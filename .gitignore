@@ -1,0 +1,20 @@
+# Arquivos e pastas construidos pelo Maven
+/target/
+*/target/
+
+# Configuracoes locais
+.idea/
+.vscode/
+*.iml
+
+# Artefatos diversos
+*.log
+.DS_Store
+
+# Certificados e segredos gerados localmente
+*.pem
+*.p12
+*.jks
+
+# Arquivos de relatorios temporarios
+/out/

@@ -1,0 +1,37 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/eickrono_identidade
+    username: eickrono_dev
+    password: senhaSuperSeguraDev
+  flyway:
+    schemas: identidade
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/desenvolvimento
+          jwk-set-uri: http://localhost:8080/realms/desenvolvimento/protocol/openid-connect/certs
+
+seguranca:
+  cors:
+    origens-permitidas:
+      - http://localhost:3000
+      - http://127.0.0.1:3000
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+documentacao:
+  swagger:
+    usuario: swagger
+    senha: swagger-dev
+
+logging:
+  level:
+    com.eickrono.api.identidade: DEBUG

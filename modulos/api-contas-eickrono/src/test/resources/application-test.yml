@@ -1,0 +1,22 @@
+spring:
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+    enabled: true
+  cache:
+    type: none
+
+seguranca:
+  mtls:
+    habilitado: false
+  cors:
+    origens-permitidas:
+      - http://localhost
+
+fapi:
+  seguranca:
+    audiencia-esperada: api-contas-eickrono-test
+    tolerancia-clock-skew-segundos: 60

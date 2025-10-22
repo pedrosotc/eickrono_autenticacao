@@ -1,0 +1,45 @@
+spring:
+  config:
+    activate:
+      on-profile: hml
+  datasource:
+    url: jdbc:postgresql://banco-postgres:5432/eickrono_identidade_hml
+    username: eickrono_hml
+    password: senhaSuperSeguraHml
+  flyway:
+    schemas: identidade_hml
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://hml-identidade.eickrono.com.br/realms/homologacao
+          jwk-set-uri: https://hml-identidade.eickrono.com.br/realms/homologacao/protocol/openid-connect/certs
+
+seguranca:
+  mtls:
+    habilitado: true
+    keystore-arquivo: classpath:certificados/hml-servidor.p12
+    keystore-senha: senhaCertificadoHml
+    truststore-arquivo: classpath:certificados/hml-truststore.p12
+    truststore-senha: senhaTruststoreHml
+  cors:
+    origens-permitidas:
+      - https://hml-app.eickrono.com.br
+
+documentacao:
+  swagger:
+    usuario: swagger
+    senha: swagger-hml
+    ips-permitidos:
+      - 10.0.0.10
+      - 10.0.0.11
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    com.eickrono.api.identidade: INFO

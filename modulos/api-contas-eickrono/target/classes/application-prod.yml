@@ -1,0 +1,47 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:postgresql://rds-contas.eickrono.internal:5432/eickrono_contas
+    username: ${CONTAS_DB_USUARIO}
+    password: ${CONTAS_DB_SENHA}
+  flyway:
+    schemas: contas
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://identidade.eickrono.com.br/realms/producao
+          jwk-set-uri: https://identidade.eickrono.com.br/realms/producao/protocol/openid-connect/certs
+
+seguranca:
+  mtls:
+    habilitado: true
+    keystore-arquivo: file:/app/seguranca/mtls/servidor-prod.p12
+    keystore-senha: ${CONTAS_MTLS_KEY_PASSWORD}
+    truststore-arquivo: file:/app/seguranca/mtls/truststore-prod.p12
+    truststore-senha: ${CONTAS_MTLS_TRUST_PASSWORD}
+  cors:
+    origens-permitidas:
+      - https://app.eickrono.com.br
+      - https://bff.eickrono.com.br
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+management:
+  server:
+    port: 9092
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+
+logging:
+  level:
+    root: WARN
+    com.eickrono.api.contas: INFO
