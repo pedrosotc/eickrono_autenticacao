@@ -1,0 +1,127 @@
+digraph "Arquitetura Eickrono Autenticacao" {
+    label="Arquitetura geral da plataforma Eickrono Autenticação";
+    labelloc=t;
+    fontsize=20;
+    fontname="Helvetica";
+    rankdir=LR;
+    splines=polyline;
+    nodesep=0.6;
+    ranksep=1.0;
+    node [shape=box, fontname="Helvetica", fontsize=12, style="rounded,filled", fillcolor="#F7FBFF"];
+    edge [fontname="Helvetica", fontsize=11, color="#2C5282", penwidth=1.6];
+
+    subgraph cluster_clientes {
+        label="Clientes e consumidores";
+        fontname="Helvetica";
+        fontsize=14;
+        style="rounded,dashed";
+        color="#63B3ED";
+        flutter [label=<<b>App Flutter</b><br/>Publico (Authorization Code + PKCE)<br/>OAuth 2.1 Confidential (DPoP planejado)>>, fillcolor="#EBF8FF"];
+        bff [label=<<b>BFF Web Eickrono</b><br/>Cliente confidencial<br/>PAR + JAR + mTLS>>, fillcolor="#EBF8FF"];
+        apis_internas [label=<<b>APIs internas</b><br/>Job/batch, integrações terceiros<br/>PAR + JAR + mTLS>>, fillcolor="#EBF8FF"];
+        suporte [label=<<b>Portal suporte / operadores</b><br/>Administração de contas<br/>Fluxo UMA + RBAC Keycloak>>, fillcolor="#EBF8FF"];
+    }
+
+    subgraph cluster_edge {
+        label="Borda de segurança";
+        fontname="Helvetica";
+        fontsize=14;
+        style="rounded,dashed";
+        color="#63B3ED";
+        cloudflare [label=<<b>Cloudflare</b><br/>WAF + Rate Limit + Bot Management<br/>mTLS Origin Pull<br/>Proteção JARM/nonce>>, fillcolor="#E6FFFA"];
+    }
+
+    subgraph cluster_aws {
+        label="AWS – Conta Produção";
+        fontname="Helvetica";
+        fontsize=14;
+        style="rounded";
+        color="#3182CE";
+
+        alb [label=<<b>ALB / NLB</b><br/>Terminação TLS 1.3 + mTLS<br/>Regras por path (Auth vs APIs)>>, fillcolor="#E8F5FF"];
+
+        subgraph cluster_vpc {
+            label="VPC privativa";
+            fontname="Helvetica";
+            fontsize=13;
+            style="rounded";
+            color="#4299E1";
+
+            subgraph cluster_eks {
+                label="EKS/ECS - Cluster de aplicações";
+                fontname="Helvetica";
+                fontsize=12;
+                style="rounded";
+                color="#63B3ED";
+
+                keycloak [label=<<b>Servidor de autorização</b><br/>Keycloak / RH-SSO<br/>Customizações (temas, SPI, mapeamentos)<br/>FAPI Advanced (PAR/JAR/JARM)<br/>Rotação JWK + políticas MFA/WebAuthn>>, fillcolor="#EDF2FF"];
+
+                api_identidade [label=<<b>API Identidade</b><br/>Spring Boot 3 / Java 21<br/>Validação aud+nonce / JWKS cache (Caffeine)<br/>Escopos identidade/vínculos<br/>Exporta métricas Actuator + OTLP>>, fillcolor="#EDF2FF"];
+
+                api_contas [label=<<b>API Contas</b><br/>Spring Boot 3 / Java 21<br/>Escopos contas/transações + auditoria detalhada<br/>mTLS obrigatório clientes confidenciais<br/>Eventos de auditoria persistidos>>, fillcolor="#EDF2FF"];
+
+                otel_agent [label=<<b>Agentes sidecar</b><br/>OpenTelemetry Collector<br/>Envio OTLP → Observabilidade>>, shape=box, style="rounded,filled", fillcolor="#E2E8F0"];
+            }
+
+            redis_cache [label=<<b>Caffeine (in-memory)</b><br/>Cache embutido em cada pod<br/>JWKS, configurações FAPI>>, shape=box, style="rounded,dotted", fillcolor="#F7FAFC"];
+
+            secrets_manager [label=<<b>Secrets Manager</b><br/>Credenciais BD, mTLS, JWT keys<br/>Integração com IAM/KMS>>, fillcolor="#E6FFFA"];
+            kms [label=<<b>KMS / HSM</b><br/>Criptografia CMK<br/>Assinatura JWK + TLS>>, fillcolor="#E6FFFA"];
+            parameter_store [label=<<b>Parameter Store</b><br/>Configurações compartilhadas<br/>Feature flags>>, fillcolor="#E6FFFA"];
+
+            observabilidade [label=<<b>Stack Observabilidade</b><br/>Prometheus + Amazon Managed Grafana<br/>CloudWatch Logs + SIEM<br/>Alertas (SNS + PagerDuty)>>, fillcolor="#FFF5F5"];
+
+            subgraph cluster_dados {
+                label="Camada de dados";
+                fontname="Helvetica";
+                fontsize=12;
+                style="rounded";
+                color="#63B3ED";
+                postgres [label=<<b>Amazon RDS PostgreSQL</b><br/>Schemas dedicados (keycloak, identidade, contas)<br/>Replicação Multi-AZ + backups automáticos<br/>Audit logs + rotaçao credenciais>>, fillcolor="#F0FFF4"];
+                backup [label=<<b>Backups & DR</b><br/>Snapshots automatizados<br/>Export para S3 + testes restauração>>, fillcolor="#F0FFF4"];
+            }
+        }
+    }
+
+    chaveiro [label=<<b>Autoridade certificadora interna</b><br/>ACM + scripts autoassinados dev/hml<br/>Distribuição certificados mTLS>>, fillcolor="#FAF5FF"];
+
+    legenda [label=<<b>Notas</b><br/>• Fluxo público: Authorization Code + PKCE (Flutter)<br/>• Clientes confidenciais: PAR + JAR + JARM + mTLS<br/>• Anti-replay: nonce, jti store, PKCE<br/>• Logs mascarados antes de enviar ao SIEM<br/>• Tolerância clock skew: 1 min (auditada)>>, shape=note, style=filled, fillcolor="#FFFFF0"];
+
+    flutter -> cloudflare [label="HTTPS + PKCE"];
+    bff -> cloudflare [label="HTTPS + mTLS"];
+    apis_internas -> cloudflare [label="HTTPS + mTLS"];
+    suporte -> cloudflare [label="HTTPS + RBAC"];
+
+    cloudflare -> alb [label="mTLS Origin Pull"];
+    alb -> keycloak [label="/auth" labeltooltip="Fluxos OAuth2/OIDC"];
+    alb -> api_identidade [label="/identidade" labeltooltip="REST FAPI"];
+    alb -> api_contas [label="/contas" labeltooltip="REST FAPI"];
+
+    keycloak -> otel_agent [style=dashed, label="OTLP metrics/traces"];
+    api_identidade -> otel_agent [style=dashed, label="OTLP"];
+    api_contas -> otel_agent [style=dashed, label="OTLP"];
+    otel_agent -> observabilidade [label="Métricas + traces"];
+
+    keycloak -> postgres [label="JDBC (schema keycloak)"];
+    api_identidade -> postgres [label="JDBC (schema identidade)"];
+    api_contas -> postgres [label="JDBC (schema contas)"];
+    postgres -> backup [label="Snapshots / PITR"];
+
+    secrets_manager -> keycloak [dir=back];
+    secrets_manager -> api_identidade [dir=back];
+    secrets_manager -> api_contas [dir=back];
+    kms -> secrets_manager;
+    kms -> keycloak [label="Assinatura JWK"];
+    kms -> alb [label="TLS certs"];
+    chaveiro -> cloudflare [label="mTLS certs"];
+    chaveiro -> alb [label="mTLS certs"];
+
+    keycloak -> api_identidade [style=dashed, label="Introspecção + JWKS"];
+    keycloak -> api_contas [style=dashed, label="JWKS"];
+    redis_cache -> api_identidade [label="Cache local", dir=back, style=dotted];
+    redis_cache -> api_contas [label="Cache local", dir=back, style=dotted];
+
+    parameter_store -> api_identidade [dir=back, style=dashed];
+    parameter_store -> api_contas [dir=back, style=dashed];
+    parameter_store -> keycloak [dir=back, style=dashed];
+}
