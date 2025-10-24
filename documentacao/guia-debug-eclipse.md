@@ -111,6 +111,20 @@ Observações:
 - Tanto em dev quanto em hml, os endpoints protegidos requerem um JWT válido: após se autenticar, clique em “Authorize”, selecione `bearer-jwt` e informe `Bearer <token>`. Você pode obter tokens via Keycloak (ex.: fluxo Authorization Code pelo app/BFF ou `curl` no `token` endpoint com cliente confidencial configurado).
 - Para facilitar testes locais, adicione tokens recentes na aba `Authorize`. Se mudar o token durante a sessão, clique em “Logout” no modal antes de colar o novo valor.
 
+### Sequência rápida após mudanças no código
+
+Para evitar erros de “módulo não encontrado” ou diretório incorreto, execute os comandos sempre a partir da raiz do repositório:
+
+```bash
+cd /Users/thiago/Desenvolvedor/eickrono_autenticacao
+mvn -pl modulos/api-identidade-eickrono,modulos/api-contas-eickrono -am clean package
+cd infraestrutura/dev
+docker compose build api-identidade-eickrono api-contas-eickrono
+docker compose up -d api-identidade-eickrono api-contas-eickrono
+```
+
+> Ajuste o caminho se o repositório estiver clonado em outra pasta.
+
 ### Como gerar um JWT para testes
 
 1. Autentique-se no Keycloak local (`http://localhost:8080/`) com usuário administrador definido no `.env`.
