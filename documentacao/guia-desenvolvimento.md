@@ -25,6 +25,7 @@ Este guia orienta a preparação do ambiente local e o fluxo de trabalho diário
 - Branches de feature: `feature/<descricao-curta>`.  
 - Commits pequenos e em português.  
 - Pull request acompanhado do `checklist-seguranca-fapi.md` preenchido.
+- Configure previamente as credenciais Git (PAT ou SSH). Um `git push --set-upstream origin main` falhará com `could not read Username` se o ambiente não puder autenticar no GitHub.
 
 ## Testes e qualidade
 
