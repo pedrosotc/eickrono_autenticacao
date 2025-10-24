@@ -1,6 +1,17 @@
 # Diagramas de sequência por caso de uso
 
-Este documento apresenta os principais fluxos ponta a ponta da plataforma **Eickrono Autenticação**, cada um descrito com um diagrama de sequência (sintaxe Mermaid) e uma breve explicação operacional. Utilize-o como referência para entender quais serviços são acionados em cada cenário e como as respostas encadeiam novas chamadas.
+Este documento apresenta dois conjuntos de diagramas:
+
+- **Versão completa (produção)** — fluxos com todos os componentes de segurança, observabilidade e integrações que operam no ambiente oficial.
+- **Versão simplificada (dev / Swagger)** — o mínimo necessário para reproduzir e testar os serviços localmente via Swagger UI, com foco em equipes de QA ou desenvolvimento.
+
+Todos os diagramas usam sintaxe Mermaid.
+
+---
+
+## Versão completa (produção)
+
+Os fluxos abaixo representam o comportamento end-to-end considerado para produção. Use-os como referência arquitetural.
 
 ---
 
@@ -204,3 +215,86 @@ sequenceDiagram
 - Utilize ferramentas com suporte a Mermaid (GitHub, VS Code, Mermaid Live Editor) para visualizar os fluxos em formato gráfico.
 - Os números de cada etapa facilitam o cruzamento com logs, traces OTEL e auditorias em banco.
 - Para novos casos de uso, replique a estrutura: identifique atores, serviços, configurações sensíveis (segredos, certificados) e descreva o encadeamento ponta a ponta.
+
+---
+
+## Versão simplificada (dev / Swagger)
+
+Os diagramas seguintes assumem o ambiente local (`docker compose` em `infraestrutura/dev`) com Swagger habilitado e sem mTLS. Servem como mapa rápido para testar manualmente chamadas REST usando tokens emitidos pelo Keycloak local.
+
+### Caso A – Gerar token e consultar perfil no Swagger
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant QA as Pessoa testadora
+    participant SW as Swagger UI (http://localhost:8081/swagger-ui)
+    participant KC as Keycloak (http://localhost:8080)
+    participant APII as API Identidade (porta 8081)
+    participant DB as PostgreSQL (schema identidade)
+
+    QA->>SW: 1. Abrir Swagger Identidade no navegador
+    QA->>KC: 2. Abrir guia Keycloak e fazer login (realm dev)
+    QA->>KC: 3. Gerar token (via Account Console ou endpoint /token)
+    QA->>SW: 4. Clicar em "Authorize" e colar `Bearer <token>`
+    QA->>APII: 5. (via Swagger) Executar GET /identidade/perfil
+    APII->>KC: 6. Buscar JWKS (preenche cache se necessário)
+    APII->>DB: 7. Consultar dados de perfil
+    APII-->>QA: 8. Retornar JSON do perfil
+```
+
+**Uso prático:** valida os escopos `identidade:ler` e o acesso básico com bearer token. Se a resposta for 401, confirme o passo 4.
+
+### Caso B – Testar fluxo de registro de dispositivo via Swagger
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant QA as Pessoa testadora
+    participant SW as Swagger UI Identidade
+    participant APII as API Identidade
+    participant DB as PostgreSQL (tabelas registro_dispositivo, codigo_verificacao)
+
+    QA->>SW: 1. Autorizar-se com token (opcional, somente para revogação)
+    QA->>APII: 2. POST /identidade/dispositivos/registro (informar e-mail, telefone, fingerprint)
+    APII->>DB: 3. Criar RegistroDispositivo + códigos de verificação
+    APII-->>QA: 4. Receber `registroId` e `expiraEm`
+    QA->>APII: 5. POST /identidade/dispositivos/registro/{id}/confirmacao (enviar códigos simulados)
+    APII->>DB: 6. Validar hashes, marcar canais como validados
+    APII-->>QA: 7. Retornar `tokenDispositivo` ou HTTP 400 se código inválido
+    QA->>APII: 8. (Opcional) POST /identidade/dispositivos/revogar para testar revogação
+```
+
+**Uso prático:** permite testar manualmente os cenários felizes, erros de código incorreto e revogação, sem depender de provedores SMS/e-mail.
+
+### Caso C – Simular transferência via API de Contas no Swagger
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant QA as Pessoa testadora
+    participant SW as Swagger UI Contas (http://localhost:8082/swagger-ui)
+    participant KC as Keycloak (realm dev)
+    participant APIC as API Contas (porta 8082)
+    participant DB as PostgreSQL (schema contas)
+
+    QA->>KC: 1. Obter token com escopo `contas:ler` ou `contas:escrever`
+    QA->>SW: 2. Autorizar Swagger com `Bearer <token>`
+    QA->>APIC: 3. GET /contas (listar)
+    APIC->>KC: 4. Validar token/JWKS se cache expirar
+    APIC->>DB: 5. Ler contas do cliente
+    APIC-->>QA: 6. Retornar lista de contas
+    QA->>APIC: 7. POST /contas/transacoes (simular débito/crédito)
+    APIC->>DB: 8. Persistir transação + auditoria
+    APIC-->>QA: 9. Confirmar operação
+```
+
+**Uso prático:** cobre leitura e escrita na API de Contas. Para validar erros, altere o token (escopo insuficiente) ou campos obrigatórios.
+
+---
+
+### Dicas para os testes via Swagger
+
+- Mantenha Keycloak e as APIs rodando (`docker compose up -d`) antes de abrir o Swagger.
+- Atualize os tokens periodicamente; em dev, os default expiram em minutos.
+- Use os comandos de rebuild descritos em `guia-debug-eclipse.md` se alterar código antes de testar novamente.
