@@ -3,7 +3,8 @@ package com.eickrono.api.identidade.configuracao;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
 import java.util.List;
-import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
@@ -23,6 +24,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -35,6 +37,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableConfigurationProperties({FapiProperties.class, CorsProperties.class, TlsMutuoProperties.class, SwaggerSegurancaProperties.class})
 public class SegurancaConfiguracao {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SegurancaConfiguracao.class);
     private static final String CACHE_JWKS = "jwks-cache";
     private static final long CACHE_TAMANHO_MAXIMO = 1_000L;
     private static final long CACHE_EXPIRACAO_MINUTOS = 5L;
@@ -42,12 +45,13 @@ public class SegurancaConfiguracao {
     private static final Duration CACHE_EXPIRACAO_PADRAO = Duration.ofMinutes(CACHE_EXPIRACAO_MINUTOS);
     private static final Duration CORS_MAX_AGE = Duration.ofHours(CORS_MAX_AGE_HORAS);
     private static final List<String> CORS_METODOS = List.of("GET", "POST", "OPTIONS");
-    private static final List<String> CORS_CABECALHOS = List.of("Authorization", "Content-Type");
+    private static final List<String> CORS_CABECALHOS = List.of("Authorization", "Content-Type", "X-Device-Token");
 
     @Bean
     public SecurityFilterChain apiSecurity(HttpSecurity http,
                                            ConversorJwtFapi conversor,
-                                           CorsConfigurationSource corsConfigurationSource) throws Exception {
+                                           CorsConfigurationSource corsConfigurationSource,
+                                           DeviceTokenFilter deviceTokenFilter) throws Exception {
         http.securityMatcher("/**")
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
@@ -55,15 +59,19 @@ public class SegurancaConfiguracao {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers(HttpMethod.GET, "/.well-known/chaves-publicas").permitAll()
+                        .requestMatchers("/identidade/dispositivos/registro/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/identidade/perfil")
                         .hasAnyAuthority("SCOPE_identidade:ler", "ROLE_cliente")
                         .requestMatchers(HttpMethod.GET, "/identidade/vinculos-sociais")
                         .hasAnyAuthority("SCOPE_vinculos:ler", "ROLE_cliente")
                         .requestMatchers(HttpMethod.POST, "/identidade/vinculos-sociais")
                         .hasAuthority("SCOPE_vinculos:escrever")
+                        .requestMatchers(HttpMethod.POST, "/identidade/dispositivos/revogar")
+                        .hasAnyAuthority("SCOPE_identidade:ler", "ROLE_cliente")
                         .anyRequest()
                         .authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(conversor)));
+        http.addFilterAfter(deviceTokenFilter, BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 
@@ -97,9 +105,7 @@ public class SegurancaConfiguracao {
     @Bean
     public JwtDecoder jwtDecoder(OAuth2ResourceServerProperties resourceServerProperties,
                                  FapiProperties fapiProperties) {
-        String issuerUri = Objects.requireNonNull(resourceServerProperties.getJwt().getIssuerUri(),
-                "issuer-uri deve estar configurado");
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
+        NimbusJwtDecoder decoder = criarDecoder(resourceServerProperties.getJwt());
 
         OAuth2TokenValidator<Jwt> audienceValidator = new JwtClaimValidator<>(
                 "aud",
@@ -152,5 +158,25 @@ public class SegurancaConfiguracao {
         if (valor == null || valor.isBlank()) {
             throw new IllegalStateException(mensagem);
         }
+    }
+
+    private NimbusJwtDecoder criarDecoder(OAuth2ResourceServerProperties.Jwt jwtProperties) {
+        String issuerUri = jwtProperties.getIssuerUri();
+        String jwkSetUri = jwtProperties.getJwkSetUri();
+
+        if (issuerUri != null && !issuerUri.isBlank()) {
+            try {
+                return NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
+            } catch (IllegalArgumentException ex) {
+                if (jwkSetUri == null || jwkSetUri.isBlank()) {
+                    throw new IllegalStateException("Falha ao inicializar JwtDecoder com issuer-uri e nenhum jwk-set-uri configurado.", ex);
+                }
+                LOGGER.warn("Falha ao inicializar JwtDecoder com issuer '{}'. Tentando jwk-set-uri.", issuerUri, ex);
+            }
+        }
+        if (jwkSetUri != null && !jwkSetUri.isBlank()) {
+            return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        }
+        throw new IllegalStateException("Configuração inválida para JwtDecoder: defina issuer-uri ou jwk-set-uri.");
     }
 }

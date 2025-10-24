@@ -9,10 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class AplicacaoApiIdentidade {
 
-    private AplicacaoApiIdentidade() {
-        // Classe utilitária: construtor privado para evitar instâncias.
-    }
-
     public static void main(String[] args) {
         SpringApplication.run(AplicacaoApiIdentidade.class, args);
     }

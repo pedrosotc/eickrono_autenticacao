@@ -132,3 +132,66 @@ sequenceDiagram
 - **Segurança de segredos**: Secrets Manager armazena credenciais e certificados, enquanto o KMS/HSM fornece criptografia e assinatura das chaves JWK, com rotação automática. 
 - **Observabilidade integrada**: cada serviço exporta métricas e traces via OTLP para o coletor OTEL, que os encaminha para Prometheus, Grafana, CloudWatch Logs e o SIEM corporativo. 
 - **Compatibilidade FAPI**: Keycloak opera com PAR, JAR, JARM, mTLS, MFA/WebAuthn e tolerância mínima de clock skew (1 min) auditada pelas APIs.
+
+## Fluxo de registro e verificação de dispositivo móvel
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Pessoa usuária
+    participant App as App Flutter
+    participant APII as API Identidade
+    participant SMS as Provedor SMS
+    participant Email as Provedor E-mail
+    participant DB as PostgreSQL (identidade)
+    participant Job as Scheduler expiração
+    participant KC as Keycloak (SPI device)
+
+    U->>App: 1. Instala app e informa e-mail/telefone
+    App->>APII: 2. POST /identidade/dispositivos/registro (fingerprint + metadados)
+    APII->>DB: 3. Cria RegistroDispositivo (status PENDENTE, expira +9h)
+    APII->>DB: 4. Cria CodigoVerificacao SMS/EMAIL (hash, tentativas=0)
+    APII->>SMS: 5. Envia código aleatório 6 dígitos (via CanalEnvioCodigoSms)
+    APII->>Email: 6. Envia código 6 dígitos (via CanalEnvioCodigoEmail)
+    APII->>DB: 7. Auditoria DISPOSITIVO_REGISTRO_SOLICITADO
+    APII-->>App: 8. Retorna registroId + expiraEm
+
+    U->>App: 9. Informa códigos recebidos
+    App->>APII: 10. POST /identidade/dispositivos/registro/{id}/confirmacao
+    APII->>DB: 11. Verifica status PENDENTE e expiraEm >= agora
+    APII->>DB: 12. Compara hash SMS e incrementa tentativas
+    APII->>DB: 13. Compara hash EMAIL e incrementa tentativas
+    APII->>DB: 14. Atualiza status registro -> CONFIRMADO
+    APII->>DB: 15. Revoga tokens ativos do usuário (status REVOGADO)
+    APII->>DB: 16. Cria novo TokenDispositivo (hash token, fingerprint)
+    APII->>KC: 17. Notifica SPI DeviceTokenConstraint (permitir apenas novo token)
+    APII->>DB: 18. Auditoria DISPOSITIVO_VERIFICACAO_SUCESSO
+    APII-->>App: 19. Retorna deviceToken opaco + metadata
+
+    App->>APII: 20. Requisições subsequentes com header X-Device-Token
+    alt Token válido
+        APII->>DB: 21. Consulta token (cache Caffeine + fallback DB)
+        APII-->>App: 22. Resposta autorizada
+    else Token revogado
+        APII-->>App: 21a. Retorna 423 Locked (força novo registro)
+    end
+
+    par Expiração automática
+        Job->>DB: 23. Busca registros PENDENTE com expiraEm < agora
+        Job->>DB: 24. Marca como EXPIRADO e invalida códigos
+        Job->>DB: 25. Auditoria DISPOSITIVO_REGISTRO_EXPIRADO
+    and Reenvio de código
+        App->>APII: 26. POST /identidade/dispositivos/registro/{id}/reenviar
+        APII->>DB: 27. Valida limite (máx 3 reenvios) e expiração
+        APII->>SMS: 28. Reenvia código SMS
+        APII->>Email: 29. Reenvia código e atualiza timestamps
+    end
+```
+
+### Notas específicas do fluxo de dispositivo
+
+- **Fingerprint mínima**: inclui modelo, plataforma, versão do app e chave pública do aparelho (usada futuramente para DPoP).  
+- **Armazenamento seguro**: os hashes de códigos e tokens utilizam HMAC-SHA256 com salt aleatório antes de persistir.  
+- **Política de tentativas**: após 5 tentativas inválidas por canal, o registro é marcado como `BLOQUEADO` e passa a devolver 423 até que novo registro seja iniciado.  
+- **Sincronização com Keycloak**: o SPI `DeviceTokenConstraintProvider` consulta a API antes de emitir refresh tokens, bloqueando sessões de tokens revogados ou expirados.  
+- **Observabilidade**: métricas expostas incluem `device_registration_requested_total`, `device_registration_confirmed_total`, `device_token_revoked_total` e histogramas de tempo até confirmação.

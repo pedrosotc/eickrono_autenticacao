@@ -1,62 +1,27 @@
 package com.eickrono.api.contas;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
+import static org.mockito.Mockito.when;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 @SpringBootTest
 @ActiveProfiles("test")
 class AplicacaoApiContasTest {
 
-    private static PostgreSQLContainer<?> postgres;
-
-    @BeforeAll
-    static void iniciarContainer() {
-        try {
-            postgres = new PostgreSQLContainer<>("postgres:15.5")
-                    .withDatabaseName("eickrono_contas_test")
-                    .withUsername("test")
-                    .withPassword("test");
-            postgres.start();
-        } catch (Throwable ex) {
-            postgres = null;
-            Assumptions.assumeTrue(false, "Docker não está disponível para executar Testcontainers");
-        }
-    }
-
-    @AfterAll
-    static void pararContainer() {
-        if (postgres != null && postgres.isRunning()) {
-            postgres.stop();
-        }
-    }
-
-    @DynamicPropertySource
-    static void registrarPropriedadesDinamicas(DynamicPropertyRegistry registry) {
-        if (postgres != null && postgres.isRunning()) {
-            registry.add("spring.datasource.url", postgres::getJdbcUrl);
-            registry.add("spring.datasource.username", postgres::getUsername);
-            registry.add("spring.datasource.password", postgres::getPassword);
-            registry.add("spring.datasource.driver-class-name", postgres::getDriverClassName);
-            registry.add("spring.flyway.locations", () -> "classpath:db/migration");
-            registry.add("spring.flyway.enabled", () -> true);
-        } else {
-            registry.add("spring.datasource.url", () -> "jdbc:h2:mem:eickrono_contas_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
-            registry.add("spring.datasource.username", () -> "sa");
-            registry.add("spring.datasource.password", () -> "");
-            registry.add("spring.datasource.driver-class-name", () -> "org.h2.Driver");
-            registry.add("spring.flyway.enabled", () -> false);
-        }
-    }
+    @MockBean
+    private JwtDecoder jwtDecoder;
 
     @Test
     void deveCarregarContexto() {
-        // Teste simples para validar a subida do contexto Spring.
+        when(jwtDecoder.decode("token")).thenReturn(Jwt.withTokenValue("token").header("alg", "none").claim("sub", "test").build());
     }
+
+    @SpringBootApplication
+    static class App {}
 }

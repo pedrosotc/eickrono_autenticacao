@@ -1,6 +1,7 @@
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/configuracao/SwaggerHmlSegurancaConfiguracao.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/configuracao/FapiProperties.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/dominio/repositorio/AuditoriaEventoContasRepositorio.java
+/Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/configuracao/SwaggerJwtConfiguracao.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/configuracao/FiltroWhitelistIp.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/configuracao/SegurancaConfiguracao.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/configuracao/SwaggerSegurancaProperties.java
@@ -14,6 +15,7 @@
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/AplicacaoApiContas.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/configuracao/CorsProperties.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/servico/TransacaoService.java
+/Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/configuracao/SwaggerDevSegurancaConfiguracao.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/dominio/modelo/Conta.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/configuracao/TlsMutuoProperties.java
 /Users/thiago/Desenvolvedor/eickrono_autenticacao/modulos/api-contas-eickrono/src/main/java/com/eickrono/api/contas/dominio/repositorio/TransacaoRepositorio.java

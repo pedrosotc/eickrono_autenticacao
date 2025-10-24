@@ -55,3 +55,10 @@ logging:
   level:
     root: WARN
     com.eickrono.api.identidade: INFO
+
+identidade:
+  dispositivo:
+    token:
+      segredo-hmac: ${IDENTIDADE_DEVICE_TOKEN_SECRET}
+    codigo:
+      segredo-hmac: ${IDENTIDADE_CODIGO_TOKEN_SECRET}

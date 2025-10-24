@@ -44,6 +44,19 @@ fapi:
     audiencia-esperada: api-identidade-eickrono
     tolerancia-clock-skew-segundos: 60
 
+identidade:
+  dispositivo:
+    token:
+      segredo-hmac: ${IDENTIDADE_DEVICE_TOKEN_SECRET:local-device-token-secret}
+      tamanho-bytes: 32
+      validade-horas: 720
+    codigo:
+      segredo-hmac: ${IDENTIDADE_CODIGO_TOKEN_SECRET:local-codigo-secret}
+      tamanho: 6
+      tentativas-maximas: 5
+      reenvios-maximos: 3
+      expiracao-horas: 9
+
 springdoc:
   api-docs:
     enabled: false

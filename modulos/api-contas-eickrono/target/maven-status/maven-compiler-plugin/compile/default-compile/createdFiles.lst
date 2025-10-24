@@ -16,11 +16,13 @@ com/eickrono/api/contas/servico/ContaService.class
 com/eickrono/api/contas/servico/TransacaoService.class
 com/eickrono/api/contas/dominio/repositorio/AuditoriaEventoContasRepositorio.class
 com/eickrono/api/contas/configuracao/ConversorJwtFapi.class
+com/eickrono/api/contas/configuracao/SwaggerDevSegurancaConfiguracao.class
 com/eickrono/api/contas/dto/ContaResumoDto.class
 com/eickrono/api/contas/configuracao/SwaggerSegurancaProperties.class
 com/eickrono/api/contas/dto/TransacaoDto.class
 com/eickrono/api/contas/configuracao/FapiProperties.class
 com/eickrono/api/contas/AplicacaoApiContas.class
+com/eickrono/api/contas/configuracao/SwaggerJwtConfiguracao.class
 com/eickrono/api/contas/dominio/repositorio/AuditoriaAcessoContasRepositorio.class
 com/eickrono/api/contas/configuracao/SwaggerHmlSegurancaConfiguracao.class
 com/eickrono/api/contas/configuracao/FiltroWhitelistIp.class

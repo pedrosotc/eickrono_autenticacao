@@ -1,13 +1,22 @@
 spring:
+  datasource:
+    url: jdbc:h2:mem:api_contas_test;MODE=PostgreSQL;DATABASE_TO_UPPER=false;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create-drop
   flyway:
-    locations: classpath:db/migration
-    enabled: true
+    enabled: false
   cache:
     type: none
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost/test-issuer
 
 seguranca:
   mtls:

@@ -1,22 +1,35 @@
 spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
   jpa:
-    open-in-view: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
-    locations: classpath:db/migration
     enabled: true
-  cache:
-    type: none
+    locations: classpath:db/migration
+  main:
+    allow-bean-definition-overriding: true
 
-seguranca:
-  mtls:
-    habilitado: false
-  cors:
-    origens-permitidas:
-      - http://localhost
+logging:
+  level:
+    root: INFO
+    com.eickrono.api.identidade: DEBUG
 
-fapi:
-  seguranca:
-    audiencia-esperada: api-identidade-eickrono-test
-    tolerancia-clock-skew-segundos: 60
+identidade:
+  dispositivo:
+    token:
+      segredo-hmac: test-device-token-secret
+      tamanho-bytes: 16
+      validade-horas: 48
+    codigo:
+      segredo-hmac: test-code-secret
+      tamanho: 6
+      tentativas-maximas: 5
+      reenvios-maximos: 3
+      expiracao-horas: 9

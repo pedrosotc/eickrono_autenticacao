@@ -6,6 +6,12 @@ spring:
     url: jdbc:postgresql://localhost:5432/eickrono_contas
     username: eickrono_dev
     password: senhaSuperSeguraDev
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: contas
   flyway:
     schemas: contas
   security:

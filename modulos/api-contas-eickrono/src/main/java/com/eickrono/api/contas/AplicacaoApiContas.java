@@ -9,10 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class AplicacaoApiContas {
 
-    private AplicacaoApiContas() {
-        // Classe utilitária: construtor privado para evitar instâncias.
-    }
-
     public static void main(String[] args) {
         SpringApplication.run(AplicacaoApiContas.class, args);
     }

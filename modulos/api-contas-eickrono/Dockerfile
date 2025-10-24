@@ -6,5 +6,5 @@ WORKDIR /app
 
 COPY target/api-contas-eickrono-*.jar /app/aplicacao.jar
 
-EXPOSE 8082
+EXPOSE 8082 5006
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/aplicacao.jar"]

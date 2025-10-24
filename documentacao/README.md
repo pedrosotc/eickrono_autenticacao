@@ -12,6 +12,7 @@ Bem-vinda(o) ao monorepo **Eickrono Autenticação**. Este projeto reúne a plat
 - **Banco de dados:** PostgreSQL com Flyway  
 - **Cache:** Caffeine padronizado  
 - **Ambientes:** desenvolvimento, homologação, produção
+- **Onboarding de dispositivos móveis:** registro controlado por MFA (SMS + e-mail), geração de `device_token` opaco e revogação automática de aparelhos anteriores.
 
 ## Estrutura principal
 
@@ -22,11 +23,12 @@ Bem-vinda(o) ao monorepo **Eickrono Autenticação**. Este projeto reúne a plat
 
 ## Diagramas e fluxos
 
-Arquivos de diagramas serão adicionados gradualmente na pasta `documentacao/diagramas` (a ser criada) conforme avançarmos no detalhamento das integrações PAR/JAR/JARM e mTLS.
+Arquivos na pasta `documentacao/diagramas` incluem o fluxo Authorization Code + PKCE e o novo fluxograma de registro de dispositivos móveis com MFA dupla.
 
 ## Próximos passos sugeridos
 
 1. Ler o `guia-desenvolvimento.md` para configurar o ambiente local.  
 2. Executar `mvn verify` na raiz para validar o build.  
 3. Subir o ambiente `docker-compose` de desenvolvimento para validar o fluxo Authorization Code + PKCE com o Keycloak local.  
-4. Preencher e revisar o `checklist-seguranca-fapi.md` antes de cada entrega.
+4. Ler `guia-debug-eclipse.md` para configurar depuração remota no Eclipse (dev/hml).  
+5. Preencher e revisar o `checklist-seguranca-fapi.md` antes de cada entrega.

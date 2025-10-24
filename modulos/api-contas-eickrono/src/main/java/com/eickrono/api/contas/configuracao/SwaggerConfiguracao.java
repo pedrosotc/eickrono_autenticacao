@@ -13,10 +13,10 @@ import org.springframework.context.annotation.Profile;
 public class SwaggerConfiguracao {
 
     @Bean
-    public GroupedOpenApi agrupamentoIdentidade() {
+    public GroupedOpenApi agrupamentoContas() {
         return GroupedOpenApi.builder()
-                .group("identidade")
-                .pathsToMatch("/identidade/**")
+                .group("contas")
+                .pathsToMatch("/contas/**")
                 .build();
     }
 }

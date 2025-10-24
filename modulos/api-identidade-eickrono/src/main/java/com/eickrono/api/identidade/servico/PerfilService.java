@@ -1,6 +1,5 @@
 package com.eickrono.api.identidade.servico;
 
-import com.eickrono.api.identidade.dominio.modelo.PerfilIdentidade;
 import com.eickrono.api.identidade.dominio.repositorio.PerfilIdentidadeRepositorio;
 import com.eickrono.api.identidade.dto.PerfilDto;
 import java.util.Optional;

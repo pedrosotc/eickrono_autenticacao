@@ -28,7 +28,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <spring-doc.version>2.5.0</spring-doc.version>
         <checkstyle.version>10.14.2</checkstyle.version>
-        <spotbugs.version>4.8.2.0</spotbugs.version>
+        <spotbugs.version>4.9.0.0</spotbugs.version>
         <otel.version>1.36.0</otel.version>
     </properties>
 
@@ -52,6 +52,26 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
                         <release>${maven.compiler.release}</release>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-toolchain-plugin</artifactId>
+                    <version>3.3.0</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>toolchain</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <toolchains>
+                            <jdk>
+                                <version>${maven.compiler.release}</version>
+                                <vendor>any</vendor>
+                            </jdk>
+                        </toolchains>
                     </configuration>
                 </plugin>
                 <plugin>

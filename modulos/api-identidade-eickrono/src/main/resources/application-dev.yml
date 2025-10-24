@@ -6,6 +6,12 @@ spring:
     url: jdbc:postgresql://localhost:5432/eickrono_identidade
     username: eickrono_dev
     password: senhaSuperSeguraDev
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: identidade
   flyway:
     schemas: identidade
   security:
@@ -35,3 +41,10 @@ documentacao:
 logging:
   level:
     com.eickrono.api.identidade: DEBUG
+
+identidade:
+  dispositivo:
+    token:
+      segredo-hmac: ${IDENTIDADE_DEVICE_TOKEN_SECRET:dev-device-token-secret}
+    codigo:
+      segredo-hmac: ${IDENTIDADE_CODIGO_TOKEN_SECRET:dev-codigo-secret}

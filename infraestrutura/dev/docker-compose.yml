@@ -49,6 +49,12 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
     volumes:
       - ../../modulos/servidor-autorizacao-eickrono/realms:/opt/keycloak/data/import:ro
       - ../../modulos/servidor-autorizacao-eickrono/temas-login-ptbr:/opt/keycloak/themes/login-ptbr:ro
@@ -58,11 +64,7 @@ services:
       - ./certificados:/certificados:ro
     networks:
       - rede_interna_dev
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
+    # Mantemos o container em execução assim que iniciar; as APIs aguardam apenas a inicialização.
 
   api-identidade-eickrono:
     build:
@@ -82,8 +84,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       SERVIDOR_AUTORIZACAO_MTLS_CERTIFICADO: ${MTLS_CERT_PATH}
       SERVIDOR_AUTORIZACAO_MTLS_SENHA: ${MTLS_CERT_SENHA}
+      JAVA_OPTS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${API_IDENTIDADE_DEBUG_PORT}"
     ports:
       - "${API_IDENTIDADE_PORT}:8081"
+      - "${API_IDENTIDADE_DEBUG_PORT}:5005"
     depends_on:
       banco-postgres:
         condition: service_healthy
@@ -110,8 +114,10 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       SERVIDOR_AUTORIZACAO_MTLS_CERTIFICADO: ${MTLS_CERT_PATH}
       SERVIDOR_AUTORIZACAO_MTLS_SENHA: ${MTLS_CERT_SENHA}
+      JAVA_OPTS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${API_CONTAS_DEBUG_PORT}"
     ports:
       - "${API_CONTAS_PORT}:8082"
+      - "${API_CONTAS_DEBUG_PORT}:5006"
     depends_on:
       banco-postgres:
         condition: service_healthy

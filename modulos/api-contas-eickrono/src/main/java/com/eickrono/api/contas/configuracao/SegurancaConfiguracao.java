@@ -3,7 +3,8 @@ package com.eickrono.api.contas.configuracao;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
 import java.util.List;
-import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
@@ -37,6 +38,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableConfigurationProperties({FapiProperties.class, CorsProperties.class, TlsMutuoProperties.class, SwaggerSegurancaProperties.class})
 public class SegurancaConfiguracao {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SegurancaConfiguracao.class);
     @Bean
     public SecurityFilterChain apiSecurity(HttpSecurity http,
                                            ConversorJwtFapi conversor,
@@ -85,9 +87,7 @@ public class SegurancaConfiguracao {
     @Bean
     public JwtDecoder jwtDecoder(OAuth2ResourceServerProperties resourceServerProperties,
                                  FapiProperties fapiProperties) {
-        String issuerUri = Objects.requireNonNull(resourceServerProperties.getJwt().getIssuerUri(),
-                "issuer-uri deve estar configurado");
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
+        NimbusJwtDecoder decoder = criarDecoder(resourceServerProperties.getJwt());
 
         OAuth2TokenValidator<Jwt> audienceValidator = new JwtClaimValidator<>(
                 "aud",
@@ -140,5 +140,25 @@ public class SegurancaConfiguracao {
         if (valor == null || valor.isBlank()) {
             throw new IllegalStateException(mensagem);
         }
+    }
+
+    private NimbusJwtDecoder criarDecoder(OAuth2ResourceServerProperties.Jwt jwtProperties) {
+        String issuerUri = jwtProperties.getIssuerUri();
+        String jwkSetUri = jwtProperties.getJwkSetUri();
+
+        if (issuerUri != null && !issuerUri.isBlank()) {
+            try {
+                return NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
+            } catch (IllegalArgumentException ex) {
+                if (jwkSetUri == null || jwkSetUri.isBlank()) {
+                    throw new IllegalStateException("Falha ao inicializar JwtDecoder com issuer-uri e nenhum jwk-set-uri configurado.", ex);
+                }
+                LOGGER.warn("Falha ao inicializar JwtDecoder com issuer '{}'. Tentando jwk-set-uri.", issuerUri, ex);
+            }
+        }
+        if (jwkSetUri != null && !jwkSetUri.isBlank()) {
+            return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        }
+        throw new IllegalStateException("Configuração inválida para JwtDecoder: defina issuer-uri ou jwk-set-uri.");
     }
 }
