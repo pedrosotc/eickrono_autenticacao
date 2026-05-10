@@ -28,6 +28,149 @@ Este guia descreve processos para operar o ecossistema **Eickrono Autenticação
 - **Auditoria:** revisar tabelas `auditoria_eventos` e `auditoria_acessos` das APIs periodicamente; arquivar registros em storage seguro.  
 - **Gestão de incidentes:** seguir runbooks, acionar comunicação e registrar lições aprendidas no pós-incidente.
 
+## Automação obrigatória para rotação do segredo RDS em ECS
+
+### Regra operacional
+
+Sempre que o segredo gerenciado do RDS for rotacionado com sucesso, os serviços
+ECS que consomem essa senha por variável de ambiente precisam receber
+`forceNewDeployment`.
+
+No ecossistema `hml`, isso é obrigatório para:
+
+- `auth-hml`
+- `identidade-hml`
+- `thimisu-backend-hml`
+
+Motivo técnico:
+
+- o `Secrets Manager` atualiza `AWSCURRENT`;
+- a task ECS não reinjeta segredos em tempo de execução;
+- a senha antiga continua em memória até o restart da task;
+- novas conexões do pool podem falhar com
+  `password authentication failed for user "eickrono_admin"`.
+
+### Automação canônica
+
+Arquivo operacional:
+
+- [configure_hml_rds_rotation_redeploy.sh](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/prod/ecs/configure_hml_rds_rotation_redeploy.sh)
+
+Artefato de runtime:
+
+- [handler.py](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/prod/ecs/lambda/rds_rotation_ecs_redeploy/handler.py)
+
+O mecanismo padrão é:
+
+1. `EventBridge` observa `RotationSucceeded` do `Secrets Manager`.
+2. A regra aciona a Lambda `eickrono-hml-rds-rotation-ecs-redeploy`.
+3. A Lambda confirma que o segredo do evento é o segredo RDS monitorado.
+4. A Lambda executa `ecs update-service --force-new-deployment` para os três serviços.
+
+### Padrão de evento adotado
+
+Baseado na documentação oficial da AWS para eventos de rotação do
+`Secrets Manager`, o padrão operacional usado é:
+
+```json
+{
+  "source": ["aws.secretsmanager"],
+  "detail-type": ["AWS Service Event via CloudTrail"],
+  "detail": {
+    "eventSource": ["secretsmanager.amazonaws.com"],
+    "eventName": ["RotationSucceeded"]
+  }
+}
+```
+
+Além desse filtro, a Lambda valida internamente:
+
+- `resources`
+- `detail.responseElements.arn`
+- `detail.responseElements.aRN`
+- `detail.secretId`
+
+Isso elimina dependência do formato exato do payload do CloudTrail.
+
+### Procedimento reprodutível
+
+#### 1. Instalar ou atualizar a automação
+
+```bash
+bash ./infraestrutura/prod/ecs/configure_hml_rds_rotation_redeploy.sh \
+  --profile Codex-cli_aws
+```
+
+#### 2. Validar a regra EventBridge
+
+```bash
+aws events describe-rule \
+  --name eickrono-hml-rds-rotation-succeeded \
+  --profile Codex-cli_aws \
+  --region sa-east-1
+```
+
+#### 3. Validar o target da regra
+
+```bash
+aws events list-targets-by-rule \
+  --rule eickrono-hml-rds-rotation-succeeded \
+  --profile Codex-cli_aws \
+  --region sa-east-1
+```
+
+#### 4. Validar a configuração da Lambda
+
+```bash
+aws lambda get-function-configuration \
+  --function-name eickrono-hml-rds-rotation-ecs-redeploy \
+  --profile Codex-cli_aws \
+  --region sa-east-1
+```
+
+Campos obrigatórios:
+
+- `TARGET_SECRET_ARN`
+- `ECS_CLUSTER=eickrono-hml`
+- `ECS_SERVICES=auth-hml,identidade-hml,thimisu-backend-hml`
+
+#### 5. Validar permissão IAM da Lambda
+
+```bash
+aws iam get-role-policy \
+  --role-name eickrono-hml-rds-rotation-ecs-redeploy-role \
+  --policy-name eickrono-hml-rds-rotation-ecs-redeploy-role-ecs-redeploy \
+  --profile Codex-cli_aws
+```
+
+#### 6. Validar após a próxima rotação real
+
+Após uma rotação real do segredo RDS, confirmar:
+
+- evento `RotationSucceeded` no CloudTrail/EventBridge;
+- invocação da Lambda;
+- novos deployments em:
+  - `auth-hml`
+  - `identidade-hml`
+  - `thimisu-backend-hml`
+
+Comandos úteis:
+
+```bash
+aws ecs describe-services \
+  --cluster eickrono-hml \
+  --services auth-hml identidade-hml thimisu-backend-hml \
+  --profile Codex-cli_aws \
+  --region sa-east-1
+```
+
+```bash
+aws logs tail /aws/lambda/eickrono-hml-rds-rotation-ecs-redeploy \
+  --follow \
+  --profile Codex-cli_aws \
+  --region sa-east-1
+```
+
 ## Procedimentos de emergência
 
 - **Disaster Recovery:** gatilho para restauração em região secundária (backup de RDS + reimplantação de Keycloak).  
