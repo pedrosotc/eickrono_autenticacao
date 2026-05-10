@@ -258,7 +258,7 @@ public class RegistroDispositivoService {
         registro.definirStatus(StatusRegistroDispositivo.CONFIRMADO, agora);
         DispositivoIdentidade dispositivo = dispositivoIdentidadeService.garantirDispositivo(usuarioSub, pessoaIdPerfil, registro);
 
-        ConfirmacaoRegistroResponse response = emitirToken(registro, dispositivo, usuarioSub, agora);
+        ConfirmacaoRegistroResponse response = emitirToken(registro, dispositivo, usuarioSub);
         sincronizarRegistroSeConfigurado(registro);
 
         auditoriaService.registrarEvento("DISPOSITIVO_VERIFICACAO_SUCESSO",
@@ -343,8 +343,7 @@ public class RegistroDispositivoService {
 
     private ConfirmacaoRegistroResponse emitirToken(RegistroDispositivo registro,
                                                     DispositivoIdentidade dispositivo,
-                                                    String usuarioSub,
-                                                    OffsetDateTime agora) {
+                                                    String usuarioSub) {
         TokenDispositivoService.TokenEmitido tokenEmitido = tokenDispositivoService.emitirToken(registro, dispositivo, usuarioSub);
         return new ConfirmacaoRegistroResponse(
                 tokenEmitido.tokenClaro(),
@@ -450,10 +449,6 @@ public class RegistroDispositivoService {
             mapa.put(canalEnvio.canal(), canalEnvio);
         }
         return mapa;
-    }
-
-    private boolean smsHabilitado() {
-        return propriedades.getOnboarding().isSmsHabilitado();
     }
 
     private String resolverUsuarioSub(final RegistroDispositivo registro, final Optional<Jwt> jwtOpt) {

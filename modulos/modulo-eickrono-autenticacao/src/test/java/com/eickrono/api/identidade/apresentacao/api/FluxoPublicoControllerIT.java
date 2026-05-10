@@ -169,8 +169,13 @@ class FluxoPublicoControllerIT {
     }
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
+        Mockito.reset(
+                clienteAdministracaoCadastroKeycloak,
+                cadastroContaPendenteScheduler,
+                registroDispositivoScheduler,
+                integracaoProdutoPendenteScheduler
+        );
         when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app"))
                 .thenReturn(new ProjetoFluxoPublicoResolvido(
                         1L,
@@ -210,6 +215,7 @@ class FluxoPublicoControllerIT {
 
     @Test
     void deveCancelarVinculacaoPendenteQuandoLoginInformadoNaoCorrespondeContaSugerida() throws Exception {
+        setUp();
         UUID contextoId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         when(contextoSocialPendenteJdbc.buscarAtivo(contextoId, 1L))
                 .thenReturn(Optional.of(new ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo(

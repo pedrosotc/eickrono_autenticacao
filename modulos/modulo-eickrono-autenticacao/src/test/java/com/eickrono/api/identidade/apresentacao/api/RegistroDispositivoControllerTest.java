@@ -95,6 +95,7 @@ class RegistroDispositivoControllerTest {
 
     @Test
     void deveDelegarSolicitacaoDeRegistroComJwtOpcional() {
+        setUp();
         RegistroDispositivoRequest request = new RegistroDispositivoRequest();
         request.setEmail("teste@eickrono.com");
         request.setTelefone("+55-11-99999-0000");

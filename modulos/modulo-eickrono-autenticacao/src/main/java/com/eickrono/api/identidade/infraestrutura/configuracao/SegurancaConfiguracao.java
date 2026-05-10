@@ -12,8 +12,6 @@ import java.util.Objects;
 import org.apache.catalina.connector.Connector;
 import org.apache.tomcat.util.net.SSLHostConfig;
 import org.apache.tomcat.util.net.SSLHostConfigCertificate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
@@ -50,7 +48,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
         CadastroInternoKeycloakProperties.class})
 public class SegurancaConfiguracao {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SegurancaConfiguracao.class);
     private static final String CACHE_JWKS = "jwks-cache";
     private static final long CACHE_TAMANHO_MAXIMO = 1_000L;
     private static final long CACHE_EXPIRACAO_MINUTOS = 5L;

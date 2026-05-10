@@ -131,6 +131,7 @@ class FluxoPublicoControllerTest {
 
     @Test
     void deveAtualizarContextosSociaisPendentesAoCriarCadastroComListaPlural() {
+        setUp();
         CadastroApiRequest request = novoCadastroApiRequest(
                 new VinculoSocialPendenteApiRequest(
                         "google",
@@ -437,11 +438,6 @@ class FluxoPublicoControllerTest {
                 "refresh-token-novo",
                 1800L
         );
-        Jwt jwtSessaoCentral = Jwt.withTokenValue("access-jwt")
-                .header("alg", "none")
-                .subject("usuario-xyz")
-                .claim("email", "teste@eickrono.com")
-                .build();
         ContextoPessoaPerfilSistema contexto = new ContextoPessoaPerfilSistema(
                 123L,
                 "usuario-xyz",
