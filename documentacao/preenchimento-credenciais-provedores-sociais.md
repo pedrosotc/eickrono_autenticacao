@@ -142,7 +142,7 @@ Para reduzir ambiguidade nos proximos passos operacionais, a convencao documenta
   - API de identidade: `id-dev.eickrono.online`
   - servidor OIDC: `oidc-dev.eickrono.online`
 - `hml`:
-  - API de identidade: `id-hml.eickrono.store`
+  - API pública de autenticação: `auth-hml.eickrono.store`
   - servidor OIDC: `oidc-hml.eickrono.store`
 
 Os dominios auxiliares existem para permitir configuracao inicial de brokers e tunnels com menor risco no dominio principal.
@@ -1823,14 +1823,14 @@ Faça a mesma substituição.
 
 ```bash
 cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev
-docker compose up -d --force-recreate servidor-autorizacao
+docker compose up -d --force-recreate eickrono-keycloak
 ```
 
 ### Homologação
 
 ```bash
 cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml
-docker compose up -d --force-recreate servidor-autorizacao
+docker compose up -d --force-recreate eickrono-keycloak
 ```
 
 ## Como validar depois do restart

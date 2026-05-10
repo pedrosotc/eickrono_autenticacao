@@ -27,7 +27,7 @@ sequenceDiagram
     participant OTEL as OTEL Collector
     participant OBS as Observabilidade (Prometheus/Grafana/SIEM)
     participant BFF as BFF Web Eickrono (confidencial)
-    participant APII as API Identidade Eickrono
+    participant APII as API Autenticacao Eickrono
     participant APIC as API Contas Eickrono
     participant APIInt as APIs internas / jobs
     participant AC as Autoridade certificadora interna
@@ -60,7 +60,7 @@ sequenceDiagram
     OTEL->>OBS: 19. Armazena métricas, logs mascarados e traces
 
     %% Chamada de API Identidade a partir do App (cliente público)
-    App->>CF: 20. Chamada GET /identidade/vinculos-organizacionais (Bearer access token)
+    App->>CF: 20. Chamada GET /api/conta/vinculos-organizacionais (Bearer access token)
     CF->>ALB: 21. Encaminha req após WAF/Rate Limit
     ALB->>APII: 22. Roteia para API Identidade
     APII->>Cache: 23. Verifica JWKS cache (Caffeine, TTL 5 min)
@@ -157,7 +157,7 @@ sequenceDiagram
     participant KC as Keycloak (SPI device)
 
     U->>App: 1. Instala app e informa e-mail/telefone
-    App->>APII: 2. POST /identidade/dispositivos/registro (fingerprint + metadados)
+    App->>APII: 2. POST /api/conta/dispositivos/registro (fingerprint + metadados)
     APII->>DB: 3. Cria RegistroDispositivo (status PENDENTE, expira +9h)
     APII->>DB: 4. Cria CodigoVerificacao SMS/EMAIL (hash, tentativas=0)
     APII->>SMS: 5. Envia código aleatório 6 dígitos (via CanalEnvioCodigoSms)
@@ -166,7 +166,7 @@ sequenceDiagram
     APII-->>App: 8. Retorna registroId + expiraEm
 
     U->>App: 9. Informa códigos recebidos
-    App->>APII: 10. POST /identidade/dispositivos/registro/{id}/confirmacao
+    App->>APII: 10. POST /api/conta/dispositivos/registro/{id}/confirmacao
     APII->>DB: 11. Verifica status PENDENTE e expiraEm >= agora
     APII->>DB: 12. Compara hash SMS e incrementa tentativas
     APII->>DB: 13. Compara hash EMAIL e incrementa tentativas
@@ -190,7 +190,7 @@ sequenceDiagram
         Job->>DB: 24. Marca como EXPIRADO e invalida códigos
         Job->>DB: 25. Auditoria DISPOSITIVO_REGISTRO_EXPIRADO
     and Reenvio de código
-        App->>APII: 26. POST /identidade/dispositivos/registro/{id}/reenviar
+        App->>APII: 26. POST /api/conta/dispositivos/registro/{id}/reenviar
         APII->>DB: 27. Valida limite (máx 3 reenvios) e expiração
         APII->>SMS: 28. Reenvia código SMS
         APII->>Email: 29. Reenvia código e atualiza timestamps

@@ -1,5 +1,5 @@
 services:
-  api-identidade-eickrono:
+  eickrono-autenticacao:
     environment:
       IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR: smtp
       IDENTIDADE_CADASTRO_EMAIL_REMETENTE: ${IDENTIDADE_CADASTRO_EMAIL_FAKE_REMETENTE:-no-reply-dev@eickrono.local}

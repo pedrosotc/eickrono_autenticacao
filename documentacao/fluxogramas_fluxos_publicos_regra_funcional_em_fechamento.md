@@ -222,7 +222,7 @@ flowchart TD
 
     D -- Nao --> P[Servidor verifica se o email social ja existe no projeto atual]
     P --> Q{Existe perfil do sistema com esse email no projeto atual?}
-    Q -- Nao --> R[App oferece abrir cadastro com prefill]
+    Q -- Nao --> R[App oferece abrir cadastro com prefill (preenchimento inicial)]
     R --> S([Fluxo continua pelo cadastro<br/>Ver fluxo 1])
     Q -- Sim --> T[App pergunta se deseja vincular a rede social a conta existente]
     T --> U{Usuario aceita?}
@@ -347,7 +347,7 @@ Rastreabilidade de testes:
 - `CASO-15` Login social sem perfil do sistema vinculado e sem email igual no projeto atual
   - comportamento:
     - manter contexto social pendente
-    - oferecer abertura de cadastro com prefill editavel
+    - oferecer abertura de cadastro com prefill (preenchimento inicial) editavel
     - nao considerar registros do mesmo email em outros projetos
 - `CASO-16` Login social sem perfil do sistema vinculado, mas com email ja existente no projeto atual
   - comportamento:
@@ -392,7 +392,7 @@ ou perfil do sistema ja vinculado no projeto atual:
 - o servidor deve verificar se o email da autenticacao social ja existe no
   projeto atual;
 - se nao existir no projeto atual:
-  - o app pode seguir para oferta de cadastro novo com prefill;
+  - o app pode seguir para oferta de cadastro novo com prefill (preenchimento inicial);
 - se existir no projeto atual:
   - o app deve oferecer vinculacao com perfil existente do projeto;
   - se o usuario recusar:

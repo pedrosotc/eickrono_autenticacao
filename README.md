@@ -10,11 +10,111 @@ Projeto do ecossistema de autenticação da Eickrono que concentra:
 A decisão canônica de nomes dos serviços está em
 `documentacao/decisao_nomenclatura_repositorios_servicos.md`.
 
-Hoje a divisão correta é:
+Na arquitetura do ecossistema, a divisão correta é:
 
 - `eickrono-autenticacao-servidor`: servidor de autorização Keycloak customizado + infraestrutura operacional da stack;
-- `eickrono-identidade-servidor`: API pública de identidade/autenticação usada pelo app;
+- `eickrono-identidade-servidor`: serviço de identidade e contexto canônico, ainda usado em partes da migração e do backchannel;
 - `eickrono-contas-servidor`: API de contas.
+
+## Decisão estrutural aprovada
+
+O alvo arquitetural aprovado para `eickrono-autenticacao-servidor` é este:
+
+- convergir para um **projeto simples**, não para um monorepo por domínio;
+- permanecer como **servidor central/singleton** de autenticação do ecossistema;
+- servir de forma **genérica** a qualquer app, site ou projeto cadastrado na
+  base, sem módulo por produto;
+- concentrar apenas responsabilidades de autenticação/autorização, sessão,
+  refresh, brokers sociais, política de dispositivo e integrações centrais
+  relacionadas a isso;
+- **não** embutir `contas` como módulo interno de domínio;
+- **não** criar acoplamento interno de runtime entre autenticação e `contas`.
+
+Isso significa, na prática:
+
+- `contas` permanece um domínio separado, com sua própria borda pública para
+  app/site/frontend;
+- este repositório não deve evoluir para ter “um módulo por projeto” nem “uma
+  API interna de contas” como parte da arquitetura final;
+- quando a autenticação precisar ser flexível para vários produtos, isso deve
+  ser resolvido por dados como `cliente`, `sistema`, `aplicacaoId` e regras
+  canônicas, e não por multiplicação de módulos específicos.
+
+## Estado físico atual do código
+
+Hoje o repositório está organizado fisicamente com:
+
+- `modulos/modulo-eickrono-autenticacao`
+- `modulos/modulo-eickrono-keycloak`
+- a raiz agregadora com infraestrutura, documentação, `docker compose`,
+  certificados e scripts operacionais
+
+O corte físico de desmontagem do monorepo já foi aplicado:
+
+- o build Maven padrão da raiz agora cuida apenas de autenticação;
+- `api-contas-eickrono` já foi extraído para o repositório standalone
+  `eickrono-contas-servidor`;
+- os dois módulos de autenticação voltam a ficar agrupados em `modulos/`,
+  deixando a raiz apenas com material agregador e operacional;
+- o `pom.xml` da raiz fica apenas como um agregador fino transitório, sem
+  dependências nem plugins compartilhados entre os componentes;
+- a stack local sobe autenticação por padrão e só inclui `contas` quando houver opt-in operacional.
+
+Essa estrutura física atual deve ser lida como **estado transitório do código e
+da operação local**, não como a arquitetura final aprovada.
+
+Leitura correta:
+
+- referências a `modulos/modulo-eickrono-autenticacao` e
+  `modulos/modulo-eickrono-keycloak` em documentação significam o layout físico
+  vigente dos módulos;
+- referências antigas a `api-identidade-eickrono`,
+  `api-autenticacao-eickrono` e `servidor-autorizacao-eickrono` devem ser
+  lidas como nomes físicos anteriores desses módulos;
+- a convergência desejada continua sendo separar a autenticação como projeto
+  simples e central.
+
+### Mapa de nomenclatura
+
+| Conceito | Nome aprovado |
+| --- | --- |
+| repositório | `eickrono-autenticacao-servidor` |
+| módulo físico da API | `modulo-eickrono-autenticacao` |
+| módulo físico do Keycloak | `modulo-eickrono-keycloak` |
+| serviço Docker da API | `eickrono-autenticacao` |
+| serviço Docker do Keycloak | `eickrono-keycloak` |
+
+Use os nomes da coluna certa conforme o contexto. A maior parte da confusão
+histórica vinha justamente de tratar nome de serviço como se fosse nome de
+módulo.
+
+### Mapa de namespaces de segredos
+
+Para `AWS Secrets Manager`, o padrão canônico aprovado é:
+
+```text
+/eickrono/<ambiente>/<dominio>/<categoria>/<identificador>/<tipo>
+```
+
+Regra prática:
+
+- segredos de cliente do Keycloak:
+  `/eickrono/<ambiente>/keycloak/clientes/<client-id>/secret`
+- senha de admin do Keycloak:
+  `/eickrono/<ambiente>/keycloak/admin/password`
+- SMTP da identidade:
+  `/eickrono/<ambiente>/identidade/smtp/primario/username`
+  e `/password`
+
+Namespaces canônicos atualmente usados em `hml`:
+
+| Namespace | Client ID | Finalidade | Consumidores |
+| --- | --- | --- | --- |
+| `/eickrono/hml/keycloak/clientes/autenticacao-servidor/secret` | `autenticacao-servidor` | segredo do cliente interno usado para token JWT/backchannel entre autenticação e identidade | `identidade-hml`, `auth-hml` |
+| `/eickrono/hml/keycloak/clientes/eickrono-keycloak/secret` | `eickrono-keycloak` | segredo do cliente interno do próprio módulo Keycloak/customizações | `auth-hml` |
+| `/eickrono/hml/keycloak/clientes/thimisu-backend/secret` | `thimisu-backend` | segredo do cliente interno usado pelo backend do Thimisu no backchannel JWT | `thimisu-backend-hml`, `auth-hml` |
+
+Fonte de verdade: `documentacao/decisao_nomenclatura_repositorios_servicos.md`.
 
 ## Diretriz de nomenclatura
 
@@ -32,12 +132,13 @@ Regra prática:
 
 ## Documentação canônica
 
-A documentação principal permanece em `documentacao/`, mas o índice canônico do
-projeto agora fica neste `README.md`.
+A documentação principal permanece em `documentacao/`, e este `README.md`
+resume a estrutura física e a direção vigente do repositório.
 
 ### Diretriz vigente para o app móvel
 
-- cadastro, confirmação de e-mail, login e recuperação de senha entram pela API pública de identidade;
+- cadastro, confirmação de e-mail, login e recuperação de senha devem
+  convergir para a borda pública final de `autenticacao`;
 - a autenticação continua dona da conta central, das credenciais e das liberações internas;
 - a identidade continua dona da `Pessoa` canônica;
 - o `thimisu` recebe apenas o provisionamento do perfil daquele sistema depois que conta central e `Pessoa` já tiverem sido resolvidas;
@@ -72,6 +173,12 @@ centralizados neste repositório:
 - `make up-dev`
 - `make up-hml`
 
+Observações desta etapa:
+
+- `make package` e `make test` agora exercitam apenas o build canônico de autenticação;
+- para subir `contas` junto na stack local, use `INCLUIR_API_CONTAS=true make up-dev`
+  ou `INCLUIR_API_CONTAS=true make up-hml`.
+
 ## Consulta de versão em runtime
 
 Para conferência operacional do que está rodando:
@@ -85,8 +192,8 @@ versão do artefato Java empacotado no runtime do Keycloak.
 
 ## Arquitetura canônica
 
-- o app fala diretamente com a API de identidade/autenticação para cadastro, login e recuperação de senha;
-- o `identidade-servidor` é a borda pública do app;
+- o app deve falar diretamente com a borda pública final de `autenticacao` para cadastro, login, refresh e recuperação de senha;
+- a `identidade` deve ficar apenas em backchannel interno quando ainda for necessária durante a migração;
 - a autenticação continua sendo a autoridade central de credencial, sessão e vínculo por sistema;
 - o backend do produto recebe apenas provisionamento interno de perfil e contexto já autorizados;
 - a confirmação de e-mail acontece na autenticação antes de qualquer provisionamento no domínio do produto;
@@ -102,18 +209,35 @@ versão do artefato Java empacotado no runtime do Keycloak.
 - fornecer a infraestrutura local de `docker compose`, `MailHog` e certificados;
 - documentar a operação da stack de autenticação.
 
-Os endpoints públicos usados pelo app ficam no projeto irmão
-`eickrono-identidade-servidor`.
+No estado alvo aprovado, o contrato público final usado pelo app pertence ao
+domínio de autenticação. Enquanto a convergência ainda não termina, parte do
+código público permanece no módulo físico
+`modulos/modulo-eickrono-autenticacao`. Essa localização atual não deve ser lida
+como aprovação permanente de monorepo ou de múltiplas APIs de domínio dentro
+deste repositório.
 
 ## Papel na arquitetura canônica
 
 No fluxo móvel atual:
 
-- a borda pública do app é o `eickrono-identidade-servidor`;
+- a borda pública final do app deve ficar em `autenticacao`;
 - este repositório sustenta a parte de Keycloak/RH-SSO do ecossistema;
-- login, recuperação de senha e demais fluxos sensíveis continuam centralizados na API pública de identidade;
+- login, recuperação de senha e demais fluxos sensíveis devem convergir para a API pública final de autenticação;
 - a autenticação continua como dona da conta central, de `usuario + sistema`, do refresh e das políticas de segurança;
 - o provider daqui consulta a identidade por `mTLS` no refresh protegido por `device token`.
+
+## Observação sobre `contas`
+
+`contas` continua sendo um domínio separado.
+
+Neste desenho aprovado:
+
+- `contas` não faz parte da fronteira interna do servidor de autenticação;
+- `contas` não é backchannel obrigatório da autenticação;
+- `contas` conversa com app/site/frontend pela sua própria borda pública;
+- qualquer referência a `contas` neste `README` fora do contexto de orquestração
+  local de ambiente não deve ser interpretada como acoplamento arquitetural
+  desejado.
 
 ## Comunicação interna entre servidores
 
@@ -178,6 +302,15 @@ Se precisar agir isoladamente em um projeto:
 
 Se o problema observado no app divergir do código-fonte atual, a primeira hipótese operacional deve ser container desatualizado.
 
+Observação:
+
+- as referências operacionais a `identidade` e `contas` nesta parte do
+  `README` existem porque este repositório ainda centraliza a orquestração
+  local da stack;
+- isso não altera a decisão arquitetural aprovada de que
+  `eickrono-autenticacao-servidor` deve convergir para um projeto simples,
+  central e sem módulo interno de `contas`.
+
 ## Ambientes locais
 
 Em `dev` e `hml`, o `docker compose` inclui `MailHog` para testes locais de e-mail:
@@ -189,7 +322,7 @@ No `dev`, se o `.env` ja estiver apontando para um SMTP real, ainda e possivel
 forcar o uso do MailHog sem alterar essas credenciais:
 
 1. `cd infraestrutura/dev`
-2. `docker compose -f docker-compose.yml -f docker-compose.email-fake.yml up -d --build smtp-teste api-identidade-eickrono`
+2. `docker compose -f docker-compose.yml -f docker-compose.email-fake.yml up -d --build smtp-teste eickrono-autenticacao identidade-servidor`
 3. abrir `http://localhost:8025`
 
 O `docker compose` local usa PostgreSQL já existente no ambiente local, com bancos separados por serviço:
@@ -203,8 +336,8 @@ O `docker compose` local usa PostgreSQL já existente no ambiente local, com ban
 
 ## Swagger
 
-- API identidade `dev`: `http://localhost:8081/swagger-ui/index.html`
-- API identidade `dev` OpenAPI: `http://localhost:8081/v3/api-docs`
+- API autenticacao `dev`: `http://127.0.0.1:8081/swagger-ui/index.html`
+- API autenticacao `dev` OpenAPI: `http://127.0.0.1:8081/v3/api-docs`
 - API identidade `hml`: `http://localhost:18081/swagger-ui/index.html`
 - API identidade `hml` OpenAPI: `http://localhost:18081/v3/api-docs`
 - API contas `dev`: `http://localhost:8082/swagger-ui/index.html`

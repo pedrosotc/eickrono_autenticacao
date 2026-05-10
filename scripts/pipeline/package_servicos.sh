@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IDENTIDADE_DIR="${EICKRONO_IDENTIDADE_DIR:-${ROOT_DIR}/../eickrono-identidade-servidor}"
 CONTAS_DIR="${EICKRONO_CONTAS_DIR:-${ROOT_DIR}/../eickrono-contas-servidor}"
+INCLUIR_API_CONTAS="${INCLUIR_API_CONTAS:-false}"
 
 empacotar() {
   local nome="$1"
@@ -22,7 +23,9 @@ empacotar() {
 }
 
 empacotar "eickrono-identidade-servidor" "${IDENTIDADE_DIR}"
-empacotar "eickrono-contas-servidor" "${CONTAS_DIR}"
+if [[ "${INCLUIR_API_CONTAS}" == "true" ]]; then
+  empacotar "eickrono-contas-servidor" "${CONTAS_DIR}"
+fi
 empacotar "eickrono-autenticacao-servidor" "${ROOT_DIR}"
 
 echo "Empacotacao concluida."

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IDENTIDADE_DIR="${EICKRONO_IDENTIDADE_DIR:-${ROOT_DIR}/../eickrono-identidade-servidor}"
 CONTAS_DIR="${EICKRONO_CONTAS_DIR:-${ROOT_DIR}/../eickrono-contas-servidor}"
+INCLUIR_API_CONTAS="${INCLUIR_API_CONTAS:-false}"
 
 testar() {
   local nome="$1"
@@ -26,10 +27,12 @@ testar \
   "eickrono-identidade-servidor" \
   "${IDENTIDADE_DIR}" \
   "test-rapido"
-testar \
-  "eickrono-contas-servidor" \
-  "${CONTAS_DIR}" \
-  "test-rapido"
+if [[ "${INCLUIR_API_CONTAS}" == "true" ]]; then
+  testar \
+    "eickrono-contas-servidor" \
+    "${CONTAS_DIR}" \
+    "test-rapido"
+fi
 testar \
   "eickrono-autenticacao-servidor" \
   "${ROOT_DIR}" \

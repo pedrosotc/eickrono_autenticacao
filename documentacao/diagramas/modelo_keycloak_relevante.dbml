@@ -45,7 +45,7 @@ Table REALM {
 Table CLIENT {
     ID                          varchar(36) [pk, note: "Identificador tecnico interno do cliente"]
     REALM_ID                    varchar(36) [not null, note: "Realm ao qual o cliente pertence"]
-    CLIENT_ID                   varchar(255) [not null, note: "Identificador logico do cliente. Exemplos atuais: api-contas-eickrono, api-identidade-eickrono e app-flutter-local"]
+    CLIENT_ID                   varchar(255) [not null, note: "Identificador logico do cliente. Exemplos atuais: api-contas-eickrono, eickrono-autenticacao e app-flutter-local"]
     NAME                        varchar(255) [note: "Nome amigavel do cliente"]
     DESCRIPTION                 varchar(255) [note: "Descricao funcional do cliente"]
     ENABLED                     boolean      [not null, note: "Indica se o cliente esta ativo"]

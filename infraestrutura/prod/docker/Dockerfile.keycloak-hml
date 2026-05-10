@@ -2,7 +2,7 @@ FROM quay.io/keycloak/keycloak:26.5.5
 
 USER root
 
-COPY target/eickrono-autenticacao-servidor-*.jar /opt/keycloak/providers/eickrono-autenticacao-servidor.jar
+COPY modulos/modulo-eickrono-keycloak/target/modulo-eickrono-keycloak-*.jar /opt/keycloak/providers/modulo-eickrono-keycloak.jar
 COPY autorizacao/realms /opt/keycloak/import-source
 COPY autorizacao/temas/login-ptbr /opt/keycloak/themes/login-ptbr
 COPY autorizacao/providers/configuracoes-fapi /opt/keycloak/providers/configuracoes-fapi

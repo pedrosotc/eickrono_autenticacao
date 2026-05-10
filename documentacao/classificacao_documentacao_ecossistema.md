@@ -15,7 +15,7 @@ Objetivo:
 
 Data desta classificacao:
 
-- `2026-05-03`
+- `2026-05-06`
 
 ## Criterios
 
@@ -51,10 +51,10 @@ porque:
 
 Total de arquivos classificados nesta passada:
 
-- `59` em `eickrono-autenticacao-servidor`
+- `61` em `eickrono-autenticacao-servidor`
 - `7` em `eickrono-thimisu-backend`
 - `1` em `eickrono-identidade-servidor`
-- `67` no total
+- `69` no total
 
 ## 1. eickrono-autenticacao-servidor
 
@@ -86,6 +86,7 @@ Total de arquivos classificados nesta passada:
 - `documentacao/guia-cloudflare-tunnel-google-keycloak-dev.md`
 - `documentacao/guia-debug-eclipse.md`
 - `documentacao/guia-desenvolvimento.md`
+- `documentacao/guia_fluxos_login_autenticacao_app.md`
 - `documentacao/guia-gerar-jwt.md`
 - `documentacao/guia-mtls.md`
 - `documentacao/guia-operacao-producao.md`
@@ -112,11 +113,12 @@ Total de arquivos classificados nesta passada:
 - `infraestrutura/prod/pipeline/README.md`
 - `infraestrutura/prod/runbook_hml_aws_operacional.md`
 - `infraestrutura/prod/validacao_cabecalho_email_provedores.md`
-- `modulos/servidor-autorizacao-eickrono/README.md`
-- `modulos/servidor-autorizacao-eickrono/configuracoes-fapi/README.md`
-- `modulos/servidor-autorizacao-eickrono/mapeamentos-atributos/README.md`
-- `modulos/servidor-autorizacao-eickrono/scripts-spi/README.md`
-- `modulos/servidor-autorizacao-eickrono/temas-login-ptbr/README.md`
+- `modulos/modulo-eickrono-keycloak/README.md`
+- `modulos/modulo-eickrono-autenticacao/README.md`
+- `modulos/modulo-eickrono-keycloak/configuracoes-fapi/README.md`
+- `modulos/modulo-eickrono-keycloak/mapeamentos-atributos/README.md`
+- `modulos/modulo-eickrono-keycloak/scripts-spi/README.md`
+- `modulos/modulo-eickrono-keycloak/temas-login-ptbr/README.md`
 
 ### 1.2 Historico ou legado
 

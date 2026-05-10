@@ -8,6 +8,21 @@ Arquivos:
 - `identidade-task-definition.hml.json`
 - `thimisu-backend-task-definition.hml.json`
 
+Leitura correta dos papéis:
+
+- `auth-task-definition.hml.json`: Keycloak + provider de autorização +
+  integração interna com a API pública `eickrono-autenticacao`.
+- `identidade-task-definition.hml.json`: serviço `identidade-servidor`, usado
+  como backchannel canônico de `Pessoa`.
+
+Nota de nomenclatura:
+
+- `eickrono-autenticacao` acima é o nome operacional do serviço em runtime;
+- o módulo físico que gera essa API, dentro deste repositório, é
+  `modulos/modulo-eickrono-autenticacao`;
+- o provider montado no Keycloak vem de
+  `modulos/modulo-eickrono-keycloak`.
+
 Regras:
 
 - os placeholders `__...__` sao resolvidos pelo script `rollout_hml_service.sh`
@@ -16,6 +31,35 @@ Regras:
 - a explicacao operacional resumida fica em `../runbook_hml_aws_operacional.md`
 - o historico ampliado continua em `../guia_subida_hml_aws.md`
 - o caminho operacional preferencial de rollout agora e `rollout_hml_service.sh`
+
+## Regra canônica para namespaces de segredos
+
+Para leitura humana e para novos segredos no `Secrets Manager`, a convenção
+canônica aprovada é:
+
+```text
+/eickrono/<ambiente>/<dominio>/<categoria>/<identificador>/<tipo>
+```
+
+Aplicação prática:
+
+- segredos de clientes do Keycloak:
+  `/eickrono/<ambiente>/keycloak/clientes/<client-id>/secret`
+- senha de admin do Keycloak:
+  `/eickrono/<ambiente>/keycloak/admin/password`
+- SMTP da identidade:
+  `/eickrono/<ambiente>/identidade/smtp/primario/username`
+  `/eickrono/<ambiente>/identidade/smtp/primario/password`
+- segredo interno compartilhado:
+  `/eickrono/<ambiente>/shared/jwt-interno/autenticacao/secret`
+
+Namespaces materializados em `hml` para clientes do Keycloak:
+
+| Namespace | Client ID | Consumidores |
+| --- | --- | --- |
+| `/eickrono/hml/keycloak/clientes/autenticacao-servidor/secret` | `autenticacao-servidor` | `identidade-hml`, `auth-hml` |
+| `/eickrono/hml/keycloak/clientes/eickrono-keycloak/secret` | `eickrono-keycloak` | `auth-hml` |
+| `/eickrono/hml/keycloak/clientes/thimisu-backend/secret` | `thimisu-backend` | `thimisu-backend-hml`, `auth-hml` |
 
 ## Estado atual da separacao de banco em HML
 

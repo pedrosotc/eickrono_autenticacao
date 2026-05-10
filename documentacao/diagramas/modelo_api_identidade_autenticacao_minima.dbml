@@ -36,7 +36,7 @@ Project eickrono_api_identidade_autenticacao_minima {
 
 Table sistemas_origem {
     id        integer      [pk, increment, note: "Identificador interno do sistema chamador"]
-    codigo    varchar(64)  [not null, unique, note: "Codigo estavel do sistema interno. Exemplos: identidade-servidor, api-contas-eickrono, servidor-autorizacao"]
+    codigo    varchar(64)  [not null, unique, note: "Codigo estavel do sistema interno. Exemplos: identidade-servidor, api-contas-eickrono, eickrono-keycloak"]
     descricao varchar(255) [note: "Descricao funcional do sistema"]
     criado_em timestamptz  [not null, note: "Momento de cadastro do sistema"]
     Note: "Catalogo de chamadores internos. Evita espalhar strings de sistema_solicitante pelas tabelas operacionais."

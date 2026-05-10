@@ -9,6 +9,7 @@ fi
 AMBIENTE="$1"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_DIR="${ROOT_DIR}/infraestrutura/${AMBIENTE}"
+INCLUIR_API_CONTAS="${INCLUIR_API_CONTAS:-false}"
 
 if [[ ! -d "${COMPOSE_DIR}" ]]; then
   echo "Ambiente invalido: ${AMBIENTE}" >&2
@@ -21,7 +22,11 @@ fi
 echo "==> Subindo stack ${AMBIENTE}"
 (
   cd "${COMPOSE_DIR}"
-  docker compose up -d --build servidor-autorizacao api-identidade-eickrono api-contas-eickrono
+  SERVICOS=(eickrono-keycloak eickrono-autenticacao identidade-servidor)
+  if [[ "${INCLUIR_API_CONTAS}" == "true" ]]; then
+    SERVICOS+=(api-contas-eickrono)
+  fi
+  docker compose up -d --build "${SERVICOS[@]}"
 )
 
 echo "Stack ${AMBIENTE} iniciada."

@@ -8,7 +8,7 @@ services:
     networks:
       - rede_interna_dev
 
-  servidor-autorizacao:
+  eickrono-keycloak:
     image: quay.io/keycloak/keycloak:26.5.5
     container_name: eickrono-keycloak-dev
     entrypoint:
@@ -41,14 +41,14 @@ services:
       KEYCLOAK_IMPORT_REALM_FILE: desenvolvimento-realm.json
       KEYCLOAK_IMPORT_REALM_TARGET_FILE: eickrono-realm.json
       EICKRONO_PASSWORD_PEPPER: ${EICKRONO_PASSWORD_PEPPER}
-      EICKRONO_IDENTIDADE_API_BASE_URL: https://api-identidade-eickrono:8443
+      EICKRONO_AUTENTICACAO_API_BASE_URL: https://eickrono-autenticacao:8443
       EICKRONO_INTERNAL_SECRET: ${EICKRONO_INTERNAL_SECRET}
-      EICKRONO_KEYCLOAK_URL_BASE: http://servidor-autorizacao:8080
+      EICKRONO_KEYCLOAK_URL_BASE: http://eickrono-keycloak:8080
       EICKRONO_KEYCLOAK_REALM: eickrono
-      EICKRONO_IDENTIDADE_CLIENT_ID_INTERNO: ${EICKRONO_IDENTIDADE_CLIENT_ID_INTERNO:-servidor-autorizacao}
-      EICKRONO_IDENTIDADE_CLIENT_SECRET_INTERNO: ${EICKRONO_IDENTIDADE_CLIENT_SECRET_INTERNO:-CHANGE_ME}
+      EICKRONO_AUTENTICACAO_CLIENT_ID_INTERNO: ${EICKRONO_AUTENTICACAO_CLIENT_ID_INTERNO:-eickrono-keycloak}
+      EICKRONO_AUTENTICACAO_CLIENT_SECRET_INTERNO: ${EICKRONO_AUTENTICACAO_CLIENT_SECRET_INTERNO:-CHANGE_ME}
       EICKRONO_INTERNO_MTLS_HABILITADO: "true"
-      EICKRONO_INTERNO_MTLS_KEYSTORE_ARQUIVO: /certificados/servidor-autorizacao.p12
+      EICKRONO_INTERNO_MTLS_KEYSTORE_ARQUIVO: /certificados/eickrono-keycloak.p12
       EICKRONO_INTERNO_MTLS_KEYSTORE_SENHA: ${MTLS_KEYSTORE_SENHA}
       EICKRONO_INTERNO_MTLS_TRUSTSTORE_ARQUIVO: /certificados/backchannel-truststore.p12
       EICKRONO_INTERNO_MTLS_TRUSTSTORE_SENHA: ${MTLS_TRUSTSTORE_SENHA}
@@ -61,7 +61,7 @@ services:
       retries: 6
       start_period: 10s
     volumes:
-      - ../../target/eickrono-autenticacao-servidor-1.0.0-SNAPSHOT.jar:/opt/keycloak/providers/eickrono-autenticacao-servidor.jar:ro
+      - ../../modulos/modulo-eickrono-keycloak/target/modulo-eickrono-keycloak-1.0.0-SNAPSHOT.jar:/opt/keycloak/providers/modulo-eickrono-keycloak.jar:ro
       - ../../autorizacao/realms:/opt/keycloak/import-source:ro
       - ../../autorizacao/temas/login-ptbr:/opt/keycloak/themes/login-ptbr:ro
       - ../../autorizacao/providers/configuracoes-fapi:/opt/keycloak/providers/configuracoes-fapi:ro
@@ -74,11 +74,11 @@ services:
       - rede_interna_dev
     # Mantemos o container em execução assim que iniciar; as APIs aguardam apenas a inicialização.
 
-  api-identidade-eickrono:
+  eickrono-autenticacao:
     build:
-      context: ../../../eickrono-identidade-servidor
+      context: ../../modulos/modulo-eickrono-autenticacao
       dockerfile: Dockerfile
-    container_name: eickrono-api-identidade-dev
+    container_name: eickrono-autenticacao-dev
     env_file:
       - .env
     environment:
@@ -89,16 +89,21 @@ services:
       SPRING_FLYWAY_SCHEMAS: identidade
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${OIDC_ISSUER_URI}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${OIDC_JWKS_URI}
-      IDENTIDADE_API_BASE_URL: http://api-identidade-eickrono:8081
       EICKRONO_INTERNAL_SECRET: ${EICKRONO_INTERNAL_SECRET}
+      INTEGRACAO_IDENTIDADE_URL_BASE: http://identidade-servidor:8081
+      INTEGRACAO_IDENTIDADE_TIMEOUT: ${INTEGRACAO_IDENTIDADE_TIMEOUT:-PT5S}
+      INTEGRACAO_IDENTIDADE_JWT_INTERNO_URL_BASE: http://eickrono-keycloak:8080
+      INTEGRACAO_IDENTIDADE_JWT_INTERNO_REALM: eickrono
+      INTEGRACAO_IDENTIDADE_JWT_INTERNO_CLIENT_ID: ${INTEGRACAO_IDENTIDADE_JWT_INTERNO_CLIENT_ID:-eickrono-autenticacao-interno}
+      INTEGRACAO_IDENTIDADE_JWT_INTERNO_CLIENT_SECRET: ${INTEGRACAO_IDENTIDADE_JWT_INTERNO_CLIENT_SECRET:-CHANGE_ME}
       INTEGRACAO_PERFIL_URL_BASE: ${INTEGRACAO_PERFIL_URL_BASE:-https://host.docker.internal:18483}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_URL_BASE: http://servidor-autorizacao:8080
+      IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_URL_BASE: http://eickrono-keycloak:8080
       IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_REALM: eickrono
       IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_ID: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_ID}
-      INTEGRACAO_PERFIL_JWT_INTERNO_URL_BASE: http://servidor-autorizacao:8080
+      INTEGRACAO_PERFIL_JWT_INTERNO_URL_BASE: http://eickrono-keycloak:8080
       INTEGRACAO_PERFIL_JWT_INTERNO_REALM: eickrono
-      INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID: ${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID:-autenticacao-servidor}
+      INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID: ${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID:-eickrono-autenticacao-interno}
       INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET: ${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET:-CHANGE_ME}
       IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR: ${IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR:-smtp}
       IDENTIDADE_CADASTRO_EMAIL_REMETENTE: ${IDENTIDADE_CADASTRO_EMAIL_REMETENTE:-no-reply-dev@eickrono.local}
@@ -109,7 +114,70 @@ services:
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
       SPRING_MAIL_SMTP_AUTH: ${SPRING_MAIL_SMTP_AUTH:-false}
       SPRING_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:-false}
-      IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_URL_BASE: http://servidor-autorizacao:8080
+      IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_URL_BASE: http://eickrono-keycloak:8080
+      IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_REALM: eickrono
+      IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      EICKRONO_PASSWORD_PEPPER: ${EICKRONO_PASSWORD_PEPPER}
+      SEGURANCA_MTLS_HABILITADO: "true"
+      SEGURANCA_MTLS_PORTA_INTERNA: 8443
+      SEGURANCA_MTLS_KEYSTORE_ARQUIVO: file:/certificados/eickrono-autenticacao.p12
+      SEGURANCA_MTLS_KEYSTORE_SENHA: ${MTLS_KEYSTORE_SENHA}
+      SEGURANCA_MTLS_TRUSTSTORE_ARQUIVO: file:/certificados/backchannel-truststore.p12
+      SEGURANCA_MTLS_TRUSTSTORE_SENHA: ${MTLS_TRUSTSTORE_SENHA}
+      SERVIDOR_AUTORIZACAO_MTLS_CERTIFICADO: ${MTLS_CERT_PATH}
+      SERVIDOR_AUTORIZACAO_MTLS_SENHA: ${MTLS_CERT_SENHA}
+      JAVA_OPTS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${API_AUTENTICACAO_DEBUG_PORT:-${API_IDENTIDADE_DEBUG_PORT:-5005}}"
+    ports:
+      - "${API_AUTENTICACAO_PORT:-${API_IDENTIDADE_PORT:-8081}}:8081"
+      - "${API_AUTENTICACAO_MTLS_PORT:-${API_IDENTIDADE_MTLS_PORT:-18481}}:8443"
+      - "${API_AUTENTICACAO_DEBUG_PORT:-${API_IDENTIDADE_DEBUG_PORT:-5005}}:5005"
+    depends_on:
+      eickrono-keycloak:
+        condition: service_healthy
+    volumes:
+      - ./certificados:/certificados:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - rede_interna_dev
+
+  identidade-servidor:
+    build:
+      context: ../../../eickrono-identidade-servidor
+      dockerfile: Dockerfile
+    container_name: eickrono-identidade-servidor-dev
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${IDENTIDADE_POSTGRES_HOST}:${IDENTIDADE_POSTGRES_PORT}/${IDENTIDADE_POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${IDENTIDADE_POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${IDENTIDADE_POSTGRES_PASSWORD}
+      SPRING_FLYWAY_SCHEMAS: identidade
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${OIDC_ISSUER_URI}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${OIDC_JWKS_URI}
+      IDENTIDADE_API_BASE_URL: http://identidade-servidor:8081
+      EICKRONO_INTERNAL_SECRET: ${EICKRONO_INTERNAL_SECRET}
+      INTEGRACAO_PERFIL_URL_BASE: ${INTEGRACAO_PERFIL_URL_BASE:-https://host.docker.internal:18483}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_URL_BASE: http://eickrono-keycloak:8080
+      IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_REALM: eickrono
+      IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_ID: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_ID}
+      INTEGRACAO_PERFIL_JWT_INTERNO_URL_BASE: http://eickrono-keycloak:8080
+      INTEGRACAO_PERFIL_JWT_INTERNO_REALM: eickrono
+      INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID: ${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID:-eickrono-autenticacao-interno}
+      INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET: ${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET:-CHANGE_ME}
+      IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR: ${IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR:-smtp}
+      IDENTIDADE_CADASTRO_EMAIL_REMETENTE: ${IDENTIDADE_CADASTRO_EMAIL_REMETENTE:-no-reply-dev@eickrono.local}
+      IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO: ${IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO:-Eickrono Dev}
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp-teste}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-1025}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      SPRING_MAIL_SMTP_AUTH: ${SPRING_MAIL_SMTP_AUTH:-false}
+      SPRING_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:-false}
+      IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_URL_BASE: http://eickrono-keycloak:8080
       IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_REALM: eickrono
       IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
@@ -122,13 +190,8 @@ services:
       SEGURANCA_MTLS_TRUSTSTORE_SENHA: ${MTLS_TRUSTSTORE_SENHA}
       SERVIDOR_AUTORIZACAO_MTLS_CERTIFICADO: ${MTLS_CERT_PATH}
       SERVIDOR_AUTORIZACAO_MTLS_SENHA: ${MTLS_CERT_SENHA}
-      JAVA_OPTS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${API_IDENTIDADE_DEBUG_PORT}"
-    ports:
-      - "${API_IDENTIDADE_PORT}:8081"
-      - "${API_IDENTIDADE_MTLS_PORT}:8443"
-      - "${API_IDENTIDADE_DEBUG_PORT}:5005"
     depends_on:
-      servidor-autorizacao:
+      eickrono-keycloak:
         condition: service_healthy
     volumes:
       - ./certificados:/certificados:ro
@@ -160,7 +223,7 @@ services:
       - "${API_CONTAS_PORT}:8082"
       - "${API_CONTAS_DEBUG_PORT}:5006"
     depends_on:
-      servidor-autorizacao:
+      eickrono-keycloak:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"

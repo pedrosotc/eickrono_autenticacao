@@ -1,6 +1,28 @@
 # Guia de mTLS
 
-Este guia consolida como o `mTLS` funciona no monorepo `eickrono-autenticacao-servidor`, quais módulos realmente o usam hoje, quais certificados cada um consome e como gerar os artefatos locais de `dev` e `hml`.
+Este guia consolida como o `mTLS` funciona no repositório
+`eickrono-autenticacao-servidor`, quais módulos realmente o usam hoje, quais
+certificados cada um consome e como gerar os artefatos locais de `dev` e
+`hml`.
+
+## Nota de nomenclatura operacional
+
+Os nomes `eickrono-autenticacao`, `identidade-servidor`,
+`api-contas-eickrono` e arquivos como `api-identidade-eickrono.p12` aparecem
+aqui como **nomes operacionais atuais** de serviços, containers, endpoints e
+certificados.
+
+Eles não significam que:
+
+- `eickrono-autenticacao-servidor` deva permanecer monorepo por domínio;
+- esses nomes sejam a fronteira arquitetural final aprovada do ecossistema.
+
+Regra complementar:
+
+- `modulo-eickrono-autenticacao` e `modulo-eickrono-keycloak` são os nomes
+  físicos aprovados dos módulos internos deste repositório;
+- `eickrono-autenticacao` e `eickrono-keycloak` continuam sendo nomes de
+  runtime/`docker compose`.
 
 ## Visão geral
 
@@ -19,17 +41,19 @@ Camadas reais do desenho:
 
 Serviços com participação em `mTLS` no ecossistema atual:
 
-- `eickrono-identidade-servidor`: servidor e cliente `mTLS`.
-- `eickrono-autenticacao-servidor`: cliente `mTLS` no fluxo de refresh por `device token`.
-- `eickrono-contas-servidor`: suporte de servidor `mTLS`, mas sem uso ativo no `docker-compose` atual e sem cliente `mTLS`.
+- `eickrono-autenticacao`: servidor e cliente `mTLS`.
+- `identidade-servidor`: servidor e cliente `mTLS`.
+- `modulo-eickrono-keycloak`: cliente `mTLS` no fluxo de refresh por `device token`.
+- `api-contas-eickrono`: suporte de servidor `mTLS`, mas sem uso ativo no `docker-compose` atual e sem cliente `mTLS`.
 
-## api-identidade-eickrono
+## modulo-eickrono-autenticacao / serviço eickrono-autenticacao
 
 ### Responsabilidade no mTLS
 
 - expõe rotas internas que podem ser consumidas por outros serviços via `backchannel`;
 - aceita certificado do cliente quando a porta `mTLS` está habilitada;
-- também atua como cliente `mTLS` ao chamar o serviço de perfil por HTTPS interno.
+- também atua como cliente `mTLS` ao chamar `identidade-servidor` e, quando
+  necessário, o backend do produto por HTTPS interno.
 
 ### Configuração
 
@@ -62,9 +86,9 @@ Quando `seguranca.mtls.habilitado=true`:
 - a porta pública HTTP continua existindo para tráfego normal e Swagger;
 - se `porta-interna == 0`, o servidor inteiro passa a exigir `mTLS`.
 
-Na prática atual do monorepo:
+Na prática atual da estrutura física do repositório:
 
-- em `dev`, a porta pública da identidade continua em `8081`;
+- em `dev`, a porta pública da autenticação continua em `8081`;
 - a porta interna `mTLS` sobe em `8443` dentro do container e é publicada como `18481` no host;
 - em `hml`, a mesma lógica vale, mas publicada como `19481`.
 
@@ -89,7 +113,8 @@ Isso significa que o serviço:
 
 ### Onde ele é usado hoje
 
-No auth, o uso real do cliente `mTLS` hoje está no `backchannel` para resolver contexto de pessoa no serviço de perfil.
+Na autenticação, o uso real do cliente `mTLS` hoje está no `backchannel` para
+resolver contexto de pessoa em `identidade-servidor`.
 
 Na arquitetura canônica, esse mesmo mecanismo também é a base para o
 provisionamento interno que a autenticação faz em duas etapas:
@@ -109,11 +134,13 @@ Observação importante:
 
 - a obtenção do JWT interno no Keycloak não usa o helper de `mTLS`; o `mTLS` aqui protege o `backchannel` entre serviços, não toda chamada feita pelo módulo.
 
-## servidor-autorizacao-eickrono
+## modulo-eickrono-keycloak
 
 ### Responsabilidade no mTLS
 
-Este módulo não sobe um servidor HTTP Spring para receber `mTLS`. Ele roda dentro do Keycloak e usa `mTLS` apenas como cliente quando valida `device token` na API de identidade durante o refresh.
+Este módulo não sobe um servidor HTTP Spring para receber `mTLS`. Ele roda
+dentro do Keycloak e usa `mTLS` apenas como cliente quando valida `device
+token` na API pública de autenticação durante o refresh.
 
 ### Configuração
 
@@ -127,28 +154,32 @@ A SPI lê estas variáveis:
 
 Além disso, ela depende de:
 
-- `EICKRONO_IDENTIDADE_API_BASE_URL`
+- `EICKRONO_AUTENTICACAO_API_BASE_URL`
 - `EICKRONO_KEYCLOAK_URL_BASE`
-- `EICKRONO_IDENTIDADE_CLIENT_ID_INTERNO`
-- `EICKRONO_IDENTIDADE_CLIENT_SECRET_INTERNO`
+- `EICKRONO_AUTENTICACAO_CLIENT_ID_INTERNO`
+- `EICKRONO_AUTENTICACAO_CLIENT_SECRET_INTERNO`
 - `EICKRONO_INTERNAL_SECRET`
+
+Por compatibilidade de rollout, o provider ainda aceita os nomes legados
+`EICKRONO_IDENTIDADE_*` como fallback.
 
 ### Como o fluxo funciona
 
 No refresh com `device token`, a SPI:
 
-1. detecta se a URL da identidade ou do Keycloak está em HTTPS;
+1. detecta se a URL da autenticação ou do Keycloak está em HTTPS;
 2. se alguma estiver em HTTPS, exige `EICKRONO_INTERNO_MTLS_HABILITADO=true`;
 3. carrega `keystore` e `truststore`;
 4. monta um `HttpClient` Java com `SSLContext`;
 5. obtém um JWT interno por `client_credentials`;
-6. chama a API de identidade com `Bearer`, `X-Eickrono-Internal-Secret`, `X-Device-Token` e `X-Usuario-Sub`.
+6. chama a API pública de autenticação com `Bearer`,
+   `X-Eickrono-Internal-Secret`, `X-Device-Token` e `X-Usuario-Sub`.
 
 No `docker-compose` atual:
 
 - a URL do Keycloak interno continua em HTTP;
-- a URL da API de identidade interna está em HTTPS;
-- então o certificado do `servidor-autorizacao.p12` é usado para o canal até a identidade.
+- a URL da API pública de autenticação interna está em HTTPS;
+- então o certificado do `eickrono-keycloak.p12` é usado para o canal até a autenticação.
 
 ## api-contas-eickrono
 
@@ -172,7 +203,8 @@ No runtime dos ambientes locais:
 - `dev`: o `docker-compose` não ativa `mTLS`;
 - `hml`: o `docker-compose` ativa explicitamente `SEGURANCA_MTLS_HABILITADO=false`.
 
-Na prática, hoje o `api-contas-eickrono` ainda não participa do `backchannel mTLS` ativo do ecossistema.
+Na prática, hoje o `api-contas-eickrono` ainda não participa do
+`backchannel mTLS` ativo da stack local padrão.
 
 ### Limitação atual
 
@@ -180,7 +212,9 @@ O validador remoto de `device token` usa `RestTemplate` simples. Então:
 
 - ele pode chamar a API de identidade;
 - mas essa chamada não usa cliente `mTLS`;
-- se o serviço passar a falar com um endpoint interno somente `mTLS`, será preciso evoluir esse módulo para seguir o mesmo padrão do `api-identidade-eickrono`.
+- se o serviço passar a falar com um endpoint interno somente `mTLS`, será
+  preciso evoluir esse módulo para seguir o mesmo padrão do
+  `eickrono-autenticacao`.
 
 ## Geração de certificados
 
@@ -192,9 +226,10 @@ Os scripts oficiais ficam em:
 Eles geram:
 
 - uma CA interna autoassinada;
+- `eickrono-autenticacao.p12`;
 - `api-identidade-eickrono.p12`;
 - `thimisu-backend.p12`;
-- `servidor-autorizacao.p12`;
+- `eickrono-keycloak.p12`;
 - `backchannel-truststore.p12`.
 
 ### Artefatos gerados
@@ -204,9 +239,10 @@ Arquivos principais:
 - `backchannel-ca.key`
 - `backchannel-ca.crt`
 - `backchannel-truststore.p12`
+- `eickrono-autenticacao.p12`
 - `api-identidade-eickrono.p12`
 - `thimisu-backend.p12`
-- `servidor-autorizacao.p12`
+- `eickrono-keycloak.p12`
 
 ### Execução em dev
 
@@ -235,19 +271,40 @@ MTLS_TRUSTSTORE_SENHA=senhaBackchannelHml \
 5. exporta o material em `PKCS12`;
 6. importa a CA no `backchannel-truststore.p12`.
 
+### Recarregar os containers depois da geracao
+
+Se os certificados forem regenerados com a stack ja em execucao, os servicos que
+ja estavam no ar continuam com o `keystore` e o `truststore` antigos em
+memoria. Isso pode aparecer como falso `PKIX`, mesmo com os arquivos novos ja
+gravados em `/certificados`.
+
+Depois de rodar `./gerar_certificados.sh`, recrie os containers que usam `mTLS`:
+
+```bash
+cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev
+docker compose up -d --force-recreate eickrono-autenticacao identidade-servidor eickrono-keycloak
+
+cd /Users/thiago/Desenvolvedor/flutter/eickrono-thimisu-backend/infraestrutura/dev
+docker compose up -d --force-recreate thimisu-backend
+```
+
+Em `hml`, use os `docker compose` equivalentes do diretório `infraestrutura/hml`.
+
 ### SAN e uso estendido
 
 O script gera:
 
+- `eickrono-autenticacao` com `serverAuth,clientAuth`;
 - `api-identidade-eickrono` com `serverAuth,clientAuth`;
 - `thimisu-backend` com `serverAuth,clientAuth`;
-- `servidor-autorizacao` com `clientAuth`.
+- `eickrono-keycloak` com `clientAuth`.
 
 Os SANs incluem nomes úteis para container e host local, como:
 
 - `api-identidade-eickrono`
+- `eickrono-autenticacao`
 - `thimisu-backend`
-- `servidor-autorizacao`
+- `eickrono-keycloak`
 - `host.docker.internal`
 - `localhost`
 - `127.0.0.1`
@@ -258,14 +315,18 @@ Em `dev` e `hml`, o `docker-compose` monta a pasta `certificados` em `/certifica
 
 Exemplos de uso real:
 
+- a autenticação lê `file:/certificados/modulos/modulo-eickrono-autenticacao.p12`;
 - a identidade lê `file:/certificados/api-identidade-eickrono.p12`;
 - o thimisu lê `file:/certificados/thimisu-backend.p12`;
-- a SPI do Keycloak lê `/certificados/servidor-autorizacao.p12`;
+- a SPI do Keycloak lê `/certificados/eickrono-keycloak.p12`;
 - todos confiam na CA via `/certificados/backchannel-truststore.p12`.
 
 ## Limitações e observações importantes
 
 - os caminhos `classpath:certificados/...` dos `application-*.yml` não são a fonte real usada no `docker-compose` local; os containers atuais dependem dos arquivos montados em `/certificados`;
-- hoje só a malha `identidade <-> thimisu` e `servidor-autorizacao -> identidade` está realmente usando `mTLS` no fluxo local;
+- hoje a malha `eickrono-autenticacao <-> identidade-servidor`,
+  `identidade-servidor <-> thimisu` e
+  `eickrono-keycloak -> eickrono-autenticacao` está realmente usando
+  `mTLS` no fluxo local;
 - o `api-contas-eickrono` ainda precisa de evolução se for entrar no mesmo padrão;
 - as variáveis `SERVIDOR_AUTORIZACAO_MTLS_CERTIFICADO` e `SERVIDOR_AUTORIZACAO_MTLS_SENHA` aparecem nos `docker-compose`, mas não são consumidas pelo código Java atual.

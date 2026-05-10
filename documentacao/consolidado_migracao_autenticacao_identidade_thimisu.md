@@ -731,12 +731,12 @@ Hoje nao existe nada equivalente no codigo do `eickrono-autenticacao-servidor`.
 Esta etapa vai exigir criacao explicita de estrutura nova. O padrao mais
 coerente com o projeto atual e seguir o mesmo estilo de `RealmResourceProvider`
 que ja existe em
-`src/main/java/com/eickrono/servidor/autorizacao/infraestrutura/versao/EstadoRuntimeRealmResourceProvider.java`.
+`modulos/modulo-eickrono-keycloak/src/main/java/com/eickrono/servidor/autorizacao/infraestrutura/versao/EstadoRuntimeRealmResourceProvider.java`.
 
 Nomes sugeridos para essa estrutura nova:
 
 - pacote novo:
-  `src/main/java/com/eickrono/servidor/autorizacao/infraestrutura/disponibilidade/`
+  `modulos/modulo-eickrono-keycloak/src/main/java/com/eickrono/servidor/autorizacao/infraestrutura/disponibilidade/`
 - recurso interno novo:
   `DisponibilidadeUsuarioSistemaRealmResourceProvider.java`
 - factory do recurso:
@@ -896,7 +896,7 @@ isso de forma clara.
 Nomes sugeridos para nascer na `autenticacao`:
 
 - pacote novo:
-  `src/main/java/com/eickrono/servidor/autorizacao/infraestrutura/provisionamento/`
+  `modulos/modulo-eickrono-keycloak/src/main/java/com/eickrono/servidor/autorizacao/infraestrutura/provisionamento/`
 - orquestrador novo:
   `OrquestradorProvisionamentoCadastroService.java`
 - cliente interno para `identidade`:

@@ -157,7 +157,7 @@ fila central de reentrega.
 
 ### Modulo
 
-- `modulos/api-identidade-eickrono`
+- `modulo-eickrono-autenticacao`
 
 ### O que e este modulo
 
@@ -172,12 +172,13 @@ Em linguagem simples:
 
 - ele e um modulo Maven dentro do repositorio
   `eickrono-autenticacao-servidor`;
-- ele gera a aplicacao Spring Boot chamada `api-identidade-eickrono`;
+- ele gera a aplicacao Spring Boot chamada `eickrono-autenticacao`;
 - ele sobe como processo HTTP proprio;
 - ele ja concentra a borda publica do app e varias integracoes internas.
 
-O nome do modulo ficou legado e pode confundir, porque hoje ele faz mais do que
-o nome sugere.
+Ainda existem nomes operacionais legados em alguns artefatos de infraestrutura,
+mas a localizacao fisica e o `artifactId` atual deste componente ja
+convergiram para `modulo-eickrono-autenticacao`.
 
 ### Motivo de ficar neste modulo
 
@@ -219,7 +220,7 @@ Hoje o projeto ja tem suporte real a `scheduler` (rotina agendada).
 ### Ativacao global de scheduler
 
 Em
-`modulos/api-identidade-eickrono/src/main/java/com/eickrono/api/identidade/infraestrutura/configuracao/InfraestruturaBasicaConfiguracao.java`
+`modulos/modulo-eickrono-autenticacao/src/main/java/com/eickrono/api/identidade/infraestrutura/configuracao/InfraestruturaBasicaConfiguracao.java`
 ja existe:
 
 - `@EnableScheduling`

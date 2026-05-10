@@ -84,7 +84,7 @@ imediato. Por isso a matriz abaixo classifica o estado de cada uma.
 - `IntegracaoInternaProperties` da API de identidade aceita:
   - `thimisu-backend`
   - `identidade-servidor`
-  - `servidor-autorizacao`
+  - `eickrono-keycloak`
 - `application.yml` da API de identidade passou a carregar a lista de clientes
   internos com o canônico primeiro e o alias legado ainda permitido;
 - `V18__seed_catalogo_multiapp_inicial.sql` agora semeia:
@@ -111,7 +111,7 @@ imediato. Por isso a matriz abaixo classifica o estado de cada uma.
 ### `eickrono-thimisu-app`
 
 - o bootstrap ja aceita sobrescritas independentes de:
-  - `CONFIG_IDENTIDADE_BASE_URL`
+  - `CONFIG_AUTENTICACAO_BASE_URL`
   - `CONFIG_THIMISU_BASE_URL`
   - `CONFIG_OIDC_ISSUER`
 - isso permite validar ambientes hibridos sem fixar cedo demais um host

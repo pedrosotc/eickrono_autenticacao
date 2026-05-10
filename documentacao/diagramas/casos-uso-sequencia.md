@@ -69,7 +69,7 @@ sequenceDiagram
     KC->>OTEL: 14. Exporta métricas/traces
 
     %% Uso do token na API Identidade
-    App->>CF: 15. GET /identidade/vinculos-organizacionais (Bearer access token)
+    App->>CF: 15. GET /api/conta/vinculos-organizacionais (Bearer access token)
     CF->>ALB: 16. Reenvia após rate-limit/WAF
     ALB->>APII: 17. Roteia para API Identidade
     APII->>KC: 18. Valida assinatura token (JWKS cache > fallback JWKS endpoint)
@@ -234,7 +234,7 @@ sequenceDiagram
     QA->>KC: 2. Abrir guia Keycloak e fazer login (realm eickrono)
     QA->>KC: 3. Gerar token (via Account Console ou endpoint /token)
     QA->>SW: 4. Clicar em "Authorize" e colar `Bearer <token>`
-    QA->>APII: 5. (via Swagger) Executar GET /identidade/vinculos-organizacionais
+    QA->>APII: 5. (via Swagger) Executar GET /api/conta/vinculos-organizacionais
     APII->>KC: 6. Buscar JWKS (preenche cache se necessário)
     APII->>DB: 7. Consultar dados de perfil
     APII-->>QA: 8. Retornar JSON do perfil
@@ -253,13 +253,13 @@ sequenceDiagram
     participant DB as PostgreSQL (tabelas registro_dispositivo, codigo_verificacao)
 
     QA->>SW: 1. Autorizar-se com token (opcional, somente para revogação)
-    QA->>APII: 2. POST /identidade/dispositivos/registro (informar e-mail, telefone, fingerprint)
+    QA->>APII: 2. POST /api/conta/dispositivos/registro (informar e-mail, telefone, fingerprint)
     APII->>DB: 3. Criar RegistroDispositivo + códigos de verificação
     APII-->>QA: 4. Receber `registroId` e `expiraEm`
-    QA->>APII: 5. POST /identidade/dispositivos/registro/{id}/confirmacao (enviar códigos simulados)
+    QA->>APII: 5. POST /api/conta/dispositivos/registro/{id}/confirmacao (enviar códigos simulados)
     APII->>DB: 6. Validar hashes, marcar canais como validados
     APII-->>QA: 7. Retornar `tokenDispositivo` ou HTTP 400 se código inválido
-    QA->>APII: 8. (Opcional) POST /identidade/dispositivos/revogar para testar revogação
+    QA->>APII: 8. (Opcional) POST /api/conta/dispositivos/revogar para testar revogação
 ```
 
 **Uso prático:** permite testar manualmente os cenários felizes, erros de código incorreto e revogação, sem depender de provedores SMS/e-mail.

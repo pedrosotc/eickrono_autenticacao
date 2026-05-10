@@ -38,7 +38,9 @@ no próprio `eickrono-autenticacao-servidor`.
 
 ## Observações
 
-- Os nomes de serviço no `docker compose` ainda permanecem `api-identidade-eickrono`
-  e `api-contas-eickrono` por compatibilidade de runtime.
-- O provider do Keycloak continua sendo montado no serviço `servidor-autorizacao`
-  a partir do JAR gerado em `eickrono-autenticacao-servidor/target/`.
+- O serviço público local do auth passou a se chamar `eickrono-autenticacao`.
+- `api-contas-eickrono` continua opcional no `docker compose`.
+- `identidade-servidor` continua existindo como backchannel separado no ambiente local.
+- O provider do Keycloak continua sendo montado no serviço `eickrono-keycloak`
+  a partir do JAR gerado em
+  `eickrono-autenticacao-servidor/modulos/modulo-eickrono-keycloak/target/`.

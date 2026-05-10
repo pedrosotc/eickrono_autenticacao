@@ -16,8 +16,8 @@ ficam concentrados em:
 
 - [Matriz Canonica de Autenticacao, Conectividade e Testes](../../eickrono-thimisu/eickrono-thimisu-app/docs/matriz_autenticacao_social_conectividade_testes.md)
 
-O desenho UML atual do codigo, incluindo app, `api-identidade-eickrono`,
-Keycloak e `identidade-servidor`, fica em:
+O desenho UML atual do codigo, incluindo app,
+`modulo-eickrono-autenticacao`, Keycloak e `identidade-servidor`, fica em:
 
 - [UML Atual de Autenticacao, Cadastro e Redes Sociais](../../eickrono-thimisu/eickrono-thimisu-app/docs/uml_autenticacao_cadastro_social_ecossistema.md)
 
@@ -96,7 +96,7 @@ documento canonico do app indicado acima.
 
 ## Contrato de API Recomendado
 
-## `GET /identidade/vinculos-sociais`
+## `GET /api/conta/redes-sociais`
 
 Responsabilidade:
 
@@ -127,7 +127,7 @@ Resposta sugerida:
 }
 ```
 
-## `POST /identidade/vinculos-sociais/{provedor}/sincronizacao`
+## `POST /api/conta/redes-sociais/{provedor}/sincronizacao`
 
 Responsabilidade:
 
@@ -140,7 +140,7 @@ Resposta implementada:
 - retorna o snapshot atualizado de todos os provedores suportados;
 - isso permite ao app atualizar a tela sem precisar de um `GET` extra imediato.
 
-## `DELETE /identidade/vinculos-sociais/{provedor}`
+## `DELETE /api/conta/redes-sociais/{provedor}`
 
 Responsabilidade:
 
@@ -158,7 +158,7 @@ Tecnicamente seria possível usar `POST` para qualquer ação, mas isso piora o 
 
 ### Motivo para `GET` na listagem
 
-`GET /identidade/vinculos-sociais` deve ser usado porque:
+`GET /api/conta/redes-sociais` deve ser usado porque:
 
 - a operação é leitura;
 - o cliente está pedindo o estado atual do recurso;

@@ -4,14 +4,48 @@ Este guia descreve a arquitetura canônica do ecossistema de autenticação da
 Eickrono para o app móvel e para os serviços internos que participam do
 cadastro, da identidade e do provisionamento do perfil de produto.
 
+## Decisão estrutural do repositório de autenticação
+
+Neste projeto, a decisão estrutural aprovada é esta:
+
+- `eickrono-autenticacao-servidor` deve convergir para um **projeto simples**,
+  não para um monorepo por domínio;
+- ele deve funcionar como **servidor central/singleton** de autenticação do
+  ecossistema;
+- ele deve atender qualquer app, site ou projeto cadastrado por dados e
+  configuração central, não por “um módulo para cada produto”;
+- ele não deve incorporar `contas` como módulo interno de domínio;
+- ele não deve pressupor comunicação interna de runtime entre autenticação e
+  `contas`.
+
+Estado atual do código:
+
+- o layout físico atual agrupa os módulos em `modulos/`, com
+  `modulos/modulo-eickrono-autenticacao`,
+  `modulos/modulo-eickrono-keycloak` e a raiz
+  agregadora;
+- ainda existem referências históricas a `api-contas-eickrono` neste
+  repositório;
+- isso deve ser lido como **estado transitório do código e da operação local**,
+  não como a arquitetura final desejada.
+
+Leitura correta:
+
+- quando este guia citar `modulos/modulo-eickrono-autenticacao`, ele está
+  apontando para a localização física atual do código;
+- isso não significa aprovação permanente de monorepo;
+- `api-contas-eickrono` fica fora da fronteira arquitetural final da
+  autenticação.
+
 ## Diretriz central
 
 Para o app móvel:
 
-- cadastro, confirmação de e-mail, login e recuperação de senha entram pela
-  API de identidade;
+- cadastro, confirmação de e-mail, login, refresh e recuperação de senha
+  devem convergir para a borda pública final de `autenticacao`;
 - o app não abre páginas do `realm`;
-- a API de identidade é a borda pública do app;
+- a `identidade` deve ficar apenas em backchannel interno quando ainda for
+  necessária durante a migração;
 - a autenticação continua sendo a dona da conta central, das credenciais e da
   autorização para os outros sistemas seguirem;
 - a identidade continua sendo a dona da `Pessoa` canônica;
@@ -22,14 +56,16 @@ Para o app móvel:
 
 - **Servidor de autorização (Keycloak/RH-SSO):** autoridade de credencial,
   token, required actions, derivação de senha e políticas de refresh.
-- **API Identidade Eickrono:** borda pública do app para cadastro, confirmação
-  de e-mail, login, recuperação de senha, emissão de `X-Device-Token` e
-  integrações móveis.
+- **Borda pública final de autenticação:** contrato público canônico do app
+  para cadastro, confirmação de e-mail, login, recuperação de senha, emissão
+  de `X-Device-Token` e integrações móveis.
+- **Identidade:** serviço interno/backchannel responsável pela `Pessoa`
+  canônica e por partes do contexto compartilhado durante a transição.
 - **Backend do produto Thimisu:** downstream de domínio, provisionado por
   comunicação interna entre servidores depois que conta central e `Pessoa`
   canônica forem resolvidas.
-- **API Contas Eickrono:** domínio financeiro separado, sem receber senha ou
-  código do app.
+- **API Contas Eickrono:** domínio financeiro separado, fora da fronteira
+  interna da autenticação e sem receber senha ou código do app.
 - **PostgreSQL + Flyway:** persistência dos estados de cadastro, dispositivos,
   códigos, tokens e auditoria.
 - **Observabilidade:** Actuator, Micrometer, Prometheus e OpenTelemetry.
@@ -48,9 +84,8 @@ Para o app móvel:
 
 ### Identidade
 
-- recebe o cadastro público do app;
-- recebe confirmação de e-mail, login e recuperação de senha na borda pública;
-- integra internamente com a autenticação para a conta central;
+- recebe chamadas internas da autenticação quando o fluxo ainda precisar de
+  `Pessoa` canônica, contexto compartilhado ou etapas transitórias do runtime;
 - concentra a leitura e a escrita da `Pessoa` canônica;
 - expõe o contexto de identidade compartilhado para os demais serviços.
 
@@ -63,19 +98,29 @@ Para o app móvel:
 - deve tratar o provisionamento recebido da autenticação como operação
   idempotente.
 
+### Contas
+
+- continua sendo domínio separado;
+- continua com sua própria borda pública para app/site/frontend;
+- não deve ser tratada como módulo interno obrigatório do servidor de
+  autenticação;
+- não participa da malha interna canônica da autenticação.
+
 ## Fluxos públicos canônicos
 
 Para o retrato do comportamento **efetivamente implementado hoje**, incluindo
 divergências já observadas entre fluxo atual e fluxo alvo, ver também:
 
+- `guia_fluxos_login_autenticacao_app.md`
 - `fluxogramas_fluxos_publicos_estado_atual.md`
 
 ### Cadastro
 
-1. o app envia o cadastro para a API de identidade;
-2. a identidade abre a etapa sensível junto à autenticação;
-3. a autenticação cria o cadastro pendente e envia o código de e-mail;
-4. o app confirma o código pela API de identidade;
+1. o app envia o cadastro para a borda pública final de `autenticacao`;
+2. a autenticação cria o cadastro pendente e envia o código de e-mail;
+3. o app confirma o código pela borda pública final de `autenticacao`;
+4. se ainda necessário durante a migração, a autenticação aciona a
+   `identidade` por backchannel;
 5. a autenticação conclui a conta central;
 6. a autenticação aciona a identidade para criar ou atualizar a `Pessoa`
    canônica;
@@ -85,24 +130,24 @@ divergências já observadas entre fluxo atual e fluxo alvo, ver também:
 
 ### Login
 
-1. o app envia login, senha, atestação e metadados do aparelho para a API de
-   identidade;
-2. a identidade integra com a autenticação para validar a credencial e a
-   política de dispositivo;
-3. a autenticação registra ou atualiza silenciosamente o dispositivo quando o
+1. o app envia login, senha, atestação e metadados do aparelho para a borda
+   pública final de `autenticacao`;
+2. a autenticação valida a credencial e a política de dispositivo;
+3. se precisar de contexto canônico ainda não internalizado, a autenticação
+   consulta a `identidade` por backchannel;
+4. a autenticação registra ou atualiza silenciosamente o dispositivo quando o
    risco permitir;
-4. a autenticação emite a sessão já com `X-Device-Token`;
-5. o app não abre uma tela dedicada de registro de dispositivo.
+5. a autenticação emite a sessão já com `X-Device-Token`;
+6. o app não abre uma tela dedicada de registro de dispositivo.
 
 ### Recuperação de senha
 
-1. o app envia o e-mail para a API de identidade;
-2. a identidade integra com a autenticação;
-3. a autenticação sempre devolve mensagem neutra;
-4. se existir conta, a autenticação envia o código por e-mail;
-5. o app confirma o código pela API de identidade;
-6. o app envia a nova senha pela API de identidade;
-7. a autenticação atualiza a credencial no Keycloak e registra auditoria.
+1. o app envia o e-mail para a borda pública final de `autenticacao`;
+2. a autenticação sempre devolve mensagem neutra;
+3. se existir conta, a autenticação envia o código por e-mail;
+4. o app confirma o código pela borda pública final de `autenticacao`;
+5. o app envia a nova senha pela borda pública final de `autenticacao`;
+6. a autenticação atualiza a credencial no Keycloak e registra auditoria.
 
 ## Contratos públicos canônicos
 

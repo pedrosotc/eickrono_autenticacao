@@ -91,7 +91,7 @@ os seguintes pacotes de banco/catalogo:
 | `TDD-56` | `CASO-12` | `cross-service` | `principal` | `principal` | `sim` | `sim` | `DB-01`, `DB-02` | Recuperacao com telefone obrigatorio precisa reabrir a mesma jornada na etapa de telefone. |
 | `TDD-57` | `CASO-13` | `backend` | `principal` | `sim` | `nao` | `nao` | `-` | Mantem bloqueio administrativo mesmo na recuperacao; tende a ser regra de runtime. |
 | `TDD-58` | `CASO-14` | `backend` | `principal` | `sim` | `nao` | `nao` | `-` | Login social ja vinculado e liberado deve continuar direto, sem nova estrutura. |
-| `TDD-59` | `CASO-15` | `cross-service` | `principal` | `principal` | `provavel` | `sim` | `DB-01`, `DB-03` | Precisa respeitar o projeto atual ao procurar e-mail e manter contexto social pendente com prefill editavel. |
+| `TDD-59` | `CASO-15` | `cross-service` | `principal` | `principal` | `provavel` | `sim` | `DB-01`, `DB-03` | Precisa respeitar o projeto atual ao procurar e-mail e manter contexto social pendente com prefill (preenchimento inicial) editavel. |
 | `TDD-60` | `CASO-16` | `cross-service` | `principal` | `principal` | `provavel` | `sim` | `DB-01`, `DB-03` | Vinculacao assistida depende da checagem por projeto atual e do contexto pendente da conta sugerida. |
 | `TDD-61` | `CASO-17` | `cross-service` | `sim` | `principal` | `provavel` | `nao` | `DB-03` | Recusa da vinculacao exige descarte consistente do contexto social pendente. |
 | `TDD-62` | `CASO-18` | `cross-service` | `principal` | `principal` | `provavel` | `sim` | `DB-01`, `DB-03` | Sucesso da vinculacao exige garantir que a autenticacao local corresponde a conta sugerida do projeto atual. |

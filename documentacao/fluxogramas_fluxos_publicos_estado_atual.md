@@ -4,6 +4,12 @@ Este documento registra o comportamento **atual do codigo** do ecossistema de
 autenticacao, para facilitar analise funcional, comparacao com a documentacao
 alvo e identificacao de divergencias.
 
+Para a revisao completa e detalhada dos fluxos atuais de cadastro, login por
+senha, login social, `registro/silencioso`, recuperacao de senha e conflitos
+entre runtime e alvo arquitetural, preferir:
+
+- `guia_fluxos_login_autenticacao_app.md`
+
 Importante:
 
 - este documento **nao** descreve o comportamento desejado ideal;

@@ -17,14 +17,22 @@ Este guia orienta a preparação do ambiente local e o fluxo de trabalho diário
 2. Rode `mvn verify` na raiz para baixar dependências e validar qualidade.  
 3. Revise `infraestrutura/dev/.env` e personalize os valores locais com segurança.  
 4. Execute `docker compose up` em `infraestrutura/dev` para subir Keycloak, PostgreSQL e as APIs.  
-5. Acesse `http://localhost:8081/actuator/health` e `http://localhost:8082/actuator/health` para verificar se as APIs estão saudáveis.
+5. Acesse `http://127.0.0.1:8081/actuator/health` e `http://127.0.0.1:8082/actuator/health` para verificar se as APIs estão saudáveis.
 
 Estrutura prática do repositório:
 
-- `src/`: código Java do provider do Keycloak
+- `modulos/modulo-eickrono-autenticacao/`: código Java da API pública/autenticada de autenticação
+- `modulos/modulo-eickrono-keycloak/`: provider, SPI e runtime customizado do Keycloak
 - `autorizacao/`: realms, tema e artefatos externos montados no container
 - `infraestrutura/`: `docker compose`, certificados e variáveis por ambiente
 - `documentacao/`: guias operacionais e arquiteturais
+
+Mapa rápido de nomenclatura:
+
+- módulo Maven da API pública/autenticada: `modulo-eickrono-autenticacao`
+- módulo Maven do provider Keycloak: `modulo-eickrono-keycloak`
+- serviço Docker da API pública: `eickrono-autenticacao`
+- serviço Docker do Keycloak: `eickrono-keycloak`
 
 Atalho operacional canônico:
 
@@ -38,7 +46,9 @@ No ambiente local, os serviços Java rodam a partir de artefatos já empacotados
 
 - `eickrono-identidade-servidor` fornece o `jar` da API de identidade;
 - `eickrono-contas-servidor` fornece o `jar` da API de contas;
-- `eickrono-autenticacao-servidor` fornece o `jar` montado dentro do Keycloak.
+- `eickrono-autenticacao-servidor` fornece:
+  - o `jar` de `modulo-eickrono-autenticacao` para a API pública;
+  - o `jar` de `modulo-eickrono-keycloak` montado dentro do Keycloak.
 
 Por isso, alteração de código sem novo `package` e sem recriar o serviço deixa o container executando a versão antiga.
 
@@ -62,14 +72,24 @@ Se precisar agir isoladamente em um serviço:
   - `cd ../eickrono-identidade-servidor && mvn -q package -DskipTests`
 - API contas:
   - `cd ../eickrono-contas-servidor && mvn -q package -DskipTests`
-- autenticação/autorização:
+- autenticação, só API pública:
+  - `mvn -q -pl modulos/modulo-eickrono-autenticacao -am package -DskipTests`
+- autenticação, só provider Keycloak:
+  - `mvn -q -pl modulos/modulo-eickrono-keycloak -am package -DskipTests`
+- autenticação, conjunto interno completo:
   - `mvn -q package -DskipTests`
 
 Se um comportamento visto no app não bater com o código atual, valide primeiro se o container local foi realmente recriado.
 
 Observações importantes do fluxo canônico:
 
-- a API de identidade é a borda pública do app para cadastro, confirmação de e-mail, login e recuperação de senha;
+- a borda pública final do app deve convergir para `autenticacao` para
+  cadastro, confirmação de e-mail, login, refresh e recuperação de senha;
+- referências a contratos públicos ainda localizados em
+  `modulo-eickrono-autenticacao` devem ser lidas como estado físico atual do
+  código;
+- referências a `api-identidade-eickrono` devem ser lidas como nomenclatura
+  legada/operacional, não como arquitetura final aprovada;
 - o servidor de autorização continua sendo a autoridade de credencial, sessão, refresh e políticas de segurança;
 - depois da confirmação de e-mail, a autenticação conclui a conta central e aciona a identidade por comunicação interna entre servidores para criar ou atualizar a `Pessoa` canônica;
 - depois disso, a autenticação aciona o backend do produto para criar ou atualizar o perfil daquele sistema;
@@ -77,7 +97,7 @@ Observações importantes do fluxo canônico:
 - o login público já emite o `X-Device-Token` quando o backend aprova o aparelho;
 - o app não usa mais tela dedicada de registro de dispositivo no fluxo principal;
 - se o backend exigir nova validação de contato, o app deve reutilizar a tela já existente de verificação;
-- em `docker compose`, a própria API de identidade precisa apontar o Keycloak interno para `http://servidor-autorizacao:8080`, não para `localhost`;
+- em `docker compose`, a própria API de identidade precisa apontar o Keycloak interno para `http://eickrono-keycloak:8080`, não para `localhost`;
 - a derivação da senha efetiva no servidor de autorização usa apenas `pepper + createdTimestamp` do usuário no Keycloak, e não mais `data_nascimento`.
 - em `dev` e `hml`, o `docker compose` já inclui um SMTP local de teste (`MailHog`), mas o `dev` pode ser sobrescrito para SMTP real via `.env`.
 - quando `IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR=smtp`, o envio passa a usar `JavaMailSender` com as propriedades `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` e derivados.
@@ -140,24 +160,24 @@ Exemplo local:
 
 Quando o `infraestrutura/dev/.env` ja estiver apontando para um SMTP real, use o override
 [`docker-compose.email-fake.yml`](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev/docker-compose.email-fake.yml)
-para redirecionar apenas a API de identidade ao `smtp-teste`.
+para redirecionar apenas a API pública de autenticação ao `smtp-teste`.
 
 Comandos canonicos:
 
 1. subir ou recriar a API com SMTP fake:
    - `cd infraestrutura/dev`
-   - `docker compose -f docker-compose.yml -f docker-compose.email-fake.yml up -d --build smtp-teste api-identidade-eickrono`
+   - `docker compose -f docker-compose.yml -f docker-compose.email-fake.yml up -d --build smtp-teste eickrono-autenticacao identidade-servidor`
 2. validar a configuracao efetiva:
    - `docker compose -f docker-compose.yml -f docker-compose.email-fake.yml config | rg 'SPRING_MAIL_HOST|SPRING_MAIL_PORT|SPRING_MAIL_USERNAME|IDENTIDADE_CADASTRO_EMAIL_REMETENTE'`
 3. abrir a UI do MailHog:
    - `http://localhost:8025`
 4. quando quiser voltar ao SMTP real definido no `.env`:
-   - `docker compose up -d --build api-identidade-eickrono`
+   - `docker compose up -d --build eickrono-autenticacao identidade-servidor`
 
 Observacoes:
 
 - esse override nao altera nem apaga as credenciais reais do `.env`;
-- ele sobrescreve apenas o container `api-identidade-eickrono`;
+- ele sobrescreve apenas o container `eickrono-autenticacao`;
 - `smtp-teste` continua sendo o mesmo MailHog ja previsto no `docker-compose.yml`;
 - se quiser personalizar remetente fake, use variaveis opcionais como `IDENTIDADE_CADASTRO_EMAIL_FAKE_REMETENTE` no shell antes do `docker compose`.
 
@@ -232,7 +252,7 @@ Credenciais de acesso manual ao mesmo PostgreSQL compartilhado:
 
 Observações do `hml` local:
 
-- a malha interna `api-identidade <-> thimisu` e `servidor-autorizacao -> api-identidade` já usa `mTLS`;
+- a malha interna `api-identidade <-> thimisu` e `eickrono-keycloak -> api-identidade` já usa `mTLS`;
 - o `api-contas-eickrono` continua fora dessa malha no `docker-compose` atual;
 - localmente, as APIs de identidade e contas usam `ddl-auto=update` para complementar tabelas ainda não cobertas pelas migrations atuais;
 - o objetivo desse perfil local é testar o fluxo real de login sem dividir estado com o `dev`.
@@ -246,8 +266,8 @@ Observações do `hml` local:
 
 Endereços por API:
 
-- API identidade `dev`: `http://localhost:8081/swagger-ui/index.html`
-- API identidade `dev` OpenAPI: `http://localhost:8081/v3/api-docs`
+- API autenticacao `dev`: `http://127.0.0.1:8081/swagger-ui/index.html`
+- API autenticacao `dev` OpenAPI: `http://127.0.0.1:8081/v3/api-docs`
 - API identidade `hml`: `http://localhost:18081/swagger-ui/index.html`
 - API identidade `hml` OpenAPI: `http://localhost:18081/v3/api-docs`
 - API contas `dev`: `http://localhost:8082/swagger-ui/index.html`
@@ -505,7 +525,7 @@ Quando a etapa de refresh vinculado ao dispositivo estiver correta, também é e
 
 ```text
 ClientPolicyEvent.TOKEN_REFRESH
-GET /identidade/dispositivos/token/validacao/interna
+GET /api/conta/dispositivos/token/validacao/interna
 DEVICE_TOKEN_REVOKED
 BUILD SUCCESS
 ```
@@ -518,16 +538,16 @@ O fluxo final ficou assim:
 2. O `device_token` opaco passa a ser persistido junto da sessão local.
 3. Ao pedir refresh, o cliente envia o parâmetro adicional `device_token`.
 4. O Keycloak aplica o executor `eickrono-device-token-refresh`.
-5. O executor consulta a API de Identidade em `/identidade/dispositivos/token/validacao/interna`.
+5. O executor consulta a API pública de autenticação em `/api/conta/dispositivos/token/validacao/interna`.
 6. Se a API responder que o token está revogado, expirado, inválido ou ausente, o refresh falha com `invalid_grant`.
 
 Variáveis de ambiente relevantes para reproduzir esse fluxo:
 
-- `EICKRONO_IDENTIDADE_API_BASE_URL`
+- `EICKRONO_AUTENTICACAO_API_BASE_URL`
 - `EICKRONO_INTERNAL_SECRET`
-- `EICKRONO_IDENTIDADE_TIMEOUT_MS`
+- `EICKRONO_AUTENTICACAO_TIMEOUT_MS`
 
-Essas variáveis precisam existir no container do Keycloak e na API de Identidade. O `docker compose` de `dev` e `hml` já foi alinhado com isso.
+Essas variáveis precisam existir no container do Keycloak e na API pública de autenticação. O `docker compose` de `dev` e `hml` já foi alinhado com isso. Os nomes `EICKRONO_IDENTIDADE_*` continuam aceitos apenas como fallback transitório.
 
 #### O que esta correção não faz
 

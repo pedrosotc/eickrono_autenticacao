@@ -17,7 +17,7 @@ ecossistema:
 
 - `eickrono-thimisu-app`
 - `eickrono-autenticacao-servidor`
-- `servidor-autorizacao-eickrono` (Keycloak)
+- `modulo-eickrono-keycloak` (Keycloak)
 - `eickrono-thimisu-backend`
 
 Ele existe para evitar que as pendencias fiquem espalhadas entre `TODO.md`,
@@ -60,7 +60,7 @@ callbacks, exports de realm, configuracoes Spring e configuracoes do app.
 
 **Servicos impactados**
 
-- `servidor-autorizacao-eickrono`
+- `modulo-eickrono-keycloak`
 - `api-identidade-eickrono`
 - `eickrono-thimisu-app`
 
@@ -87,9 +87,9 @@ callbacks, exports de realm, configuracoes Spring e configuracoes do app.
 - primeiro corte aplicado no runtime:
   - `hml` dos backends autenticados passou para `https://oidc-hml.eickrono.store/realms/eickrono`;
   - `prd` do `identidade-servidor` passou para `https://oidc.eickrono.com/realms/eickrono`;
-  - o app em `prod` passou a usar `https://id.eickrono.com/` como API de identidade;
+  - o app em `prod` passou a usar `https://id.eickrono.com/` como host operacional da borda canonica de autenticacao;
 - o app agora aceita sobrescritas independentes por build para:
-  - `CONFIG_IDENTIDADE_BASE_URL`
+  - `CONFIG_AUTENTICACAO_BASE_URL`
   - `CONFIG_THIMISU_BASE_URL`
   - `CONFIG_OIDC_ISSUER`
 - a convencao de nomes do dominio Thimisu ficou aprovada:
@@ -110,7 +110,7 @@ Ainda faltam capacidades operacionais centrais de sessao e `X-Device-Token`.
 **Servicos impactados**
 
 - `eickrono-autenticacao-servidor`
-- `servidor-autorizacao-eickrono`
+- `modulo-eickrono-keycloak`
 - `eickrono-thimisu-app`
 
 **O que falta**
@@ -178,7 +178,9 @@ fluxo publico onde existirem.
 
 - o `identidade-servidor` nao recebe mais senha, codigo ou tentativa de login
   do app;
-- toda autenticacao publica entra pela `api-identidade-eickrono`.
+- toda autenticacao publica converge para a borda final de `autenticacao`,
+  ainda que parte do runtime atual permaneça fisicamente localizada em
+  `api-identidade-eickrono` durante a migracao.
 
 ### P1. Hardening Real Da Seguranca Do App Movel
 
@@ -216,7 +218,7 @@ quarentena e alerta.
 **Servicos impactados**
 
 - `eickrono-autenticacao-servidor`
-- `servidor-autorizacao-eickrono`
+- `modulo-eickrono-keycloak`
 - `eickrono-thimisu-app`
 
 **O que falta**
@@ -268,7 +270,7 @@ ambiente”, especialmente com provedores Meta e com a politica de
 
 **Servicos impactados**
 
-- `servidor-autorizacao-eickrono`
+- `modulo-eickrono-keycloak`
 - `api-identidade-eickrono`
 - `eickrono-thimisu-app`
 

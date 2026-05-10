@@ -506,7 +506,7 @@ Para terminar esta etapa operacionalmente, ainda faltam as credenciais reais de 
 Depois disso, o passo operacional é:
 
 1. preencher os `.env` do ambiente;
-2. reiniciar o serviço `servidor-autorizacao`;
+2. reiniciar o serviço `eickrono-keycloak`;
 3. deixar o `render-realms.sh` materializar os secrets no import;
 4. confirmar no Admin Console do Keycloak que os brokers subiram corretamente;
 5. testar `kc_idp_hint` e `idp_link` com o app.

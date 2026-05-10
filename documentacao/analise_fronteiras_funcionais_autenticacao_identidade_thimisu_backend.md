@@ -24,8 +24,9 @@ No recorte atual, a fronteira funcional principal **esta coerente**.
 
 Hoje:
 
-- a borda publica de cadastro, login, recuperacao de senha, confirmacao e
-  dispositivo esta no `api-identidade-eickrono`;
+- no runtime atual, a borda publica de cadastro, login, recuperacao de senha,
+  confirmacao e dispositivo ainda passa por contratos fisicamente localizados
+  em `modulos/modulo-eickrono-autenticacao`;
 - o `thimisu-backend` nao recebe senha, codigo nem tentativa de login do app;
 - o `thimisu-backend` ficou concentrado em contexto do produto, provisionamento
   do perfil do sistema e leitura local do proprio dominio.
@@ -41,7 +42,7 @@ projeto errado.
 
 ## Mapa de responsabilidades por servico
 
-## `api-identidade-eickrono`
+## Runtime publico atual em `modulo-eickrono-autenticacao`
 
 ### Deve continuar aqui
 
@@ -64,20 +65,20 @@ Rotas publicas de seguranca e onboarding de dispositivo:
 
 - `POST /api/publica/atestacoes/desafios`
 - `POST /api/publica/atestacoes/validacoes`
-- `POST /identidade/dispositivos/registro`
-- `POST /identidade/dispositivos/registro/silencioso`
-- `POST /identidade/dispositivos/registro/{id}/confirmacao`
-- `POST /identidade/dispositivos/registro/{id}/reenviar`
-- `POST /identidade/dispositivos/revogar`
+- `POST /api/conta/dispositivos/registro`
+- `POST /api/conta/dispositivos/registro/silencioso`
+- `POST /api/conta/dispositivos/registro/{id}/confirmacao`
+- `POST /api/conta/dispositivos/registro/{id}/reenviar`
+- `POST /api/conta/dispositivos/revogar`
 - `GET /identidade/dispositivos/token/validacao`
-- `GET /identidade/dispositivos/token/validacao/interna`
+- `GET /api/conta/dispositivos/token/validacao/interna`
 
 Rotas de conta autenticada que tambem pertencem a autenticacao:
 
-- `GET /identidade/vinculos-sociais`
-- `POST /identidade/vinculos-sociais/{provedor}/sincronizacao`
-- `DELETE /identidade/vinculos-sociais/{provedor}`
-- `GET /identidade/vinculos-organizacionais`
+- `GET /api/conta/redes-sociais`
+- `POST /api/conta/redes-sociais/{provedor}/sincronizacao`
+- `DELETE /api/conta/redes-sociais/{provedor}`
+- `GET /api/conta/vinculos-organizacionais`
 - `GET /api/publica/convites/{codigo}`
 
 Backchannel interno que tambem faz sentido aqui:
@@ -91,7 +92,7 @@ Backchannel interno que tambem faz sentido aqui:
 
 ### Leitura funcional
 
-Esse servico e a **borda canonica** de:
+No estado atual do codigo, esse servico e a **borda publica efetiva** de:
 
 - autenticacao publica;
 - ciclo de vida do cadastro;
@@ -100,7 +101,9 @@ Esse servico e a **borda canonica** de:
 - vinculo social;
 - politicas de sessao.
 
-Isso esta coerente com a arquitetura desejada.
+Isso esta coerente como estado de transicao. Na arquitetura alvo aprovada, a
+borda publica final do app deve convergir para `autenticacao`, e `identidade`
+deve ficar em backchannel interno quando ainda for necessaria.
 
 ## `thimisu-backend`
 
@@ -174,7 +177,7 @@ No backend do produto, o contrato novo ja esta separado em
 
 `GET /identidade/perfil` foi removido da API de autenticacao e do pacote
 compartilhado. A leitura autenticada agora deve usar contratos vivos, como
-`/identidade/vinculos-sociais`, `/identidade/vinculos-organizacionais` ou o
+`/api/conta/redes-sociais`, `/api/conta/vinculos-organizacionais` ou o
 backend de dominio propriamente dito.
 
 ### 5. O que resta hoje e mais tecnico do que funcional
@@ -193,7 +196,8 @@ A refatoracao funcional principal ja esta em boa forma.
 
 No recorte analisado:
 
-- autenticacao publica esta no `api-identidade-eickrono`;
+- a autenticacao publica ainda passa por `eickrono-autenticacao` no runtime
+  atual;
 - dominio e provisionamento interno estao no `thimisu-backend`;
 - nao encontrei um fluxo grande de login/cadastro/senha claramente perdido no
   backend de dominio.

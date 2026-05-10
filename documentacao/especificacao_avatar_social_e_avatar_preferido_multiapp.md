@@ -105,11 +105,30 @@ Regras:
 - `avatar_preferido_arquivo_id` fica reservado para a fase em que o usuário puder subir foto própria na aplicação;
 - a preferência é por projeto, não global para todo o ecossistema.
 
+### 2.1 Separação obrigatória entre vínculo social e avatar preferido
+
+Esta separação é obrigatória:
+
+- toda rede social autenticada e não removida deve continuar vinculada à pessoa;
+- a escolha do avatar preferido não decide qual rede social fica persistida;
+- o campo `principal` das tabelas de `formas_acesso` continua sendo metadado da
+  forma de acesso, não a fonte canônica do avatar preferido;
+- o estado canônico do avatar preferido por projeto continua em
+  `autenticacao.usuarios_clientes_ecossistema.avatar_preferido_*`.
+
+Em outras palavras:
+
+- o usuário pode ter `Google` e `Apple` vinculados ao mesmo tempo;
+- escolher `Google` como avatar preferido não apaga `Apple`;
+- escolher `Apple` como avatar preferido não torna `Apple` a única rede
+  persistida;
+- escolher foto do dispositivo não apaga nenhum vínculo social.
+
 ### 3. Contexto social pendente
 
 Quando o usuário entra por rede social sem vínculo final consumido, o contexto pendente já pode carregar a foto externa para melhorar a UX de:
 
-- abrir cadastro com prefill;
+- abrir cadastro com prefill (preenchimento inicial);
 - entrar e vincular;
 - mostrar confirmação visual da conta social em processo.
 
@@ -229,7 +248,7 @@ Exemplo:
 
 Endpoint implementado:
 
-- `PUT /identidade/vinculos-sociais/avatar-preferido`
+- `PUT /api/conta/avatar-preferido`
 
 Corpo para escolher avatar de rede social:
 
@@ -265,7 +284,7 @@ Semântica:
 
 ### 3. Resposta do contexto autenticado
 
-Nesta entrega, o app resolve o avatar efetivo a partir de `GET /identidade/vinculos-sociais?aplicacaoId=...`.
+Nesta entrega, o app resolve o avatar efetivo a partir de `GET /api/conta/redes-sociais?aplicacaoId=...`.
 
 Em evolução futura, quando houver contexto autenticado enriquecido, a resposta pode expor:
 
@@ -435,10 +454,17 @@ Uma URL social externa pode:
 - mudar após o usuário trocar foto na rede social;
 - ser removida sem aviso.
 
-Por isso, o plano recomendado é:
+Por isso, o plano canônico é:
 
-- fase 1: salvar a URL remota por vínculo social;
-- fase 2: quando o usuário escolher aquela foto como avatar principal, opcionalmente copiar a imagem para uma mídia própria da Eickrono e gravar uma URL estável em `avatar_preferido_url`.
+- para vínculo social, salvar a URL remota por vínculo social quando ela
+  existir;
+- quando o usuário escolher uma foto social como avatar principal, o backend
+  pode reaproveitar essa URL remota enquanto ela continuar válida;
+- quando o usuário escolher uma foto processada localmente no dispositivo como
+  foto pública do perfil, essa imagem deve subir para uma mídia própria da
+  Eickrono e virar uma URL pública estável;
+- essa URL estável deve alimentar `avatar_preferido_url` ou, quando o pipeline
+  estiver completo, `avatar_preferido_arquivo_id`.
 
 ## Cobertura de testes
 
@@ -506,13 +532,13 @@ Cobertura principal ja existente:
 
 Backend:
 
-- [VinculoSocialServiceTest.java](/Users/thiago/Desenvolvedor/flutter/eickrono-identidade-servidor/src/test/java/com/eickrono/api/identidade/aplicacao/servico/VinculoSocialServiceTest.java:1)
-- [VinculosSociaisControllerIT.java](/Users/thiago/Desenvolvedor/flutter/eickrono-identidade-servidor/src/test/java/com/eickrono/api/identidade/apresentacao/api/VinculosSociaisControllerIT.java:1)
-- [RegistroDispositivoControllerIT.java](/Users/thiago/Desenvolvedor/flutter/eickrono-identidade-servidor/src/test/java/com/eickrono/api/identidade/apresentacao/api/RegistroDispositivoControllerIT.java:1)
+- [VinculoSocialServiceTest.java](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/modulos/modulo-eickrono-autenticacao/src/test/java/com/eickrono/api/identidade/aplicacao/servico/VinculoSocialServiceTest.java:1)
+- [VinculosSociaisControllerIT.java](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/modulos/modulo-eickrono-autenticacao/src/test/java/com/eickrono/api/identidade/apresentacao/api/VinculosSociaisControllerIT.java:1)
+- [RegistroDispositivoControllerIT.java](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/modulos/modulo-eickrono-autenticacao/src/test/java/com/eickrono/api/identidade/apresentacao/api/RegistroDispositivoControllerIT.java:1)
 
 Cliente compartilhado:
 
-- [cliente_api_identidade_eickrono_test.dart](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-cliente/test/cliente_api_identidade_eickrono_test.dart:1)
+- [cliente_api_conta_eickrono_test.dart](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-cliente/test/cliente_api_conta_eickrono_test.dart:1)
 
 App:
 
@@ -539,11 +565,11 @@ tema.
 
 ### API
 
-1. `GET /identidade/vinculos-sociais` com `urlAvatarExterno` preenchido;
-2. `GET /identidade/vinculos-sociais` com `urlAvatarExterno = null`;
-3. `PUT /identidade/vinculos-sociais/avatar-preferido` para `SOCIAL` com
+1. `GET /api/conta/redes-sociais` com `urlAvatarExterno` preenchido;
+2. `GET /api/conta/redes-sociais` com `urlAvatarExterno = null`;
+3. `PUT /api/conta/avatar-preferido` para `SOCIAL` com
    sucesso;
-4. `PUT /identidade/vinculos-sociais/avatar-preferido` para `SOCIAL` sem foto
+4. `PUT /api/conta/avatar-preferido` para `SOCIAL` sem foto
    disponivel, com erro funcional;
 5. resposta final do projeto depois da limpeza de preferencia social invalida.
 

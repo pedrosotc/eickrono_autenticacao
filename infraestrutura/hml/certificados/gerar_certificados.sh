@@ -13,6 +13,10 @@ ARQUIVOS_GERADOS=(
   backchannel-ca.crt
   backchannel-ca.srl
   backchannel-truststore.p12
+  eickrono-autenticacao.key
+  eickrono-autenticacao.csr
+  eickrono-autenticacao.crt
+  eickrono-autenticacao.p12
   api-identidade-eickrono.key
   api-identidade-eickrono.csr
   api-identidade-eickrono.crt
@@ -21,10 +25,10 @@ ARQUIVOS_GERADOS=(
   thimisu-backend.csr
   thimisu-backend.crt
   thimisu-backend.p12
-  servidor-autorizacao.key
-  servidor-autorizacao.csr
-  servidor-autorizacao.crt
-  servidor-autorizacao.p12
+  eickrono-keycloak.key
+  eickrono-keycloak.csr
+  eickrono-keycloak.crt
+  eickrono-keycloak.p12
 )
 
 rm -f "${ARQUIVOS_GERADOS[@]}"
@@ -92,6 +96,12 @@ EOF
 }
 
 gerar_certificado \
+  "eickrono-autenticacao" \
+  "eickrono-autenticacao" \
+  "DNS:eickrono-autenticacao,DNS:auth-hml-interno,DNS:auth-hml-interno.hml.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
+  "serverAuth,clientAuth"
+
+gerar_certificado \
   "api-identidade-eickrono" \
   "api-identidade-eickrono" \
   "DNS:api-identidade-eickrono,DNS:id-hml-interno,DNS:id-hml-interno.hml.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
@@ -104,9 +114,9 @@ gerar_certificado \
   "serverAuth,clientAuth"
 
 gerar_certificado \
-  "servidor-autorizacao" \
-  "servidor-autorizacao" \
-  "DNS:servidor-autorizacao,DNS:auth-hml-interno,DNS:auth-hml-interno.hml.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
+  "eickrono-keycloak" \
+  "eickrono-keycloak" \
+  "DNS:eickrono-keycloak,DNS:auth-hml-interno,DNS:auth-hml-interno.hml.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
   "clientAuth"
 
 keytool -importcert -noprompt \
@@ -117,3 +127,7 @@ keytool -importcert -noprompt \
   -storepass "${SENHA_TRUSTSTORE}"
 
 echo "Certificados e truststore do backchannel gerados em ${DIR_ATUAL}"
+echo "Se a stack local ja estiver em execucao, recrie os containers que usam mTLS para recarregar keystore/truststore."
+echo "Exemplos:"
+echo "  cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml && docker compose up -d --force-recreate eickrono-autenticacao identidade-servidor eickrono-keycloak"
+echo "  cd /Users/thiago/Desenvolvedor/flutter/eickrono-thimisu-backend/infraestrutura/hml && docker compose up -d --force-recreate thimisu-backend"

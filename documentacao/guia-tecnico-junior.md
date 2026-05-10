@@ -5,11 +5,15 @@ Este documento introduz a arquitetura e o funcionamento da plataforma de autenti
 ## Visão geral do repositório
 
 - **Linguagem e build**: Java 21 com Maven.
+- **Decisão estrutural aprovada**:
+  - `eickrono-autenticacao-servidor` deve convergir para um projeto simples e central de autenticação;
+  - ele não deve evoluir como monorepo por domínio;
+  - `contas` permanece domínio separado, fora da fronteira interna da autenticação.
 - **Componentes principais**:
   - `src/`: código Java do provider e das extensões do Keycloak.
   - `autorizacao/`: artefatos de runtime do Keycloak (realms, tema, políticas e scripts).
-  - `../eickrono-identidade-servidor`: API de identidade (perfil, vínculos sociais) que valida tokens JWT.
-  - `../eickrono-contas-servidor`: API de contas e transações, com escopos específicos e auditoria.
+  - `../eickrono-identidade-servidor`: serviço de identidade e contexto canônico, ainda usado em partes do runtime atual e da migração.
+  - `../eickrono-contas-servidor`: domínio separado de contas e transações, sem fazer parte da fronteira interna da autenticação.
   - `infraestrutura/`: scripts para ambientes locais (dev/hml) e pastas guia para produção (AWS + Cloudflare).
 - **Documentação**: guias de arquitetura, desenvolvimento, operação e checklist FAPI em `documentacao/`.
 
@@ -30,7 +34,7 @@ Este documento introduz a arquitetura e o funcionamento da plataforma de autenti
 2. Cloudflare valida a requisição, aplica proteções adicionais e encaminha para o ALB.
 3. Keycloak autentica o usuário (senha, MFA, WebAuthn), grava auditorias e devolve um código de autorização assinado (JARM).
 4. O App troca o código por tokens de acesso/ID/refresh; Keycloak registra o grant e assinaturas via KMS.
-5. O App consome endpoints da API de Identidade usando o token. A API valida escopos, audiência (`aud`) e nonce, consulta o banco e devolve o resultado.
+5. O App consome a borda pública final de autenticação usando o token. Durante a transição, parte do runtime ainda consulta a identidade por backchannel para contexto canônico e fechamento da sessão local.
 
 ## Dispositivo e `X-Device-Token`
 
@@ -55,7 +59,7 @@ O desenho canônico atual não usa uma tela dedicada de registro de dispositivo 
    - Não existe mais uma etapa obrigatória e separada de “registrar dispositivo” no app.
 
 5. **Fluxos excepcionais**  
-   - As rotas explícitas de `POST /identidade/dispositivos/registro` e `POST /identidade/dispositivos/registro/{id}/confirmacao` continuam existindo para cenários excepcionais, manutenção e compatibilidade transitória.  
+   - As rotas explícitas de `POST /api/conta/dispositivos/registro` e `POST /api/conta/dispositivos/registro/{id}/confirmacao` continuam existindo para cenários excepcionais, manutenção e compatibilidade transitória.
    - Elas não representam mais o fluxo principal do app móvel.
 
 ## Fluxo para clientes confidenciais (BFF, integrações internas)
@@ -79,7 +83,7 @@ O desenho canônico atual não usa uma tela dedicada de registro de dispositivo 
 1. Leia `documentacao/guia-desenvolvimento.md` para configurar Java, Maven, Docker e outras dependências.
 2. Execute `mvn verify` na raiz para baixar dependências e rodar testes.
 3. Inicie o ambiente local com `docker compose up` em `infraestrutura/dev` (Keycloak + PostgreSQL + APIs).
-4. Acesse `http://localhost:8081/actuator/health` e `http://localhost:8082/actuator/health` para validar as APIs.
+4. Acesse `http://127.0.0.1:8081/actuator/health` e `http://127.0.0.1:8082/actuator/health` para validar as APIs.
 5. Use os realms em `autorizacao/realms` para importar as configurações do Keycloak local.
 
 ## Boas práticas do time

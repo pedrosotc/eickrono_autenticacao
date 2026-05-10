@@ -154,7 +154,9 @@ Observação:
 A recomendação é:
 
 1. manter o TOTP dentro do Keycloak;
-2. manter a experiência nativa dentro do `api-identidade-eickrono`;
+2. manter a experiência nativa dentro da borda pública final de
+   `autenticacao`, ainda que parte do runtime atual permaneça fisicamente
+   localizada em `modulo-eickrono-autenticacao` durante a migração;
 3. não usar tela web do domínio de autenticação como fluxo principal do aplicativo;
 4. devolver ao aplicativo o `otpauth://...` como carga canônica de provisionamento;
 5. oferecer código QR, chave manual e tentativa opcional de abertura do autenticador;
@@ -328,7 +330,9 @@ Caso 3:
 O `ValidateOTP` padrão do Keycloak responde como `invalid user credentials`, o que para a Eickrono é ruim porque:
 
 - mistura senha errada com OTP faltando;
-- o `api-identidade-eickrono` hoje traduz isso como credencial inválida genérica.
+- o runtime público atual ainda localizado em `modulo-eickrono-autenticacao`
+  hoje
+  traduz isso como credencial inválida genérica.
 
 Então a recomendação é criar um fluxo customizado de concessão direta da Eickrono com um autenticador OTP customizado que:
 
@@ -547,7 +551,8 @@ Recomendação:
 
 ### O que não fazer
 
-- não guardar o segredo TOTP definitivo no banco do `api-identidade-eickrono`;
+- não guardar o segredo TOTP definitivo no banco do
+  `modulo-eickrono-autenticacao`;
 - não escrever direto nas tabelas do Keycloak;
 - não tornar código QR o único caminho;
 - não depender exclusivamente de link profundo proprietário para Google ou Microsoft;

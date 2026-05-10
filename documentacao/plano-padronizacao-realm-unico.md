@@ -100,7 +100,7 @@ Enquanto o dominio principal ainda nao estiver pronto para receber `dev` e `hml`
   - `id-dev.eickrono.online`
   - `oidc-dev.eickrono.online`
 - `hml`:
-  - `id-hml.eickrono.store`
+  - `auth-hml.eickrono.store`
   - `oidc-hml.eickrono.store`
 
 Para o backend de dominio do Thimisu, a convencao canonica ja esta aprovada,
@@ -175,7 +175,7 @@ Arquivos impactados:
 Pontos de atencao:
 
 - `auth.oidc.issuer`
-- `servicos.identidade.baseUrl`
+- `servicos.autenticacao.baseUrl`
 - `servicos.thimisu.baseUrl`
 - qualquer referencia antiga a host/realm divergente
 
@@ -235,8 +235,9 @@ Status atual desta tarefa:
 - primeiro corte de runtime ja aplicado:
   - `api-identidade-eickrono` e `api-contas-eickrono` em `hml` agora usam `https://oidc-hml.eickrono.store/realms/eickrono`;
   - o `thimisu-backend` em `hml` e `prd` agora usa `realm=eickrono` com `issuer` OIDC separado do host da API;
-  - o app em `prod` agora aponta `servicos.identidade.baseUrl` para `https://id.eickrono.com/`;
-- o app agora aceita sobrescritas independentes de bootstrap para `CONFIG_IDENTIDADE_BASE_URL`, `CONFIG_THIMISU_BASE_URL` e `CONFIG_OIDC_ISSUER`;
+  - o app em `prod` ja usa `servicos.autenticacao.baseUrl` como chave
+    canonica;
+- o app agora aceita sobrescritas independentes de bootstrap para `CONFIG_AUTENTICACAO_BASE_URL`, `CONFIG_THIMISU_BASE_URL` e `CONFIG_OIDC_ISSUER`;
 - a convencao canonica do backend publico do dominio ficou aprovada como `thimisu-backend-*`;
 - a leitura do que ja pode migrar e do que ainda continua alias legado ficou consolidada em `matriz_migracao_autenticacao_identidade_thimisu_backend.md`;
 - `hml` do app continua local por padrao ate o DNS/runtime desse backend ser publicado no ambiente;

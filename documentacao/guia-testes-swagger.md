@@ -1,10 +1,10 @@
 # Guia de rotas de testes para Swagger
 
-Este roteiro organiza a ordem sugerida de chamadas e fornece exemplos de payloads para validar os serviços expostos por `eickrono-identidade-servidor` e `eickrono-contas-servidor` via Swagger ou cURL.
+Este roteiro organiza a ordem sugerida de chamadas e fornece exemplos de payloads para validar os serviços expostos por `eickrono-autenticacao` e `eickrono-contas-servidor` via Swagger ou cURL.
 
 ## Pré-requisitos rápidos
 - Ambiente `dev` ativo (`cd infraestrutura/dev && docker compose up --build -d`).
-- Containers saudáveis (`docker ps` confirmando `eickrono-keycloak-dev`, `eickrono-api-identidade-dev`, `eickrono-api-contas-dev`, `eickrono-postgres-dev`).
+- Containers saudáveis (`docker ps` confirmando `eickrono-keycloak-dev`, `eickrono-api-autenticacao-dev`, `eickrono-api-contas-dev`, `eickrono-postgres-dev`).
 - Possibilidade de ler os logs das APIs (para capturar códigos e tokens gerados).
 - Usuário de teste e cliente confidencial configurados no Keycloak conforme `documentacao/guia-gerar-jwt.md`.
 
@@ -22,7 +22,7 @@ Use para fluxos que representam o app com um usuário autenticado (precisa de `R
      1. Crie os **client scopes** em **Client scopes > Create client scope** (`identidade:ler`, `vinculos:ler`, `vinculos:escrever`, `contas:ler`, `transacoes:ler`, `openid`), deixando o tipo como *Default* ou *Optional* conforme sua política.
      2. Associe cada scope ao cliente **app-flutter-local** (aba **Client scopes** do cliente, botão **Add client scope**, marcando como *Optional*).
      3. Para disponibilizar as roles:
-        - Em **Clients > api-identidade-eickrono > Roles**, adicione `identidade:ler`, `vinculos:ler`, `vinculos:escrever`.
+        - Em **Clients > eickrono-autenticacao > Roles**, adicione `identidade:ler`, `vinculos:ler`, `vinculos:escrever`.
         - Em **Clients > api-contas-eickrono > Roles**, adicione `contas:ler`, `transacoes:ler`.
         - Em **Realm roles**, crie (se necessário) a role `cliente`.
      4. Volte ao usuário e, em **Role mapping**, utilize **Client Roles** para selecionar `app-flutter-local` e adicionar as novas roles; também adicione a realm role `cliente`.
@@ -46,9 +46,9 @@ curl -X POST http://localhost:8080/realms/eickrono/protocol/openid-connect/token
 #### O que cada escopo/role representa
 
 - `openid` — escopo padrão do OpenID Connect que habilita emissão de tokens compatíveis com as bibliotecas OIDC. Sem ele, alguns clientes rejeitam o token.
-- `vinculos:ler` — libera leituras autenticadas como `GET /identidade/vinculos-organizacionais`.
-- `vinculos:ler` — permite listar vínculos sociais (`GET /identidade/vinculos-sociais`).
-- `vinculos:escrever` — requerido para criar vínculos (`POST /identidade/vinculos-sociais`).
+- `vinculos:ler` — libera leituras autenticadas como `GET /api/conta/vinculos-organizacionais`.
+- `vinculos:ler` — permite listar vínculos sociais (`GET /api/conta/redes-sociais`).
+- `vinculos:escrever` — requerido para criar vínculos (`POST /api/conta/redes-sociais`).
 - `contas:ler` — autoriza a leitura de contas (`GET /contas`, `GET /contas/{id}`).
 - `transacoes:ler` — autoriza `GET /transacoes?contaId=...`.
 - `cliente` — realm role que mapeia para `ROLE_cliente`, usada pelas APIs para impor o cabeçalho `X-Device-Token` e garantir que se trata de um cliente humano.
@@ -57,9 +57,9 @@ Todos esses nomes são customizados pelas nossas APIs e não vêm prontos no Key
 
 #### Como identificar escopos/roles diretamente no código
 
-1. Verifique as classes `SegurancaConfiguracao` de cada serviço em `../eickrono-identidade-servidor` e `../eickrono-contas-servidor`. Elas listam os `requestMatchers` e os `@PreAuthorize` globais; procure por strings começando com `SCOPE_` ou `ROLE_`.
+1. Verifique as classes `SegurancaConfiguracao` de cada serviço em `../eickrono-autenticacao-servidor/modulos/modulo-eickrono-autenticacao` e `../eickrono-contas-servidor`. Elas listam os `requestMatchers` e os `@PreAuthorize` globais; procure por strings começando com `SCOPE_` ou `ROLE_`.
 2. Procure anotações `@PreAuthorize` nos controllers (`ContasController`, `TransacoesController` etc.). Os parâmetros usados ali (ex.: `hasAuthority('SCOPE_transacoes:ler')`) indicam escopos que precisam existir no Keycloak.
-3. Analise filtros adicionais como `DeviceTokenFilter` em `../eickrono-identidade-servidor`: ele exige que o token tenha `ROLE_cliente`, por isso a realm role `cliente` é obrigatória.
+3. Analise filtros adicionais como `DeviceTokenFilter` em `../eickrono-autenticacao-servidor/modulos/modulo-eickrono-autenticacao`: ele exige que o token tenha `ROLE_cliente`, por isso a realm role `cliente` é obrigatória.
 4. Reúna os nomes encontrados nessas verificações; o conjunto resultante é a lista de escopos/roles que você deve criar/atribuir no Keycloak.
 
 Para o código atual, a análise rende exatamente os itens abaixo:
@@ -107,12 +107,12 @@ PY
 > Diretriz atual do app móvel: o `X-Device-Token` canônico é emitido em `POST /api/publica/sessoes`. As rotas explícitas de `registro` abaixo permanecem para testes manuais, cenários excepcionais e compatibilidade transitória, não como fluxo principal do app.
 
 ### 1. Utilidades iniciais
-- **GET** `http://localhost:8081/.well-known/chaves-publicas`
+- **GET** `http://127.0.0.1:8081/.well-known/chaves-publicas`
   - Autenticação: não requer.
-  - Verifica se a API de identidade está respondendo e expõe as chaves do Keycloak.
+  - Verifica se a API pública de autenticação está respondendo e expõe as chaves do Keycloak.
 
 ### 2. Registro e confirmação manual de dispositivo (fluxo excepcional/legado)
-1. **POST** `http://localhost:8081/identidade/dispositivos/registro`
+1. **POST** `http://127.0.0.1:8081/api/conta/dispositivos/registro`
    - Autenticação: não requer.
    - Payload (JSON):
      ```json
@@ -129,10 +129,10 @@ PY
      - `telefone` só é obrigatório quando a política `identidade.dispositivo.onboarding.sms-habilitado=true` estiver ativa.
    - Esperado: `202 Accepted` com `registroId`, `expiraEm`, `status=PENDENTE` e a lista `canaisConfirmacao`.
    - Pegue os códigos SMS/e-mail nos logs:
-     `docker logs -f eickrono-api-identidade-dev | grep "Enviando código"`
+     `docker logs -f eickrono-api-autenticacao-dev | grep "Enviando código"`
      (o e-mail é enviado por `CanalEnvioCodigoEmailLog`; SMS passa por `CanalEnvioCodigoSms` e pelo `FornecedorEnvioSms` configurado, que em dev usa `FornecedorEnvioSmsLog`).
 
-2. **POST** `http://localhost:8081/identidade/dispositivos/registro/{registroId}/confirmacao`
+2. **POST** `http://127.0.0.1:8081/api/conta/dispositivos/registro/{registroId}/confirmacao`
    - Cabeçalhos:
      - `Authorization: Bearer <token_password>`
    - Payload:
@@ -151,7 +151,7 @@ PY
    - Esperado: `200 OK` com `tokenDispositivo`, `tokenExpiraEm`, `registroId`, `emitidoEm`.
    - Guarde `tokenDispositivo`; ele vai no cabeçalho `X-Device-Token` das demais rotas que exigem `ROLE_cliente`.
 
-3. (Opcional) **POST** `http://localhost:8081/identidade/dispositivos/registro/{registroId}/reenviar`
+3. (Opcional) **POST** `http://127.0.0.1:8081/api/conta/dispositivos/registro/{registroId}/reenviar`
    - Autenticação: não requer.
    - Payload opcional:
      ```json
@@ -163,7 +163,7 @@ PY
    - `reenviarSms` só terá efeito quando o registro tiver sido criado com o canal SMS ativo.
    - Esperado: `202 Accepted` e novos códigos nos logs.
 
-4. **GET** `http://localhost:8081/identidade/dispositivos/offline/politica`
+4. **GET** `http://127.0.0.1:8081/api/conta/dispositivos/offline/politica`
    - Cabeçalhos:
      - `Authorization: Bearer <token_password>`
      - `X-Device-Token: <tokenDispositivo>`
@@ -181,7 +181,7 @@ PY
      }
      ```
 
-5. **POST** `http://localhost:8081/identidade/dispositivos/offline/eventos`
+5. **POST** `http://127.0.0.1:8081/api/conta/dispositivos/offline/eventos`
    - Cabeçalhos:
      - `Authorization: Bearer <token_password>`
      - `X-Device-Token: <tokenDispositivo>`
@@ -203,20 +203,20 @@ PY
    - Esperado: `202 Accepted`.
    - Objetivo: registrar no backend os eventos relevantes do período offline do app sem criar ainda uma entidade de janela offline.
 
-### 3. Consultas e ações da API Identidade
+### 3. Consultas e ações da API pública de autenticação
 > As chamadas abaixo exigem **dois cabeçalhos**:
 > - `Authorization: Bearer <token_password>`
 > - `X-Device-Token: <tokenDispositivo>`
 > (o `DeviceTokenFilter` libera apenas usuários com `ROLE_cliente` e token ativo).
 
-1. **GET** `http://localhost:8081/identidade/vinculos-organizacionais`
+1. **GET** `http://127.0.0.1:8081/api/conta/vinculos-organizacionais`
    - Esperado: `200 OK` com `PerfilDto` (nome, email, perfis, papeis).
 
-2. **GET** `http://localhost:8081/identidade/vinculos-sociais`
+2. **GET** `http://127.0.0.1:8081/api/conta/redes-sociais`
    - Escopos: `identidade:ler` ou role `cliente`.
    - Esperado: lista de vínculos; vazia na primeira execução.
 
-3. **POST** `http://localhost:8081/identidade/vinculos-sociais`
+3. **POST** `http://127.0.0.1:8081/api/conta/redes-sociais/google`
    - Requer escopo `vinculos:escrever`.
    - Payload:
      ```json
@@ -227,7 +227,7 @@ PY
      ```
    - Esperado: `200 OK` com `VinculoSocialDto` recém-criado.
 
-4. **POST** `http://localhost:8081/identidade/dispositivos/revogar`
+4. **POST** `http://127.0.0.1:8081/api/conta/dispositivos/revogar`
    - Cabeçalhos extras: `X-Device-Token: <tokenDispositivo>` (o mesmo a ser revogado).
    - Payload opcional:
      ```json

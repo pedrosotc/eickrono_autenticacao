@@ -359,9 +359,9 @@ echo "Token emitido? $( [ -n "$ACCESS_TOKEN" ] && echo SIM || echo NAO )"
 # Testa um endpoint protegido usando o token
 curl -s -o /dev/null -w '%{http_code}\n' \
   -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-  http://localhost:8081/actuator/health
+  http://127.0.0.1:8081/actuator/health
 
-# Se o endpoint acima exigir autenticação diferente, teste uma rota funcional da API (ex.: /identidade/vinculos-organizacionais) para validar os escopos.
+# Se o endpoint acima exigir autenticacao diferente, teste uma rota funcional da API (ex.: /api/conta/vinculos-organizacionais) para validar os escopos.
 ```
 
 ## 8. Emitir token com `grant_type=client_credentials`
@@ -403,7 +403,7 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 
 ## 9. Usar o token para testar as APIs
 
-1. Abra o Swagger desejado (`http://localhost:8081/swagger-ui/index.html` para Identidade, `http://localhost:8082/swagger-ui/index.html` para Contas).
+1. Abra o Swagger desejado (`http://127.0.0.1:8081/swagger-ui/index.html` para Autenticacao, `http://127.0.0.1:8082/swagger-ui/index.html` para Contas).
 2. Clique no botão **Authorize** (cadeado).
 3. Selecione `bearer-jwt` e preencha com `Bearer <access_token>`.
 4. Clique em **Authorize**. A partir daí, todas as chamadas feitas pelo Swagger usarão o token informado.
@@ -412,7 +412,7 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 **Comandos**
 ```bash
 # Reutiliza o ACCESS_TOKEN ou SERVICE_TOKEN obtido acima
-curl -H "Authorization: Bearer ${ACCESS_TOKEN}" http://localhost:8081/identidade/vinculos-organizacionais
+curl -H "Authorization: Bearer ${ACCESS_TOKEN}" http://127.0.0.1:8081/api/conta/vinculos-organizacionais
 
 # Para a API de contas:
 curl -H "Authorization: Bearer ${SERVICE_TOKEN}" http://localhost:8082/contas
@@ -423,7 +423,7 @@ curl -H "Authorization: Bearer ${SERVICE_TOKEN}" http://localhost:8082/contas
 # Verifica se a chamada retornou HTTP 200
 curl -s -o /dev/null -w '%{http_code}\n' \
   -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-  http://localhost:8081/identidade/vinculos-organizacionais
+  http://127.0.0.1:8081/api/conta/vinculos-organizacionais
 ```
 
 ## 10. Adaptando para homologação (`hml`)
@@ -445,7 +445,7 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 
 4. **Replique o cliente com o nome do ambiente**  
    - Siga as etapas da seção 3 escolhendo um `client_id` coerente (ex.: `app-flutter-hml`).  
-   - Garanta que os redirecionamentos (`Valid redirect URIs`) apontem para os domínios de homologação (`https://id-hml.eickrono.store/*`, `http://localhost/*` se precisar testar localmente via tunnel).
+   - Garanta que os redirecionamentos (`Valid redirect URIs`) apontem para os domínios de homologação (`https://auth-hml.eickrono.store/*`, `http://localhost/*` se precisar testar localmente via tunnel).
    - Segredo, roles e escopos são próprios desse ambiente: gere novos valores em **Credentials** e atribua as roles conforme a política de homologação.
 
 5. **Atualize as requisições `curl`**  

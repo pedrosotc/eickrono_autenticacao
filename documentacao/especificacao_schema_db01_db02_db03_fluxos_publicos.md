@@ -341,7 +341,7 @@ Nome proposto:
 
 Porque o fluxo social pendente agora cobre dois ramos diferentes:
 
-1. abrir cadastro com prefill;
+1. abrir cadastro com prefill (preenchimento inicial);
 2. permanecer no login em modo `Entrar e vincular`.
 
 O segundo ramo pode existir sem que um cadastro tenha sido aberto.
@@ -428,7 +428,7 @@ Observacao:
 
 ### Relacao com os campos legados de cadastro
 
-Quando o usuario aceitar o ramo `Abrir cadastro com prefill`:
+Quando o usuario aceitar o ramo `Abrir cadastro com prefill (preenchimento inicial)`:
 
 - o contexto social pendente pode ser copiado para `cadastros_conta` nos campos
   legados ja existentes:

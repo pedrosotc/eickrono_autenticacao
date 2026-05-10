@@ -1,10 +1,11 @@
 // ====================================================================================================
-// PROJETO: Eickrono Autenticacao - API Identidade
+// PROJETO: Eickrono Autenticacao - API Autenticacao
 // FORMATO: DBML (Database Markup Language)
 // BANCO DE DADOS: PostgreSQL
 // ----------------------------------------------------------------------------------------------------
 // Este arquivo representa a base relacional do projeto Java do servidor de autenticacao, conforme o
-// estado programado hoje nas migrations V1..V7 e nas entidades JPA da api-identidade-eickrono.
+// estado programado hoje nas migrations V1..V7 e nas entidades JPA de
+// modulos/modulo-eickrono-autenticacao.
 // STATUS DE LEITURA:
 // - este arquivo representa o ESTADO ATUAL / LEGADO do modelo implementado;
 // - ele nao deve ser lido como modelo alvo final;
@@ -17,9 +18,9 @@
 // - registro_dispositivo.usuario_sub e token_dispositivo.usuario_sub usam o mesmo identificador
 // ====================================================================================================
 
-Project eickrono_api_identidade {
+Project eickrono_modulo_autenticacao {
     database_type: "PostgreSQL"
-    Note: "Modelo do estado implementado hoje na API Identidade. Ler como retrato de transicao entre legado e desenho alvo. Nao usar este arquivo sozinho para decidir ownership canônico. O fluxo real ainda carrega copia local e compatibilidades historicas que estao sendo desmontadas na migracao."
+    Note: "Modelo do estado implementado hoje no modulo-eickrono-autenticacao. Ler como retrato de transicao entre legado e desenho alvo. Nao usar este arquivo sozinho para decidir ownership canônico. O fluxo real ainda carrega copia local e compatibilidades historicas que estao sendo desmontadas na migracao."
 }
 
 // ====================================================================================================

@@ -7,7 +7,7 @@ Este guia rápido explica, de forma acessível para quem está começando, os se
 ## eickrono-keycloak-dev
 
 - **O que é:** uma instância do Keycloak (servidor de autorização) configurada com o realm `eickrono`. Ele cuida do login, emissão de tokens e regras de segurança.
-- **Configuração:** fica no container `servidor-autorizacao` definido em `infraestrutura/dev/docker-compose.yml`. Usa a imagem `quay.io/keycloak/keycloak:26.5.5`.
+- **Configuração:** fica no container `eickrono-keycloak` definido em `infraestrutura/dev/docker-compose.yml`. Usa a imagem `quay.io/keycloak/keycloak:26.5.5`.
 
 ### Quando usar
 
@@ -20,7 +20,7 @@ Este guia rápido explica, de forma acessível para quem está começando, os se
 - **Ver logs em tempo real:**
   ```bash
   cd infraestrutura/dev
-  docker compose logs -f servidor-autorizacao
+  docker compose logs -f eickrono-keycloak
   ```
 
 - **Entrar no shell do container:**
@@ -32,7 +32,7 @@ Este guia rápido explica, de forma acessível para quem está começando, os se
 - **Reiniciar o serviço sem derrubar o restante:**
   ```bash
   cd infraestrutura/dev
-  docker compose restart servidor-autorizacao
+  docker compose restart eickrono-keycloak
   ```
 
 ### Como obter informações pelo Keycloak
@@ -88,7 +88,7 @@ Este guia rápido explica, de forma acessível para quem está começando, os se
 3. Abra o Keycloak em `http://localhost:8080/` e gere tokens para testar as APIs no Swagger.
 4. Execute algumas rotas via Swagger ou `curl`.
 5. Use `docker compose logs -f` nos containers para acompanhar a atividade:
-   - `servidor-autorizacao` → autenticação / emissão de token.
+   - `eickrono-keycloak` → autenticação / emissão de token.
    - `otel-collector` → métricas/traces enviados pelas APIs.
 
 Seguindo esses passos, você ganha confiança no que cada serviço faz e sabe onde olhar quando precisar investigar problemas de autenticação ou observabilidade no ambiente local.

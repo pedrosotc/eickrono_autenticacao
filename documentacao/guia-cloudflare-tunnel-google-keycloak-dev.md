@@ -24,7 +24,7 @@ Para a implantacao transitória segura, enquanto `dev` e `hml` ainda nao estiver
 
 - API de identidade:
   - `id-dev.eickrono.online`
-  - `id-hml.eickrono.store`
+  - `auth-hml.eickrono.store`
 - servidor de autorizacao OIDC:
   - `oidc-dev.eickrono.online`
   - `oidc-hml.eickrono.store`

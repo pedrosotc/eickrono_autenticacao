@@ -43,7 +43,7 @@ Antes de executar o fluxo:
 - `autenticacao` deve responder `200` em `http://localhost:8084/actuator/health`;
 - `identidade` deve responder `200` em `http://localhost:8081/actuator/health`;
 - `Keycloak`, `Postgres` e `MailHog` devem estar de pe;
-- o client interno `servidor-autorizacao-interno` deve existir no `Keycloak`
+- o client interno `eickrono-keycloak` deve existir no `Keycloak`
   local;
 - o client interno `thimisu-backend` deve existir no `Keycloak` local;
 - o segredo interno `X-Eickrono-Internal-Secret` deve estar alinhado entre os

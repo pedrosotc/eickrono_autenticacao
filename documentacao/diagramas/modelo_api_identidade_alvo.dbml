@@ -29,7 +29,7 @@ Project eickrono_api_identidade_alvo {
 
 Table sistemas_origem {
     id          integer      [pk, increment, note: "Identificador interno do sistema chamador"]
-    codigo      varchar(64)  [not null, unique, note: "Codigo estavel do sistema interno. Exemplos esperados: identidade-servidor, api-contas-eickrono, servidor-autorizacao"]
+    codigo      varchar(64)  [not null, unique, note: "Codigo estavel do sistema interno. Exemplos esperados: identidade-servidor, api-contas-eickrono, eickrono-keycloak"]
     descricao   varchar(255) [note: "Descricao funcional do sistema"]
     criado_em   timestamptz  [not null, note: "Momento de cadastro do sistema de origem"]
     Note: "Catalogo normalizado de chamadores internos do ecossistema. Substitui strings soltas como sistema_solicitante espalhadas em varias tabelas."
