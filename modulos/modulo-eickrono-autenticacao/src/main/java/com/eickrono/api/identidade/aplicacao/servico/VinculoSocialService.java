@@ -17,6 +17,7 @@ import com.eickrono.api.identidade.dominio.repositorio.PerfilIdentidadeRepositor
 import com.eickrono.api.identidade.dominio.repositorio.VinculoSocialRepositorio;
 import com.eickrono.api.identidade.apresentacao.dto.VinculoSocialDto;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -94,6 +95,54 @@ public class VinculoSocialService {
                 formaAcessoRepositorio.findByPessoa(pessoa),
                 resolverProjetoOpcional(aplicacaoId),
                 jwtLocal.getSubject());
+    }
+
+    @Transactional
+    public void vincularContextoPendenteAposLoginLocal(
+            final Jwt jwt,
+            final ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo contextoSocialPendente,
+            final String aplicacaoId) {
+        Jwt jwtLocal = Objects.requireNonNull(jwt, "jwt é obrigatório");
+        ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo contexto =
+                Objects.requireNonNull(contextoSocialPendente, "contextoSocialPendente é obrigatório");
+        if (!contexto.modoEntrarEVincular()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Contexto social pendente incompatível com entrada e vínculo.");
+        }
+        ProvedorVinculoSocial provedor = validarProvedor(contexto.provedor());
+        if (normalizarTexto(contexto.identificadorExterno(), contexto.nomeUsuarioExterno()) == null) {
+            throw new ResponseStatusException(BAD_REQUEST, "Contexto social pendente sem identificador externo.");
+        }
+
+        Pessoa pessoa = provisionamentoIdentidadeService.provisionarOuAtualizar(jwtLocal);
+        PerfilIdentidade perfil = localizarPerfil(jwtLocal.getSubject());
+        IdentidadeFederadaKeycloak identidadeFederada = new IdentidadeFederadaKeycloak(
+                provedor,
+                contexto.identificadorExterno(),
+                contexto.nomeUsuarioExterno(),
+                contexto.nomeExibicaoExterno(),
+                contexto.urlAvatarExterno());
+        validarConflitoVinculoSocial(pessoa, identidadeFederada);
+        clienteAdministracaoCadastroKeycloak.vincularIdentidadeFederada(jwtLocal.getSubject(), identidadeFederada);
+
+        OffsetDateTime instanteSincronizacao = OffsetDateTime.now();
+        List<IdentidadeFederadaKeycloak> identidadesFederadas = new ArrayList<>(
+                clienteAdministracaoVinculosSociaisKeycloak.listarIdentidadesFederadas(jwtLocal.getSubject()));
+        if (!contemIdentidadeFederada(identidadesFederadas, identidadeFederada)) {
+            identidadesFederadas.add(identidadeFederada);
+        }
+        identidadesFederadas = enriquecerIdentidadesFederadas(
+                identidadesFederadas,
+                provedor,
+                contexto.nomeExibicaoExterno(),
+                contexto.urlAvatarExterno());
+        reconciliarVinculosSociais(perfil, identidadesFederadas, instanteSincronizacao);
+        reconciliarFormasAcessoSociais(pessoa, identidadesFederadas, instanteSincronizacao);
+        sincronizarAvataresMultiapp(jwtLocal, pessoa, instanteSincronizacao, identidadesFederadas, aplicacaoId);
+        consumirContextoSocialPendenteSeCompativel(contexto.id(), pessoa);
+        auditoriaService.registrarEvento(
+                "VINCULO_SOCIAL_VINCULADO",
+                jwtLocal.getSubject(),
+                "Provedor=" + provedor.getAliasApi());
     }
 
     @Transactional
@@ -569,6 +618,13 @@ public class VinculoSocialService {
         return identidadesFederadas.stream()
                 .map(IdentidadeFederadaKeycloak::provedor)
                 .anyMatch(provedor::equals);
+    }
+
+    private boolean contemIdentidadeFederada(final List<IdentidadeFederadaKeycloak> identidadesFederadas,
+                                             final IdentidadeFederadaKeycloak identidadeFederada) {
+        return identidadesFederadas.stream()
+                .anyMatch(identidade -> identidade.provedor() == identidadeFederada.provedor()
+                        && Objects.equals(identidade.identificadorCanonico(), identidadeFederada.identificadorCanonico()));
     }
 
     private String mascararIdentificador(final String identificador) {

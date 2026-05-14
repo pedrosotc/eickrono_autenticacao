@@ -162,6 +162,11 @@ public class ContextoSocialPendenteJdbc {
         return jdbcTemplate.query("""
                 SELECT id,
                        cliente_ecossistema_id,
+                       provedor,
+                       identificador_externo,
+                       nome_usuario_externo,
+                       nome_exibicao_externo,
+                       url_avatar_externo,
                        usuario_id_sugerido,
                        login_sugerido,
                        modo_pendente,
@@ -349,6 +354,11 @@ public class ContextoSocialPendenteJdbc {
         return jdbcTemplate.query("""
                 SELECT id,
                        cliente_ecossistema_id,
+                       provedor,
+                       identificador_externo,
+                       nome_usuario_externo,
+                       nome_exibicao_externo,
+                       url_avatar_externo,
                        usuario_id_sugerido,
                        login_sugerido,
                        modo_pendente,
@@ -431,6 +441,11 @@ public class ContextoSocialPendenteJdbc {
         return new ContextoSocialPendenteAtivo(
                 rs.getObject("id", UUID.class),
                 rs.getLong("cliente_ecossistema_id"),
+                rs.getString("provedor"),
+                rs.getString("identificador_externo"),
+                rs.getString("nome_usuario_externo"),
+                rs.getString("nome_exibicao_externo"),
+                rs.getString("url_avatar_externo"),
                 rs.getObject("usuario_id_sugerido", UUID.class),
                 rs.getString("login_sugerido"),
                 rs.getString("modo_pendente"),
@@ -477,12 +492,41 @@ public class ContextoSocialPendenteJdbc {
     public record ContextoSocialPendenteAtivo(
             UUID id,
             Long clienteEcossistemaId,
+            String provedor,
+            String identificadorExterno,
+            String nomeUsuarioExterno,
+            String nomeExibicaoExterno,
+            String urlAvatarExterno,
             UUID perfilSistemaIdSugerido,
             String identificadorPublicoSistemaSugerido,
             String modoPendente,
             int tentativasFalhas,
             int tentativasMaximas
     ) {
+        public ContextoSocialPendenteAtivo(
+                final UUID id,
+                final Long clienteEcossistemaId,
+                final UUID perfilSistemaIdSugerido,
+                final String identificadorPublicoSistemaSugerido,
+                final String modoPendente,
+                final int tentativasFalhas,
+                final int tentativasMaximas) {
+            this(
+                    id,
+                    clienteEcossistemaId,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    perfilSistemaIdSugerido,
+                    identificadorPublicoSistemaSugerido,
+                    modoPendente,
+                    tentativasFalhas,
+                    tentativasMaximas
+            );
+        }
+
         public boolean aceitaLogin(final String loginNormalizado) {
             if (!StringUtils.hasText(identificadorPublicoSistemaSugerido) || !StringUtils.hasText(loginNormalizado)) {
                 return false;

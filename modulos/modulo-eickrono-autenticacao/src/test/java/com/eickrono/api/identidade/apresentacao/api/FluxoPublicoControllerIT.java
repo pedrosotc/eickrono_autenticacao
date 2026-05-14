@@ -22,10 +22,12 @@ import com.eickrono.api.identidade.aplicacao.servico.ClienteContextoPessoaPerfil
 import com.eickrono.api.identidade.aplicacao.servico.ContextoSocialPendenteJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.IntegracaoProdutoPendenteScheduler;
 import com.eickrono.api.identidade.aplicacao.servico.LocalizadorPerfilSistemaProjetoPorEmailJdbc;
+import com.eickrono.api.identidade.aplicacao.servico.ResolvedorContextoAutenticacaoService;
 import com.eickrono.api.identidade.aplicacao.servico.ResolvedorProjetoFluxoPublico;
 import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoService;
 import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoScheduler;
 import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoLoginSilenciosoService;
+import com.eickrono.api.identidade.aplicacao.servico.VinculoSocialService;
 import com.eickrono.api.identidade.aplicacao.excecao.FluxoPublicoException;
 import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.PerfilSistemaProjetoPorEmailResolvido;
@@ -87,6 +89,9 @@ class FluxoPublicoControllerIT {
     private ClienteContextoPessoaPerfilSistema clienteContextoPessoaPerfilSistema;
 
     @MockBean
+    private ResolvedorContextoAutenticacaoService resolvedorContextoAutenticacaoService;
+
+    @MockBean
     private ClienteAdministracaoVinculosSociaisKeycloak clienteAdministracaoVinculosSociaisKeycloak;
 
     @MockBean
@@ -100,6 +105,9 @@ class FluxoPublicoControllerIT {
 
     @MockBean
     private RegistroDispositivoLoginSilenciosoService registroDispositivoLoginSilenciosoService;
+
+    @MockBean
+    private VinculoSocialService vinculoSocialService;
 
     @MockBean
     private ContextoSocialPendenteJdbc contextoSocialPendenteJdbc;
@@ -535,7 +543,7 @@ class FluxoPublicoControllerIT {
                         "refresh-token-senha",
                         1800
                 ));
-        when(clienteContextoPessoaPerfilSistema.buscarPorEmail("senha@eickrono.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("senha@eickrono.com"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         77L,
                         "usuario-senha",
@@ -790,7 +798,7 @@ class FluxoPublicoControllerIT {
                         "refresh-token",
                         3600
                 ));
-        when(clienteContextoPessoaPerfilSistema.buscarPorEmail("a@a.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("a@a.com"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         10L,
                         "sub-123",
@@ -858,9 +866,7 @@ class FluxoPublicoControllerIT {
                         "refresh-token",
                         3600
                 ));
-        when(clienteContextoPessoaPerfilSistema.buscarPorEmail("ana@eickrono.com"))
-                .thenThrow(new IllegalStateException("produto indisponivel"));
-        when(cadastroContaInternaServico.buscarContextoCentralPorEmailPublico("ana@eickrono.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("ana@eickrono.com"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         77L,
                         "sub-ana",
@@ -934,9 +940,7 @@ class FluxoPublicoControllerIT {
                         "refresh-token",
                         3600
                 ));
-        when(clienteContextoPessoaPerfilSistema.buscarPorEmail("ana@eickrono.com"))
-                .thenReturn(Optional.empty());
-        when(cadastroContaInternaServico.buscarContextoCentralPorEmailPublico("ana@eickrono.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("ana@eickrono.com"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         77L,
                         "sub-ana",
@@ -1015,7 +1019,7 @@ class FluxoPublicoControllerIT {
                 .subject("usuario-social")
                 .claim("email", "social@eickrono.com")
                 .build());
-        when(clienteContextoPessoaPerfilSistema.buscarPorSub("usuario-social"))
+        when(resolvedorContextoAutenticacaoService.buscarPorSubPublico("usuario-social"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         77L,
                         "usuario-social",
@@ -1099,7 +1103,7 @@ class FluxoPublicoControllerIT {
                 .subject("usuario-social-pendente")
                 .claim("email", "social-pendente@eickrono.com")
                 .build());
-        when(clienteContextoPessoaPerfilSistema.buscarPorSub("usuario-social-pendente"))
+        when(resolvedorContextoAutenticacaoService.buscarPorSubPublico("usuario-social-pendente"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         91L,
                         "usuario-social-pendente",
@@ -1195,7 +1199,7 @@ class FluxoPublicoControllerIT {
                 .subject("usuario-refresh")
                 .claim("email", "refresh@eickrono.com")
                 .build());
-        when(clienteContextoPessoaPerfilSistema.buscarPorSub("usuario-refresh"))
+        when(resolvedorContextoAutenticacaoService.buscarPorSubPublico("usuario-refresh"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         33L,
                         "usuario-refresh",
@@ -1268,7 +1272,7 @@ class FluxoPublicoControllerIT {
                 .claim("name", "Social User")
                 .claim("picture", "https://cdn.eickrono.store/avatar-social.png")
                 .build());
-        when(clienteContextoPessoaPerfilSistema.buscarPorSub("usuario-sem-conta"))
+        when(resolvedorContextoAutenticacaoService.buscarPorSubPublico("usuario-sem-conta"))
                 .thenReturn(Optional.empty());
         when(localizadorPerfilSistemaProjetoPorEmail.localizar(1L, "social@eickrono.com"))
                 .thenReturn(Optional.of(new PerfilSistemaProjetoPorEmailResolvido(

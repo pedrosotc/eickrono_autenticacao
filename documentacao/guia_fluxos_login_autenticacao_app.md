@@ -862,8 +862,10 @@ Mas o app ainda nao esta consumindo essa borda como caminho publico principal.
 
 O app trata `conta_nao_liberada` assim:
 
-- se houver `cadastroId` recuperavel, oferece retomada de validacao;
-- se nao houver `cadastroId`, mostra a falha como bloqueio simples.
+- mostra um aviso na parte inferior da tela com texto explicativo;
+- oferece `Sim` e `Nao`;
+- se o operador tocar `Sim`, abre `/validacao-contatos`;
+- se o operador tocar `Nao`, fecha o aviso e mantem o login.
 
 Fluxograma:
 
@@ -871,12 +873,10 @@ Fluxograma:
 flowchart TD
     A[Login por senha falhou] --> B{codigoErroPublico == conta_nao_liberada?}
     B -- Nao --> C[Mostrar erro]
-    B -- Sim --> D{Existe cadastroId para retomada?}
-    D -- Nao --> C
-    D -- Sim --> E[Oferecer reabrir validacao]
-    E --> F{Usuario aceitou?}
-    F -- Sim --> G[Abrir validacao-contatos]
-    F -- Nao --> C
+    B -- Sim --> D[Mostrar aviso inferior com Sim / Nao]
+    D --> E{Usuario aceitou?}
+    E -- Sim --> F[Abrir validacao-contatos]
+    E -- Nao --> G[Fechar aviso e manter login]
 ```
 
 #### 3.5.5 Lista de contas recentes na tela de login
@@ -1129,7 +1129,7 @@ Isso e o que aciona as UX de:
 ```mermaid
 flowchart TD
     A[registro silencioso retornou 409 social_sem_conta_local] --> B[Identidade olha e-mail social]
-    B --> C{Ja existe perfil do sistema neste projeto com este e-mail?}
+    B --> C{Ja existe usuario local deste projeto com este e-mail?}
     C -- Nao --> D[acaoSugerida=ABRIR_CADASTRO]
     C -- Sim --> E[acaoSugerida=ENTRAR_E_VINCULAR]
     D --> F[Mensagem para abrir cadastro com dados recebidos]
@@ -1591,9 +1591,9 @@ Ele nao resolve sozinho:
 | Codigo | Onde nasce | Significado pratico | Reacao atual do app |
 | --- | --- | --- | --- |
 | `credenciais_invalidas` | login por senha | senha ou login invalidos | mostra erro simples |
-| `conta_nao_liberada` | login por senha ou registro silencioso | conta central existe, mas contexto local ainda nao permite uso | pode oferecer retomada se houver `cadastroId`; caso contrario so bloqueia |
+| `conta_nao_liberada` | login por senha ou registro silencioso | conta central existe, mas contexto local ainda nao permite uso | mostra aviso inferior com `Sim` / `Nao`; `Sim` abre `/validacao-contatos` |
 | `conta_incompleta` | mapeamento do login por senha | conta central ainda nao terminou configuracao minima | mostra erro |
-| `conta_desabilitada` | mapeamento do login por senha | conta bloqueada ou desabilitada | mostra erro |
+| `conta_desabilitada` | mapeamento do login por senha | conta bloqueada ou desabilitada | abre a tela de excecao de usuario bloqueado |
 | `conta_pendente_redefinir_senha` | login por senha | conta precisa regularizar senha | app oferece fluxo de regularizacao |
 | `social_sem_conta_local` | `registro/silencioso` | rede social autenticou, mas nao existe perfil do sistema pronto para este projeto | app abre fluxo de cadastro ou entrar e vincular |
 | `falha_rede` | qualquer etapa | conectividade | app mostra erro de rede |
@@ -3212,8 +3212,9 @@ Observacoes:
 
 Leitura de UX:
 
-- se vier `cadastroId`, o app pode oferecer retomada;
-- se nao vier `cadastroId`, o app tende a mostrar bloqueio simples.
+- o app mostra um aviso na parte inferior da tela;
+- `Sim` abre `/validacao-contatos`;
+- `Nao` fecha o aviso e mantem o login.
 
 #### 5.8.3 `conta_pendente_redefinir_senha`
 
@@ -3311,7 +3312,7 @@ Leitura de UX:
 
 ```json
 {
-  "codigo": "rede_social_ja_vinculada_a_outra_conta",
+  "codigo": "vinculo_social_pertence_a_outra_conta",
   "mensagem": "Esta rede social ja esta vinculada a outra conta deste ecossistema.",
   "detalhes": {
     "provedor": "apple",
@@ -3335,8 +3336,9 @@ Tabela canonica:
 
 | Sinal tecnico do broker | Leitura funcional | Resposta publica correta |
 | --- | --- | --- |
-| conta local do projeto ja existe para o mesmo e-mail e a rede ainda nao esta ligada a ela | conta existente ainda sem vinculo daquela rede | `social_sem_conta_local` com `acaoSugerida = ENTRAR_E_VINCULAR` |
-| a identidade social ja pertence a outro usuario local | conflito duro de vinculacao | `rede_social_ja_vinculada_a_outra_conta` |
+| a rede social ja esta vinculada ao usuario correto e esse usuario esta liberado neste projeto | caso feliz de login social | sessao autenticada pronta |
+| ja existe usuario local deste projeto para o mesmo e-mail e a rede ainda nao esta ligada a ele | conta existente ainda sem vinculo daquela rede | `social_sem_conta_local` com `acaoSugerida = ENTRAR_E_VINCULAR` |
+| a identidade social ja pertence a outro usuario local | conflito duro de vinculacao | `vinculo_social_pertence_a_outra_conta` |
 | o backend nao consegue provar qual conta deve receber o vinculo | conflito ambiguo | erro funcional explicito, sem cadastro novo e sem vinculacao automatica |
 
 ### 5.10 Exemplos de resposta para UX de retomada e vinculacao
@@ -3350,7 +3352,9 @@ Sinais que o app usa:
 
 Decisao de UX:
 
-- oferecer abrir tela de validacao ou retomada do cadastro.
+- mostrar aviso inferior com `Sim` e `Nao`;
+- `Sim` abre `/validacao-contatos`;
+- `Nao` fecha o aviso e mantem o login.
 
 #### 5.10.2 Cadastro prefillado (preenchido inicialmente) por rede social
 
@@ -3376,8 +3380,10 @@ Sinais que o app usa:
 
 Decisao de UX:
 
-- orientar o operador a entrar com a conta existente;
-- depois usar o contexto social pendente para vincular a rede.
+- mostrar aviso inferior com `Entrar e vincular` e `Agora nao`;
+- se aceitar, permanecer no login e pedir usuario e senha;
+- se o login local concluir, vincular automaticamente a rede;
+- se houver 3 falhas ou outra conta, cancelar a vinculacao pendente e limpar o contexto.
 
 #### 5.10.4 Cadastro em andamento com agregacao de redes
 

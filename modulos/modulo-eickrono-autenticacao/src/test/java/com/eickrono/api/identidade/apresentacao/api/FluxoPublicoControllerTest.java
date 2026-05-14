@@ -26,6 +26,7 @@ import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoLoginSil
 import com.eickrono.api.identidade.aplicacao.servico.ResolvedorContextoAutenticacaoService;
 import com.eickrono.api.identidade.aplicacao.servico.ResolvedorProjetoFluxoPublico;
 import com.eickrono.api.identidade.aplicacao.servico.TokenDispositivoService;
+import com.eickrono.api.identidade.aplicacao.servico.VinculoSocialService;
 import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoResponse;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.AtestacaoOperacaoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.CadastroApiRequest;
@@ -102,6 +103,9 @@ class FluxoPublicoControllerTest {
     private TokenDispositivoService tokenDispositivoService;
 
     @Mock
+    private VinculoSocialService vinculoSocialService;
+
+    @Mock
     private JwtDecoder jwtDecoder;
 
     @Mock
@@ -125,6 +129,7 @@ class FluxoPublicoControllerTest {
                 registroDispositivoService,
                 registroDispositivoLoginSilenciosoService,
                 tokenDispositivoService,
+                vinculoSocialService,
                 jwtDecoder
         );
     }
@@ -728,6 +733,121 @@ class FluxoPublicoControllerTest {
         assertThat(resposta.canaisConfirmacao()).containsExactly(CanalVerificacao.EMAIL);
         assertThat(resposta.podeOferecerBiometria()).isFalse();
         assertThat(resposta.podeOferecerVinculacaoSocial()).isFalse();
+    }
+
+    @Test
+    void deveConcluirVinculoSocialPendenteAoCriarSessaoComLoginLocal() {
+        UUID contextoId = UUID.fromString("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb");
+        CriarSessaoApiRequest request = new CriarSessaoApiRequest(
+                "eickrono-thimisu-app",
+                "teste@eickrono.com",
+                "Senha#123",
+                contextoId,
+                new DispositivoSessaoApiRequest(
+                        "IOS",
+                        "eickrono-thimisu-app",
+                        "instalacao-login",
+                        "iphone17,1",
+                        "apple",
+                        "ios",
+                        "18.0",
+                        "1.0.0"
+                ),
+                new AtestacaoOperacaoApiRequest(
+                        PlataformaAtestacaoApp.IOS,
+                        ProvedorAtestacaoApp.APPLE_APP_ATTEST,
+                        TipoComprovanteAtestacaoApp.OBJETO_ATESTACAO,
+                        "desafio",
+                        "ZGVzYWZpbw==",
+                        "dG9rZW0=",
+                        OffsetDateTime.parse("2026-05-05T18:00:00Z"),
+                        null
+                ),
+                new SegurancaAplicativoApiRequest(
+                        "IOS",
+                        "APPLE_APP_ATTEST",
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        true,
+                        true,
+                        java.util.List.of(),
+                        0,
+                        "store.eickrono.thimisu",
+                        null,
+                        null,
+                        null
+                )
+        );
+        ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
+                77L,
+                "thimisu",
+                "Thimisu",
+                "Aplicacao",
+                "Thimisu",
+                "Mobile",
+                false);
+        ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo contextoPendente =
+                new ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo(
+                        contextoId,
+                        77L,
+                        "apple",
+                        "apple-user-id",
+                        "apple-user",
+                        "Usuario Apple",
+                        null,
+                        UUID.fromString("cccccccc-1111-2222-3333-dddddddddddd"),
+                        "teste@eickrono.com",
+                        "ENTRAR_E_VINCULAR",
+                        0,
+                        3
+                );
+        SessaoInternaAutenticada sessao = new SessaoInternaAutenticada(
+                true,
+                "Bearer",
+                "access-login",
+                "refresh-login",
+                1800L
+        );
+        Jwt jwtSessaoCentral = Jwt.withTokenValue("access-login")
+                .header("alg", "none")
+                .subject("usuario-xyz")
+                .claim("email", "teste@eickrono.com")
+                .build();
+        ContextoPessoaPerfilSistema contexto = new ContextoPessoaPerfilSistema(
+                123L,
+                "usuario-xyz",
+                "teste@eickrono.com",
+                "Usuario Teste",
+                null,
+                "LIBERADO"
+        );
+        DispositivoSessaoRegistrado dispositivoRegistrado = new DispositivoSessaoRegistrado(
+                "device-token",
+                OffsetDateTime.parse("2026-05-05T18:00:00Z")
+        );
+        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
+        when(contextoSocialPendenteJdbc.buscarAtivo(contextoId, 77L)).thenReturn(Optional.of(contextoPendente));
+        when(servletRequest.getHeader("X-Forwarded-For")).thenReturn(null);
+        when(servletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(autenticacaoSessaoInternaServico.autenticar("teste@eickrono.com", "Senha#123")).thenReturn(sessao);
+        when(jwtDecoder.decode("access-login")).thenReturn(jwtSessaoCentral);
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("teste@eickrono.com"))
+                .thenReturn(Optional.of(contexto));
+        when(registroDispositivoLoginSilenciosoService.registrar(contexto, request.dispositivo()))
+                .thenReturn(dispositivoRegistrado);
+
+        SessaoApiResposta resposta = controller.criarSessao(request, servletRequest);
+
+        assertThat(resposta.autenticado()).isTrue();
+        assertThat(resposta.tokenDispositivo()).isEqualTo("device-token");
+        verify(vinculoSocialService).vincularContextoPendenteAposLoginLocal(
+                jwtSessaoCentral,
+                contextoPendente,
+                "eickrono-thimisu-app"
+        );
     }
 
     @Test

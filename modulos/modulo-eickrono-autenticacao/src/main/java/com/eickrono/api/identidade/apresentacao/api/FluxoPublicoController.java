@@ -25,6 +25,7 @@ import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoService;
 import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoLoginSilenciosoService;
 import com.eickrono.api.identidade.aplicacao.servico.ResultadoValidacaoTokenDispositivo;
 import com.eickrono.api.identidade.aplicacao.servico.TokenDispositivoService;
+import com.eickrono.api.identidade.aplicacao.servico.VinculoSocialService;
 import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoResponse;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.CadastroApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.CadastroApiResposta;
@@ -95,6 +96,7 @@ public class FluxoPublicoController {
     private final RegistroDispositivoService registroDispositivoService;
     private final RegistroDispositivoLoginSilenciosoService registroDispositivoLoginSilenciosoService;
     private final TokenDispositivoService tokenDispositivoService;
+    private final VinculoSocialService vinculoSocialService;
     private final JwtDecoder jwtDecoder;
 
     public FluxoPublicoController(final CadastroContaInternaServico cadastroContaInternaServico,
@@ -110,6 +112,7 @@ public class FluxoPublicoController {
                                   final RegistroDispositivoService registroDispositivoService,
                                   final RegistroDispositivoLoginSilenciosoService registroDispositivoLoginSilenciosoService,
                                   final TokenDispositivoService tokenDispositivoService,
+                                  final VinculoSocialService vinculoSocialService,
                                   final JwtDecoder jwtDecoder) {
         this.cadastroContaInternaServico = Objects.requireNonNull(
                 cadastroContaInternaServico, "cadastroContaInternaServico é obrigatório");
@@ -136,6 +139,8 @@ public class FluxoPublicoController {
                 registroDispositivoLoginSilenciosoService, "registroDispositivoLoginSilenciosoService é obrigatório");
         this.tokenDispositivoService = Objects.requireNonNull(
                 tokenDispositivoService, "tokenDispositivoService é obrigatório");
+        this.vinculoSocialService = Objects.requireNonNull(
+                vinculoSocialService, "vinculoSocialService é obrigatório");
         this.jwtDecoder = Objects.requireNonNull(jwtDecoder, "jwtDecoder é obrigatório");
     }
 
@@ -371,6 +376,13 @@ public class FluxoPublicoController {
                     HttpStatus.FORBIDDEN,
                     "conta_nao_liberada",
                     "A conta ainda não está liberada para utilizar o aplicativo."
+            );
+        }
+        if (contextoSocialPendente.isPresent()) {
+            vinculoSocialService.vincularContextoPendenteAposLoginLocal(
+                    decodificarSessaoCentral(sessao.accessToken()),
+                    contextoSocialPendente.orElseThrow(),
+                    requisicao.aplicacaoId()
             );
         }
         return concluirSessaoPublica(
