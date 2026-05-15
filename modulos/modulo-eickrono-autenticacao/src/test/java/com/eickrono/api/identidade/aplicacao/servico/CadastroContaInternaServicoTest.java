@@ -698,6 +698,43 @@ class CadastroContaInternaServicoTest {
     }
 
     @Test
+    @DisplayName("deve resolver contexto central por sub sem consultar o produto")
+    void deveResolverContextoCentralPorSubSemConsultarProduto() {
+        CadastroConta cadastro = new CadastroConta(
+                java.util.UUID.randomUUID(),
+                "sub-ana",
+                TipoPessoaCadastro.FISICA,
+                "Ana Souza",
+                null,
+                "ana.souza",
+                null,
+                null,
+                null,
+                "ana@eickrono.com",
+                "+5511999999999",
+                CanalValidacaoTelefoneCadastro.SMS,
+                "hash",
+                OffsetDateTime.parse("2026-03-16T09:00:00Z"),
+                OffsetDateTime.parse("2026-03-16T18:00:00Z"),
+                "eickrono-thimisu-app",
+                "127.0.0.1",
+                "JUnit",
+                OffsetDateTime.parse("2026-03-16T09:00:00Z"),
+                OffsetDateTime.parse("2026-03-16T09:00:00Z")
+        );
+        cadastro.marcarEmailConfirmado(OffsetDateTime.parse("2026-03-16T10:00:00Z"));
+        cadastro.definirPessoaIdPerfil(10L, OffsetDateTime.parse("2026-03-16T10:01:00Z"));
+        when(cadastroContaRepositorio.findBySubjectRemoto("sub-ana")).thenReturn(Optional.of(cadastro));
+
+        Optional<ContextoPessoaPerfilSistema> resultado =
+                servicoPublico.buscarContextoCentralPorSubPublico("sub-ana");
+
+        assertThat(resultado).isPresent();
+        assertThat(resultado.orElseThrow().usuario()).isEqualTo("ana.souza");
+        verify(clienteContextoPessoaPerfilSistema, never()).buscarPorSub(any());
+    }
+
+    @Test
     @DisplayName("deve expurgar automaticamente cadastros pendentes com mais de 48 horas")
     void deveExpurgarCadastrosPendentesExpirados() {
         CadastroConta expirado = new CadastroConta(

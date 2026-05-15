@@ -543,7 +543,7 @@ class FluxoPublicoControllerIT {
                         "refresh-token-senha",
                         1800
                 ));
-        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("senha@eickrono.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublico("senha@eickrono.com"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         77L,
                         "usuario-senha",
@@ -798,7 +798,7 @@ class FluxoPublicoControllerIT {
                         "refresh-token",
                         3600
                 ));
-        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("a@a.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublico("a@a.com"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         10L,
                         "sub-123",
@@ -866,7 +866,7 @@ class FluxoPublicoControllerIT {
                         "refresh-token",
                         3600
                 ));
-        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("ana@eickrono.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublico("ana@eickrono.com"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         77L,
                         "sub-ana",
@@ -940,7 +940,7 @@ class FluxoPublicoControllerIT {
                         "refresh-token",
                         3600
                 ));
-        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("ana@eickrono.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublico("ana@eickrono.com"))
                 .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
                         77L,
                         "sub-ana",

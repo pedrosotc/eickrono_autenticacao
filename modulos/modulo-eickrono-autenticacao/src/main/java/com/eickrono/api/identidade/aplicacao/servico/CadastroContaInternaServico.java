@@ -411,11 +411,10 @@ public class CadastroContaInternaServico {
 
     public Optional<ContextoPessoaPerfilSistema> buscarContextoCentralPorSubPublico(final String subPessoa) {
         String subNormalizado = obrigatorio(subPessoa, "subPessoa");
-        return buscarContextoProdutoPorSubTolerante(subNormalizado)
-                .or(() -> cadastroContaRepositorio.findBySubjectRemoto(subNormalizado)
-                        .filter(CadastroConta::emailJaConfirmado)
-                        .filter(cadastro -> cadastro.getPessoaIdPerfil() != null)
-                        .map(this::mapearContextoCentralFallback));
+        return cadastroContaRepositorio.findBySubjectRemoto(subNormalizado)
+                .filter(CadastroConta::emailJaConfirmado)
+                .filter(cadastro -> cadastro.getPessoaIdPerfil() != null)
+                .map(this::mapearContextoCentralFallback);
     }
 
     public void reenviarCodigoEmail(final UUID cadastroId) {

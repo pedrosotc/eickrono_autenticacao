@@ -353,7 +353,7 @@ public class FluxoPublicoController {
                 sessao.expiresIn()
         );
         ContextoPessoaPerfilSistema contexto = resolvedorContextoAutenticacaoService
-                .buscarPorEmailPublicoPreferindoProduto(loginNormalizado)
+                .buscarPorEmailPublico(loginNormalizado)
                 .orElseThrow(() -> {
                     LOGGER.warn(
                             "login_publico_contexto_ausente login={} motivo=conta_nao_liberada",
@@ -830,7 +830,7 @@ public class FluxoPublicoController {
         if (!StringUtils.hasText(email)) {
             return Optional.empty();
         }
-        return resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto(email);
+        return resolvedorContextoAutenticacaoService.buscarPorEmailPublico(email);
     }
 
     private Optional<ContextoPessoaPerfilSistema> buscarContextoParaSessao(final String usuarioSub) {

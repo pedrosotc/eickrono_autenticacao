@@ -709,7 +709,7 @@ class FluxoPublicoControllerTest {
         when(servletRequest.getHeader("X-Forwarded-For")).thenReturn(null);
         when(servletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
         when(autenticacaoSessaoInternaServico.autenticar("teste@eickrono.com", "Senha#123")).thenReturn(sessao);
-        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("teste@eickrono.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublico("teste@eickrono.com"))
                 .thenReturn(Optional.of(contexto));
         when(registroDispositivoLoginSilenciosoService.registrar(contexto, request.dispositivo()))
                 .thenThrow(new FluxoPublicoException(
@@ -838,7 +838,7 @@ class FluxoPublicoControllerTest {
         when(servletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
         when(autenticacaoSessaoInternaServico.autenticar("teste@eickrono.com", "Senha#123")).thenReturn(sessao);
         when(jwtDecoder.decode("access-login")).thenReturn(jwtSessaoCentral);
-        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublicoPreferindoProduto("teste@eickrono.com"))
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublico("teste@eickrono.com"))
                 .thenReturn(Optional.of(contexto));
         when(registroDispositivoLoginSilenciosoService.registrar(contexto, request.dispositivo()))
                 .thenReturn(dispositivoRegistrado);
