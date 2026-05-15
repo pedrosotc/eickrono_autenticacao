@@ -402,6 +402,7 @@ class FluxoPublicoControllerTest {
                 "usuario-xyz",
                 "teste@eickrono.com",
                 "Usuario Teste",
+                "usuario.teste",
                 null,
                 "LIBERADO"
         );
@@ -425,6 +426,7 @@ class FluxoPublicoControllerTest {
         assertThat(resposta.tokenDispositivoExpiraEm()).isEqualTo(OffsetDateTime.parse("2026-05-05T18:00:00Z"));
         assertThat(resposta.statusPerfilSistema()).isEqualTo("LIBERADO");
         assertThat(resposta.emailPrincipal()).isEqualTo("teste@eickrono.com");
+        assertThat(resposta.usuario()).isEqualTo("usuario.teste");
         assertThat(resposta.podeOferecerBiometria()).isTrue();
     }
 
@@ -560,6 +562,7 @@ class FluxoPublicoControllerTest {
                 "usuario-social",
                 "social@eickrono.com",
                 "Usuario Social",
+                "usuario.social",
                 null,
                 "LIBERADO"
         );
@@ -584,6 +587,7 @@ class FluxoPublicoControllerTest {
         assertThat(resposta.tokenDispositivo()).isEqualTo("device-social");
         assertThat(resposta.statusPerfilSistema()).isEqualTo("LIBERADO");
         assertThat(resposta.emailPrincipal()).isEqualTo("social@eickrono.com");
+        assertThat(resposta.usuario()).isEqualTo("usuario.social");
         assertThat(resposta.podeOferecerBiometria()).isTrue();
     }
 

@@ -636,6 +636,7 @@ public class FluxoPublicoController {
                     null,
                     statusPerfilSistema,
                     contexto.emailPrincipal(),
+                    contexto.usuario(),
                     false,
                     true,
                     true
@@ -681,6 +682,7 @@ public class FluxoPublicoController {
                 null,
                 statusPerfilSistema,
                 contexto.emailPrincipal(),
+                contexto.usuario(),
                 false,
                 true,
                 true
@@ -745,6 +747,7 @@ public class FluxoPublicoController {
                     null,
                     statusPerfilSistema,
                     contexto.emailPrincipal(),
+                    contexto.usuario(),
                     false,
                     true,
                     true
@@ -781,6 +784,7 @@ public class FluxoPublicoController {
                     registroInterativo.canaisConfirmacao(),
                     statusPerfilSistema,
                     contexto.emailPrincipal(),
+                    contexto.usuario(),
                     false,
                     false,
                     false

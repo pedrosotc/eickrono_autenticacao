@@ -22,10 +22,48 @@ public record SessaoApiResposta(
         List<CanalVerificacao> canaisConfirmacao,
         @JsonProperty("statusUsuario") String statusPerfilSistema,
         String emailPrincipal,
+        String usuario,
         boolean primeiraSessao,
         boolean podeOferecerBiometria,
         boolean podeOferecerVinculacaoSocial
 ) {
+
+    public SessaoApiResposta(final boolean autenticado,
+                             final String tipoToken,
+                             final String accessToken,
+                             final String refreshToken,
+                             final long expiresIn,
+                             final String tokenDispositivo,
+                             final OffsetDateTime tokenDispositivoExpiraEm,
+                             final UUID registroDispositivoId,
+                             final OffsetDateTime registroDispositivoExpiraEm,
+                             final StatusRegistroDispositivo statusRegistroDispositivo,
+                             final List<CanalVerificacao> canaisConfirmacao,
+                             final String statusPerfilSistema,
+                             final String emailPrincipal,
+                             final boolean primeiraSessao,
+                             final boolean podeOferecerBiometria,
+                             final boolean podeOferecerVinculacaoSocial) {
+        this(
+                autenticado,
+                tipoToken,
+                accessToken,
+                refreshToken,
+                expiresIn,
+                tokenDispositivo,
+                tokenDispositivoExpiraEm,
+                registroDispositivoId,
+                registroDispositivoExpiraEm,
+                statusRegistroDispositivo,
+                canaisConfirmacao,
+                statusPerfilSistema,
+                emailPrincipal,
+                null,
+                primeiraSessao,
+                podeOferecerBiometria,
+                podeOferecerVinculacaoSocial
+        );
+    }
 
     public SessaoApiResposta {
         canaisConfirmacao = canaisConfirmacao == null ? null : List.copyOf(canaisConfirmacao);

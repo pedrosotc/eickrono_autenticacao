@@ -797,6 +797,7 @@ public class CadastroContaInternaServico {
                 cadastroConta.getSubjectRemoto(),
                 cadastroConta.getEmailPrincipal(),
                 cadastroConta.getNomeCompleto(),
+                cadastroConta.getUsuario(),
                 cadastroConta.getPerfilSistemaId(),
                 statusPerfilSistema
         );

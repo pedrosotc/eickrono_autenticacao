@@ -491,11 +491,17 @@ public class RegistroDispositivoService {
     }
 
     private Jwt jwtDoContexto(final ContextoPessoaPerfilSistema contexto) {
-        return Jwt.withTokenValue("registro-dispositivo-sessao")
+        Jwt.Builder builder = Jwt.withTokenValue("registro-dispositivo-sessao")
                 .header("alg", "none")
                 .subject(normalizarObrigatorio(contexto.sub(), "sub"))
-                .claim("email", normalizarObrigatorio(contexto.emailPrincipal(), "emailPrincipal"))
-                .build();
+                .claim("email", normalizarObrigatorio(contexto.emailPrincipal(), "emailPrincipal"));
+        if (StringUtils.hasText(contexto.usuario())) {
+            String usuario = contexto.usuario().trim().toLowerCase(Locale.ROOT);
+            builder
+                    .claim("usuario", usuario)
+                    .claim("preferred_username", usuario);
+        }
+        return builder.build();
     }
 
     private record CodigoGerado(CodigoVerificacao entidade, String codigoClaro) {
