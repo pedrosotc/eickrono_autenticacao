@@ -27,6 +27,7 @@ import com.eickrono.api.identidade.dominio.modelo.TipoFormaAcesso;
 import com.eickrono.api.identidade.dominio.repositorio.CadastroContaRepositorio;
 import com.eickrono.api.identidade.dominio.repositorio.FormaAcessoRepositorio;
 import com.eickrono.api.identidade.infraestrutura.configuracao.DispositivoProperties;
+import java.lang.reflect.Field;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -732,6 +733,85 @@ class CadastroContaInternaServicoTest {
         assertThat(resultado).isPresent();
         assertThat(resultado.orElseThrow().usuario()).isEqualTo("ana.souza");
         verify(clienteContextoPessoaPerfilSistema, never()).buscarPorSub(any());
+    }
+
+    @Test
+    @DisplayName("nao deve resolver contexto central por sub quando cadastro nao tem usuario")
+    void naoDeveResolverContextoCentralPorSubSemUsuarioMaterializado() throws Exception {
+        CadastroConta cadastro = new CadastroConta(
+                java.util.UUID.randomUUID(),
+                "sub-sem-usuario",
+                TipoPessoaCadastro.FISICA,
+                "Ana Souza",
+                null,
+                "ana.souza",
+                null,
+                null,
+                null,
+                "ana@eickrono.com",
+                "+5511999999999",
+                CanalValidacaoTelefoneCadastro.SMS,
+                "hash",
+                OffsetDateTime.parse("2026-03-16T09:00:00Z"),
+                OffsetDateTime.parse("2026-03-16T18:00:00Z"),
+                "eickrono-thimisu-app",
+                "127.0.0.1",
+                "JUnit",
+                OffsetDateTime.parse("2026-03-16T09:00:00Z"),
+                OffsetDateTime.parse("2026-03-16T09:00:00Z")
+        );
+        simularUsuarioLegadoNulo(cadastro);
+        cadastro.marcarEmailConfirmado(OffsetDateTime.parse("2026-03-16T10:00:00Z"));
+        cadastro.definirPessoaIdPerfil(10L, OffsetDateTime.parse("2026-03-16T10:01:00Z"));
+        when(cadastroContaRepositorio.findBySubjectRemoto("sub-sem-usuario")).thenReturn(Optional.of(cadastro));
+
+        Optional<ContextoPessoaPerfilSistema> resultado =
+                servicoPublico.buscarContextoCentralPorSubPublico("sub-sem-usuario");
+
+        assertThat(resultado).isEmpty();
+        verify(clienteContextoPessoaPerfilSistema, never()).buscarPorSub(any());
+    }
+
+    @Test
+    @DisplayName("nao deve resolver contexto central por email quando cadastro nao tem usuario")
+    void naoDeveResolverContextoCentralPorEmailSemUsuarioMaterializado() throws Exception {
+        CadastroConta cadastro = new CadastroConta(
+                java.util.UUID.randomUUID(),
+                "sub-sem-usuario",
+                TipoPessoaCadastro.FISICA,
+                "Ana Souza",
+                null,
+                "ana.souza",
+                null,
+                null,
+                null,
+                "ana@eickrono.com",
+                "+5511999999999",
+                CanalValidacaoTelefoneCadastro.SMS,
+                "hash",
+                OffsetDateTime.parse("2026-03-16T09:00:00Z"),
+                OffsetDateTime.parse("2026-03-16T18:00:00Z"),
+                "eickrono-thimisu-app",
+                "127.0.0.1",
+                "JUnit",
+                OffsetDateTime.parse("2026-03-16T09:00:00Z"),
+                OffsetDateTime.parse("2026-03-16T09:00:00Z")
+        );
+        simularUsuarioLegadoNulo(cadastro);
+        cadastro.marcarEmailConfirmado(OffsetDateTime.parse("2026-03-16T10:00:00Z"));
+        cadastro.definirPessoaIdPerfil(10L, OffsetDateTime.parse("2026-03-16T10:01:00Z"));
+        when(cadastroContaRepositorio.findByEmailPrincipal("ana@eickrono.com")).thenReturn(Optional.of(cadastro));
+
+        Optional<ContextoPessoaPerfilSistema> resultado =
+                servicoPublico.buscarContextoCentralPorEmailPublico("ANA@EICKRONO.COM");
+
+        assertThat(resultado).isEmpty();
+    }
+
+    private static void simularUsuarioLegadoNulo(final CadastroConta cadastro) throws Exception {
+        Field campoUsuario = CadastroConta.class.getDeclaredField("usuario");
+        campoUsuario.setAccessible(true);
+        campoUsuario.set(cadastro, null);
     }
 
     @Test

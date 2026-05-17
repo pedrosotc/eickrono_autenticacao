@@ -406,6 +406,7 @@ public class CadastroContaInternaServico {
         return cadastroContaRepositorio.findByEmailPrincipal(emailNormalizado)
                 .filter(CadastroConta::emailJaConfirmado)
                 .filter(cadastro -> cadastro.getPessoaIdPerfil() != null)
+                .filter(this::cadastroPossuiUsuarioMaterializado)
                 .map(this::mapearContextoCentralFallback);
     }
 
@@ -414,6 +415,7 @@ public class CadastroContaInternaServico {
         return cadastroContaRepositorio.findBySubjectRemoto(subNormalizado)
                 .filter(CadastroConta::emailJaConfirmado)
                 .filter(cadastro -> cadastro.getPessoaIdPerfil() != null)
+                .filter(this::cadastroPossuiUsuarioMaterializado)
                 .map(this::mapearContextoCentralFallback);
     }
 
@@ -800,6 +802,11 @@ public class CadastroContaInternaServico {
                 cadastroConta.getPerfilSistemaId(),
                 statusPerfilSistema
         );
+    }
+
+    private boolean cadastroPossuiUsuarioMaterializado(final CadastroConta cadastroConta) {
+        String usuario = cadastroConta.getUsuario();
+        return usuario != null && !usuario.isBlank();
     }
 
     private void validarDuplicidadeUsuario(final String usuarioNormalizado,

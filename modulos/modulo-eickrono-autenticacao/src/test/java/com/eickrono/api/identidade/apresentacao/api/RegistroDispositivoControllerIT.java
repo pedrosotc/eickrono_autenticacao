@@ -30,6 +30,7 @@ import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoResponse;
 import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoSessaoResponse;
 import com.eickrono.api.identidade.apresentacao.dto.ValidacaoTokenDispositivoResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -95,16 +96,31 @@ class RegistroDispositivoControllerIT {
     @BeforeEach
     void setUp() {
         keycloakStub.limparIdentidadesFederadas();
-        jdbcTemplate.getJdbcOperations().update("DELETE FROM dispositivos.tokens_dispositivo");
-        jdbcTemplate.getJdbcOperations().update("DELETE FROM dispositivos.eventos_offline_dispositivo");
-        jdbcTemplate.getJdbcOperations().update("DELETE FROM dispositivos.dispositivos_confiaveis");
-        jdbcTemplate.getJdbcOperations().update("DELETE FROM dispositivos.codigos_verificacao_dispositivo");
-        jdbcTemplate.getJdbcOperations().update("DELETE FROM dispositivos.registros_dispositivo");
+        codigoCapturador.limpar();
+        jdbcTemplate.getJdbcOperations().update("""
+                TRUNCATE TABLE
+                    dispositivos.tokens_dispositivo,
+                    dispositivos.dispositivos_confiaveis,
+                    dispositivos.codigos_verificacao_dispositivo,
+                    dispositivos.registros_dispositivo,
+                    eventos_offline_dispositivo,
+                    token_dispositivo,
+                    dispositivos_identidade,
+                    codigo_verificacao,
+                    registro_dispositivo,
+                    cadastros_conta,
+                    autenticacao.contextos_sociais_pendentes,
+                    autenticacao.usuarios_clientes_ecossistema,
+                    autenticacao.usuarios_formas_acesso,
+                    autenticacao.usuarios
+                CASCADE
+                """);
         ContextoPessoaPerfilSistema contexto = new ContextoPessoaPerfilSistema(
                 123L,
                 "usuario-xyz",
                 "teste@eickrono.com",
                 "Usuario Teste",
+                "usuario.teste",
                 null,
                 "ATIVO"
         );
@@ -333,16 +349,24 @@ class RegistroDispositivoControllerIT {
                 .andReturn();
         assertThat(tokenAnteriorRevogado.getResponse().getContentAsString()).contains("DEVICE_TOKEN_REVOKED");
 
-        assertThat(tokenDispositivoRepositorio().findAll())
-                .filteredOn(token -> token.getStatus() == StatusTokenDispositivo.ATIVO)
-                .hasSize(1)
-                .extracting(TokenDispositivo::getFingerprint)
+        List<String> fingerprintsAtivos = jdbcTemplate().getJdbcOperations().queryForList("""
+                SELECT registro.fingerprint
+                FROM token_dispositivo token
+                JOIN registro_dispositivo registro
+                  ON registro.id = token.registro_id
+                WHERE token.status = 'ATIVO'
+                ORDER BY registro.fingerprint
+                """, String.class);
+        assertThat(fingerprintsAtivos)
                 .containsExactly("ios|iphone14,3|device-2");
 
-        assertThat(tokenDispositivoRepositorio().findAll())
-                .filteredOn(token -> token.getStatus() == StatusTokenDispositivo.REVOGADO)
-                .extracting(token -> token.getMotivoRevogacao().orElse(null))
-                .contains(MotivoRevogacaoToken.NOVO_DISPOSITIVO_CONFIRMANDO);
+        List<String> motivosRevogacao = jdbcTemplate().getJdbcOperations().queryForList("""
+                SELECT token.motivo_revogacao
+                FROM token_dispositivo token
+                WHERE token.status = 'REVOGADO'
+                """, String.class);
+        assertThat(motivosRevogacao)
+                .contains(MotivoRevogacaoToken.NOVO_DISPOSITIVO_CONFIRMANDO.name());
     }
 
     @Test
@@ -357,6 +381,8 @@ class RegistroDispositivoControllerIT {
 
     @Test
     void deveRegistrarSessaoSilenciosaQuandoContextoDoProdutoExistir() throws Exception {
+        criarCadastroCentralConcluido("usuario-xyz", "teste@eickrono.com", "usuario.teste");
+
         MvcResult resultado = mockMvc().perform(post("/identidade/dispositivos/registro/silencioso")
                         .with(Objects.requireNonNull(clienteJwt()))
                         .contentType(Objects.requireNonNull(jsonMediaType()))
@@ -463,6 +489,56 @@ class RegistroDispositivoControllerIT {
                 .andExpect(jsonPath("$.detalhes.provedor").value("google"))
                 .andExpect(jsonPath("$.detalhes.identificadorExterno").value("google-sub-2"))
                 .andExpect(jsonPath("$.detalhes.contextoSocialPendenteId").isNotEmpty());
+    }
+
+    private void criarCadastroCentralConcluido(final String sub, final String email, final String usuario) {
+        UUID cadastroId = UUID.randomUUID();
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("cadastroId", cadastroId)
+                .addValue("sub", sub)
+                .addValue("email", email)
+                .addValue("usuario", usuario)
+                .addValue("perfilSistemaId", UUID.randomUUID().toString())
+                .addValue("protocoloSuporte", "cad-" + cadastroId.toString().replace("-", ""));
+        jdbcTemplate().update("""
+                INSERT INTO cadastros_conta (
+                    cadastro_id,
+                    subject_remoto,
+                    pessoa_id_perfil,
+                    usuario_id_perfil,
+                    tipo_pessoa,
+                    nome_completo,
+                    usuario,
+                    email_principal,
+                    status,
+                    codigo_email_hash,
+                    codigo_email_gerado_em,
+                    codigo_email_expira_em,
+                    email_confirmado_em,
+                    sistema_solicitante,
+                    criado_em,
+                    atualizado_em,
+                    protocolo_suporte
+                ) VALUES (
+                    :cadastroId,
+                    :sub,
+                    123,
+                    :perfilSistemaId,
+                    'FISICA',
+                    'Usuario Teste',
+                    :usuario,
+                    :email,
+                    'EMAIL_CONFIRMADO',
+                    'hash-email-teste',
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP + INTERVAL '1 hour',
+                    CURRENT_TIMESTAMP,
+                    'eickrono-thimisu-app',
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP,
+                    :protocoloSuporte
+                )
+                """, params);
     }
 
     private RegistroDispositivoResponse solicitarRegistro() throws Exception {
@@ -631,6 +707,10 @@ class RegistroDispositivoControllerIT {
         void registrar(UUID registroId, CanalVerificacao canal, String codigo) {
             mapa.computeIfAbsent(canal, c -> new ConcurrentHashMap<>())
                     .put(registroId, codigo);
+        }
+
+        void limpar() {
+            mapa.clear();
         }
 
         Optional<String> obterCodigo(UUID registroId, CanalVerificacao canal) {
