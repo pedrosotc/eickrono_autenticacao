@@ -327,117 +327,38 @@ Backfill minimo transitorio:
 
 Esses pontos continuam de regra de aplicacao e nao de schema puro.
 
-## DB-03 - Contexto social pendente para vinculacao assistida
+## DB-03 - Contexto social pendente persistido
 
-### Decisao estrutural
+### Decisao estrutural atualizada
 
-`DB-03` **cria tabela nova**.
+`DB-03` esta **cancelado como alvo ativo**.
 
-Nome proposto:
+O fluxo aprovado nao deve criar tabela nem contrato persistido para contexto
+social pendente. A autenticacao social feita antes de cadastro ou antes do login
+local fica temporariamente no app. Quando o usuario concluir o cadastro ou a
+vinculacao, o app envia dados confirmados em listas:
 
-- `autenticacao.contextos_sociais_pendentes`
+- `vinculosSociaisConfirmados`;
+- `avataresCadastroConfirmados`.
 
-### Por que nao reutilizar `cadastros_conta`
+### Regra funcional
 
-Porque o fluxo social pendente agora cobre dois ramos diferentes:
+- o backend valida a credencial social recebida;
+- se a rede ainda nao pode ser vinculada definitivamente, o backend devolve
+  estado funcional para o app, sem persistir pendencia social;
+- o app guarda o estado temporario somente em memoria/estado local de fluxo;
+- a persistencia definitiva acontece apenas junto do cadastro finalizado ou do
+  login local confirmado para `Entrar e vincular`.
 
-1. abrir cadastro com prefill (preenchimento inicial);
-2. permanecer no login em modo `Entrar e vincular`.
+### Relacao com artefatos legados
 
-O segundo ramo pode existir sem que um cadastro tenha sido aberto.
+Se alguma instalacao ja tiver tabela, migration ou campos com nome de contexto
+social pendente, isso deve ser tratado como legado. Fluxos novos nao devem
+depender desses artefatos.
 
-Entao os campos de `vinculo_social_pendente_*` hoje presentes em
-`cadastros_conta` sao insuficientes para o alvo funcional completo.
-
-Eles continuam uteis apenas para o ramo em que o usuario de fato abriu o
-cadastro.
-
-### Schema proposto
-
-```sql
-CREATE TABLE IF NOT EXISTS autenticacao.contextos_sociais_pendentes (
-    id UUID PRIMARY KEY,
-    cliente_ecossistema_id BIGINT NOT NULL REFERENCES catalogo.clientes_ecossistema (id),
-    provedor VARCHAR(32) NOT NULL,
-    identificador_externo VARCHAR(255) NOT NULL,
-    email_social_normalizado VARCHAR(255) NOT NULL,
-    nome_usuario_externo VARCHAR(255),
-    usuario_id_sugerido UUID REFERENCES autenticacao.usuarios (id),
-    login_sugerido VARCHAR(255),
-    modo_pendente VARCHAR(32) NOT NULL,
-    tentativas_falhas INTEGER NOT NULL DEFAULT 0,
-    tentativas_maximas INTEGER NOT NULL DEFAULT 3,
-    expira_em TIMESTAMP WITH TIME ZONE NOT NULL,
-    cancelado_em TIMESTAMP WITH TIME ZONE,
-    consumido_em TIMESTAMP WITH TIME ZONE,
-    motivo_cancelamento VARCHAR(64),
-    criado_em TIMESTAMP WITH TIME ZONE NOT NULL,
-    atualizado_em TIMESTAMP WITH TIME ZONE NOT NULL
-);
-```
-
-### Semantica minima dos campos
-
-- `cliente_ecossistema_id`
-  - obriga o escopo por projeto atual
-- `provedor` + `identificador_externo`
-  - identificam a conta social trazida pelo provedor
-- `email_social_normalizado`
-  - suporta a regra “existe conta com este email **neste projeto**?”
-- `usuario_id_sugerido`
-  - identificador interno do usuario central sugerido para `Entrar e vincular`
-    no projeto atual, quando esse vinculo ja puder ser inferido com seguranca
-- `login_sugerido`
-  - valor textual que o app pode exibir/conferir no modo assistido
-- `modo_pendente`
-  - valores minimos recomendados:
-    - `ABRIR_CADASTRO`
-    - `ENTRAR_E_VINCULAR`
-- `tentativas_falhas`
-  - contador do modo `Entrar e vincular`
-- `tentativas_maximas`
-  - congelado em `3` para a primeira versao
-- `cancelado_em` e `motivo_cancelamento`
-  - permitem distinguir:
-    - recusa do usuario
-    - conta divergente
-    - limite de falhas
-- `consumido_em`
-  - marca que o contexto ja foi usado com sucesso
-
-### Indices recomendados
-
-```sql
-CREATE UNIQUE INDEX IF NOT EXISTS uk_contextos_sociais_pendentes_ativos_projeto_provedor
-    ON autenticacao.contextos_sociais_pendentes (cliente_ecossistema_id, provedor, identificador_externo)
-    WHERE cancelado_em IS NULL
-      AND consumido_em IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_contextos_sociais_pendentes_email_projeto
-    ON autenticacao.contextos_sociais_pendentes (cliente_ecossistema_id, email_social_normalizado);
-
-CREATE INDEX IF NOT EXISTS idx_contextos_sociais_pendentes_usuario_sugerido
-    ON autenticacao.contextos_sociais_pendentes (usuario_id_sugerido, cliente_ecossistema_id);
-```
-
-Observacao:
-
-- a unicidade deve valer apenas para contextos sociais **ativos**;
-- isso evita que uma vinculacao ja cancelada ou consumida bloqueie uma nova
-  tentativa futura da mesma conta social no mesmo projeto.
-
-### Relacao com os campos legados de cadastro
-
-Quando o usuario aceitar o ramo `Abrir cadastro com prefill (preenchimento inicial)`:
-
-- o contexto social pendente pode ser copiado para `cadastros_conta` nos campos
-  legados ja existentes:
-  - `vinculo_social_pendente_provedor`
-  - `vinculo_social_pendente_identificador_externo`
-  - `vinculo_social_pendente_nome_usuario_externo`
-
-Mas isso deve ser tratado como **materializacao derivada**, nao como fonte
-canonica do contexto social pendente.
+Remocao fisica, quando for decidida, deve ocorrer em migration propria de drop,
+separada deste documento, para evitar quebra em ambientes que ja aplicaram a
+estrutura antiga.
 
 ## Ordem recomendada de migrations
 
@@ -454,12 +375,12 @@ canonica do contexto social pendente.
 3. ajustar contrato da recuperacao para receber `aplicacaoId`
 4. so depois endurecer `cliente_ecossistema_id` em recuperacao
 
-### Fase 3 - Contexto social pendente
+### Fase 3 - Cadastro social confirmado
 
-1. criar `DB-03`
-2. passar a gravar o contexto social pendente fora de `cadastros_conta`
-3. manter os campos legados do cadastro apenas como copia derivada quando o
-   usuario efetivamente abrir o cadastro
+1. nao criar `DB-03` de contexto social pendente persistido
+2. aceitar somente listas confirmadas no contrato publico de cadastro/vinculo
+3. gravar vinculos sociais e avatares apenas quando o cadastro ou o vínculo
+   local estiver confirmado
 
 ## Preparacao de local e hml
 
@@ -473,7 +394,8 @@ canonica do contexto social pendente.
 ### HML
 
 - so aplicar migrations depois que:
-  - `DB-01`, `DB-02` e `DB-03` estiverem aprovados nesta especificacao
+  - `DB-01` e `DB-02` estiverem aprovados nesta especificacao
+  - o contrato de cadastro social confirmado estiver fechado
   - o contrato da recuperacao com `aplicacaoId` estiver fechado
   - os TDDs correspondentes estiverem implementados pelo menos em camada
     minima

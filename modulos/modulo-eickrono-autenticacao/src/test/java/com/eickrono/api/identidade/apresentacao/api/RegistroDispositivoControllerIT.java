@@ -1,57 +1,56 @@
 package com.eickrono.api.identidade.apresentacao.api;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import com.eickrono.api.identidade.dominio.modelo.CanalVerificacao;
-import com.eickrono.api.identidade.dominio.modelo.EventoOfflineDispositivo;
-import com.eickrono.api.identidade.dominio.modelo.MotivoRevogacaoToken;
-import com.eickrono.api.identidade.dominio.modelo.TipoEventoOfflineDispositivo;
-import com.eickrono.api.identidade.AplicacaoApiIdentidade;
-import com.eickrono.api.identidade.aplicacao.modelo.ContextoPessoaPerfilSistema;
-import com.eickrono.api.identidade.aplicacao.servico.ClienteContextoPessoaPerfilSistema;
-import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
-import com.eickrono.api.identidade.support.InfraestruturaTesteIdentidade;
-import com.eickrono.api.identidade.support.ClienteAdministracaoCadastroKeycloakStubConfiguration;
-import com.eickrono.api.identidade.dominio.modelo.StatusRegistroDispositivo;
-import com.eickrono.api.identidade.dominio.modelo.StatusTokenDispositivo;
-import com.eickrono.api.identidade.dominio.modelo.TokenDispositivo;
-import com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial;
-import com.eickrono.api.identidade.dominio.repositorio.EventoOfflineDispositivoRepositorio;
-import com.eickrono.api.identidade.dominio.repositorio.TokenDispositivoRepositorio;
-import com.eickrono.api.identidade.apresentacao.dto.ConfirmacaoRegistroResponse;
-import com.eickrono.api.identidade.apresentacao.dto.PoliticaOfflineDispositivoResponse;
-import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoResponse;
-import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoSessaoResponse;
-import com.eickrono.api.identidade.apresentacao.dto.ValidacaoTokenDispositivoResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
+import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.eickrono.api.identidade.AplicacaoApiIdentidade;
+import com.eickrono.api.identidade.aplicacao.modelo.ContextoPessoaPerfilSistema;
+import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
+import com.eickrono.api.identidade.aplicacao.servico.ClienteContextoPessoaPerfilSistema;
+import com.eickrono.api.identidade.apresentacao.dto.ConfirmacaoRegistroResponse;
+import com.eickrono.api.identidade.apresentacao.dto.PoliticaOfflineDispositivoResponse;
+import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoResponse;
+import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoSessaoResponse;
+import com.eickrono.api.identidade.apresentacao.dto.ValidacaoTokenDispositivoResponse;
+import com.eickrono.api.identidade.dominio.modelo.CanalVerificacao;
+import com.eickrono.api.identidade.dominio.modelo.EventoOfflineDispositivo;
+import com.eickrono.api.identidade.dominio.modelo.MotivoRevogacaoToken;
+import com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial;
+import com.eickrono.api.identidade.dominio.modelo.StatusRegistroDispositivo;
+import com.eickrono.api.identidade.dominio.modelo.TipoEventoOfflineDispositivo;
+import com.eickrono.api.identidade.dominio.modelo.TokenDispositivo;
+import com.eickrono.api.identidade.dominio.repositorio.EventoOfflineDispositivoRepositorio;
+import com.eickrono.api.identidade.dominio.repositorio.TokenDispositivoRepositorio;
+import com.eickrono.api.identidade.support.ClienteAdministracaoCadastroKeycloakStubConfiguration;
+import com.eickrono.api.identidade.support.InfraestruturaTesteIdentidade;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @SpringBootTest(classes = {
         AplicacaoApiIdentidade.class,
@@ -93,8 +92,7 @@ class RegistroDispositivoControllerIT {
     @MockBean
     private ClienteContextoPessoaPerfilSistema clienteContextoPessoaPerfilSistema;
 
-    @BeforeEach
-    void setUp() {
+    private void prepararContextoDeTeste() {
         keycloakStub.limparIdentidadesFederadas();
         codigoCapturador.limpar();
         jdbcTemplate.getJdbcOperations().update("""
@@ -109,7 +107,6 @@ class RegistroDispositivoControllerIT {
                     codigo_verificacao,
                     registro_dispositivo,
                     cadastros_conta,
-                    autenticacao.contextos_sociais_pendentes,
                     autenticacao.usuarios_clientes_ecossistema,
                     autenticacao.usuarios_formas_acesso,
                     autenticacao.usuarios
@@ -156,6 +153,8 @@ class RegistroDispositivoControllerIT {
 
     @Test
     void fluxoCompletoDeRegistroConfirmacaoERevogacao() throws Exception {
+        prepararContextoDeTeste();
+
         RegistroDispositivoResponse registro = solicitarRegistro();
         assertThat(registro.status()).isEqualTo(StatusRegistroDispositivo.PENDENTE);
         assertThat(registro.canaisConfirmacao()).containsExactlyInAnyOrder(CanalVerificacao.EMAIL, CanalVerificacao.SMS);
@@ -281,6 +280,8 @@ class RegistroDispositivoControllerIT {
 
     @Test
     void deveAceitarFluxoInterativoPelaRotaCanonicaDeConta() throws Exception {
+        prepararContextoDeTeste();
+
         RegistroDispositivoResponse registro = solicitarRegistro(
                 REGISTRO_ENDPOINT_CONTA,
                 "ios|iphone14,3|device-canonico"
@@ -308,6 +309,8 @@ class RegistroDispositivoControllerIT {
 
     @Test
     void deveRevogarTokenAnteriorQuandoNovoDispositivoForConfirmado() throws Exception {
+        prepararContextoDeTeste();
+
         RegistroDispositivoResponse primeiroRegistro = solicitarRegistro("ios|iphone14,3|device-1");
         String primeiroCodigoSms = codigoCapturador().obterCodigo(primeiroRegistro.registroId(), CanalVerificacao.SMS)
                 .orElseThrow(() -> new IllegalStateException("Codigo SMS do primeiro dispositivo nao capturado"));
@@ -371,6 +374,8 @@ class RegistroDispositivoControllerIT {
 
     @Test
     void reenviarCodigoRespeitaLimites() throws Exception {
+        prepararContextoDeTeste();
+
         RegistroDispositivoResponse registro = solicitarRegistro();
 
         mockMvc().perform(post(REGISTRO_ENDPOINT + "/" + registro.registroId() + "/reenviar")
@@ -381,6 +386,8 @@ class RegistroDispositivoControllerIT {
 
     @Test
     void deveRegistrarSessaoSilenciosaQuandoContextoDoProdutoExistir() throws Exception {
+        prepararContextoDeTeste();
+
         criarCadastroCentralConcluido("usuario-xyz", "teste@eickrono.com", "usuario.teste");
 
         MvcResult resultado = mockMvc().perform(post("/identidade/dispositivos/registro/silencioso")
@@ -411,6 +418,8 @@ class RegistroDispositivoControllerIT {
 
     @Test
     void deveRetornarSocialSemContaLocalQuandoSubAutenticadoNaoPossuirContextoNoProjeto() throws Exception {
+        prepararContextoDeTeste();
+
         when(clienteContextoPessoaPerfilSistema.buscarPorSub("usuario-xyz"))
                 .thenReturn(Optional.empty());
         when(clienteContextoPessoaPerfilSistema.buscarPorEmail("teste@eickrono.com"))
@@ -444,12 +453,13 @@ class RegistroDispositivoControllerIT {
                 .andExpect(jsonPath("$.detalhes.acaoSugerida").value("ABRIR_CADASTRO"))
                 .andExpect(jsonPath("$.detalhes.email").value("teste@eickrono.com"))
                 .andExpect(jsonPath("$.detalhes.provedor").value("google"))
-                .andExpect(jsonPath("$.detalhes.identificadorExterno").value("google-sub-1"))
-                .andExpect(jsonPath("$.detalhes.contextoSocialPendenteId").isNotEmpty());
+                .andExpect(jsonPath("$.detalhes.identificadorExterno").value("google-sub-1"));
     }
 
     @Test
     void deveRetornarEntrarEVincularQuandoJaExistirContaLocalNoProjetoComMesmoEmail() throws Exception {
+        prepararContextoDeTeste();
+
         String emailSocial = "conta.existente@eickrono.com";
         when(clienteContextoPessoaPerfilSistema.buscarPorSub("usuario-sem-contexto"))
                 .thenReturn(Optional.empty());
@@ -487,8 +497,7 @@ class RegistroDispositivoControllerIT {
                 .andExpect(jsonPath("$.detalhes.emailContaExistente").value(emailSocial))
                 .andExpect(jsonPath("$.detalhes.loginSugerido").value("pedrosotc"))
                 .andExpect(jsonPath("$.detalhes.provedor").value("google"))
-                .andExpect(jsonPath("$.detalhes.identificadorExterno").value("google-sub-2"))
-                .andExpect(jsonPath("$.detalhes.contextoSocialPendenteId").isNotEmpty());
+                .andExpect(jsonPath("$.detalhes.identificadorExterno").value("google-sub-2"));
     }
 
     private void criarCadastroCentralConcluido(final String sub, final String email, final String usuario) {

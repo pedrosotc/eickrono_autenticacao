@@ -1,5 +1,6 @@
 package com.eickrono.api.identidade.apresentacao.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,17 +20,19 @@ import com.eickrono.api.identidade.aplicacao.servico.CadastroContaInternaServico
 import com.eickrono.api.identidade.aplicacao.servico.ClienteAdministracaoCadastroKeycloak;
 import com.eickrono.api.identidade.aplicacao.servico.ClienteAdministracaoVinculosSociaisKeycloak;
 import com.eickrono.api.identidade.aplicacao.servico.ClienteContextoPessoaPerfilSistema;
-import com.eickrono.api.identidade.aplicacao.servico.ContextoSocialPendenteJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.IntegracaoProdutoPendenteScheduler;
+import com.eickrono.api.identidade.aplicacao.servico.LocalizadorLoginSocialProjetoJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.LocalizadorPerfilSistemaProjetoPorEmailJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.ResolvedorContextoAutenticacaoService;
 import com.eickrono.api.identidade.aplicacao.servico.ResolvedorProjetoFluxoPublico;
 import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoService;
 import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoScheduler;
 import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoLoginSilenciosoService;
-import com.eickrono.api.identidade.aplicacao.servico.VinculoSocialService;
+import com.eickrono.api.identidade.aplicacao.servico.ValidadorCredencialSocialNativaService;
 import com.eickrono.api.identidade.aplicacao.excecao.FluxoPublicoException;
-import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
+import com.eickrono.api.identidade.aplicacao.modelo.CredencialSocialDeclarada;
+import com.eickrono.api.identidade.aplicacao.modelo.CredencialSocialValidada;
+import com.eickrono.api.identidade.aplicacao.modelo.LoginSocialProjetoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.PerfilSistemaProjetoPorEmailResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.DispositivoSessaoRegistrado;
@@ -37,7 +40,6 @@ import com.eickrono.api.identidade.aplicacao.modelo.ContextoPessoaPerfilSistema;
 import com.eickrono.api.identidade.aplicacao.modelo.SessaoInternaAutenticada;
 import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoResponse;
 import com.eickrono.api.identidade.dominio.modelo.CanalVerificacao;
-import com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial;
 import com.eickrono.api.identidade.dominio.modelo.StatusRegistroDispositivo;
 import com.eickrono.api.identidade.support.InfraestruturaTesteIdentidade;
 import java.time.OffsetDateTime;
@@ -107,13 +109,13 @@ class FluxoPublicoControllerIT {
     private RegistroDispositivoLoginSilenciosoService registroDispositivoLoginSilenciosoService;
 
     @MockBean
-    private VinculoSocialService vinculoSocialService;
-
-    @MockBean
-    private ContextoSocialPendenteJdbc contextoSocialPendenteJdbc;
+    private LocalizadorLoginSocialProjetoJdbc localizadorLoginSocialProjeto;
 
     @MockBean
     private ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico;
+
+    @MockBean
+    private ValidadorCredencialSocialNativaService validadorCredencialSocialNativaService;
 
     @MockBean
     private JwtDecoder jwtDecoder;
@@ -126,6 +128,12 @@ class FluxoPublicoControllerIT {
 
     @MockBean
     private IntegracaoProdutoPendenteScheduler integracaoProdutoPendenteScheduler;
+
+    @Test
+    void deveCarregarMocksObrigatoriosDoContextoDeFluxoPublico() {
+        assertThat(clienteContextoPessoaPerfilSistema).isNotNull();
+        assertThat(clienteAdministracaoVinculosSociaisKeycloak).isNotNull();
+    }
 
     static final class LocalDatabaseOidcInitializer
             implements ApplicationContextInitializer<ConfigurableApplicationContext> {
@@ -222,111 +230,6 @@ class FluxoPublicoControllerIT {
     }
 
     @Test
-    void deveCancelarVinculacaoPendenteQuandoLoginInformadoNaoCorrespondeContaSugerida() throws Exception {
-        setUp();
-        UUID contextoId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        when(contextoSocialPendenteJdbc.buscarAtivo(contextoId, 1L))
-                .thenReturn(Optional.of(new ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo(
-                        contextoId,
-                        1L,
-                        UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
-                        "pedrosotc",
-                        "ENTRAR_E_VINCULAR",
-                        0,
-                        3
-                )));
-
-        mockMvc.perform(post("/api/publica/sessoes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(corpoLoginPublico("""
-                                "contextoSocialPendenteId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                                "login": "outra@eickrono.com",
-                                "senha": "SenhaForte123",
-                                """)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.codigo").value("vinculacao_social_pendente_cancelada"));
-
-        verify(contextoSocialPendenteJdbc).cancelar(
-                contextoId,
-                1L,
-                "CONTA_DIVERGENTE"
-        );
-        Mockito.verifyNoInteractions(autenticacaoSessaoInternaServico);
-    }
-
-    @Test
-    void deveManterVinculacaoPendenteQuandoFalhaDeCredenciaisAindaNaoAtingiuLimite() throws Exception {
-        UUID contextoId = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
-        when(contextoSocialPendenteJdbc.buscarAtivo(contextoId, 1L))
-                .thenReturn(Optional.of(new ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo(
-                        contextoId,
-                        1L,
-                        UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd"),
-                        "pedrosotc",
-                        "ENTRAR_E_VINCULAR",
-                        0,
-                        3
-                )));
-        when(autenticacaoSessaoInternaServico.autenticar("pedrosotc", "SenhaForte123"))
-                .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid user credentials"));
-        when(contextoSocialPendenteJdbc.registrarFalhaEntrarEVincular(contextoId, 1L))
-                .thenReturn(new ContextoSocialPendenteJdbc.ResultadoFalhaEntrarEVincular(
-                        true,
-                        1,
-                        3,
-                        false
-                ));
-
-        mockMvc.perform(post("/api/publica/sessoes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(corpoLoginPublico("""
-                                "contextoSocialPendenteId": "cccccccc-cccc-cccc-cccc-cccccccccccc",
-                                "login": "pedrosotc",
-                                "senha": "SenhaForte123",
-                                """)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.codigo").value("credenciais_invalidas"));
-
-        verify(contextoSocialPendenteJdbc).registrarFalhaEntrarEVincular(contextoId, 1L);
-    }
-
-    @Test
-    void deveCancelarVinculacaoPendenteQuandoAtingirLimiteDeFalhasDeCredenciais() throws Exception {
-        UUID contextoId = UUID.fromString("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
-        when(contextoSocialPendenteJdbc.buscarAtivo(contextoId, 1L))
-                .thenReturn(Optional.of(new ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo(
-                        contextoId,
-                        1L,
-                        UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff"),
-                        "pedrosotc",
-                        "ENTRAR_E_VINCULAR",
-                        2,
-                        3
-                )));
-        when(autenticacaoSessaoInternaServico.autenticar("pedrosotc", "SenhaForte123"))
-                .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid user credentials"));
-        when(contextoSocialPendenteJdbc.registrarFalhaEntrarEVincular(contextoId, 1L))
-                .thenReturn(new ContextoSocialPendenteJdbc.ResultadoFalhaEntrarEVincular(
-                        true,
-                        3,
-                        3,
-                        true
-                ));
-
-        mockMvc.perform(post("/api/publica/sessoes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(corpoLoginPublico("""
-                                "contextoSocialPendenteId": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
-                                "login": "pedrosotc",
-                                "senha": "SenhaForte123",
-                                """)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.codigo").value("vinculacao_social_pendente_cancelada"));
-
-        verify(contextoSocialPendenteJdbc).registrarFalhaEntrarEVincular(contextoId, 1L);
-    }
-
-    @Test
     void deveConsultarDisponibilidadePublicaDoUsuario() throws Exception {
         when(cadastroContaInternaServico.identificadorPublicoSistemaDisponivelPublico("ana.souza")).thenReturn(false);
 
@@ -374,6 +277,8 @@ class FluxoPublicoControllerIT {
                 eq(com.eickrono.api.identidade.dominio.modelo.CanalValidacaoTelefoneCadastro.SMS),
                 eq("SenhaForte123"),
                 eq("eickrono-thimisu-app"),
+                any(),
+                any(),
                 any(),
                 any()))
                 .thenReturn(new com.eickrono.api.identidade.aplicacao.modelo.CadastroInternoRealizado(
@@ -448,6 +353,8 @@ class FluxoPublicoControllerIT {
                 eq("SenhaForte123"),
                 eq("eickrono-thimisu-app"),
                 any(),
+                any(),
+                any(),
                 any());
     }
 
@@ -459,21 +366,6 @@ class FluxoPublicoControllerIT {
 
         verify(cadastroContaInternaServico).cancelarCadastroPendentePublico(
                 java.util.UUID.fromString("11111111-1111-1111-1111-111111111111"));
-    }
-
-    @Test
-    void deveCancelarContextoSocialPendentePublico() throws Exception {
-        UUID contextoId = UUID.fromString("12121212-1212-1212-1212-121212121212");
-
-        mockMvc.perform(delete("/api/publica/sessoes/contextos-sociais-pendentes/{contextoId}", contextoId)
-                        .param("aplicacaoId", "eickrono-thimisu-app"))
-                .andExpect(status().isNoContent());
-
-        verify(contextoSocialPendenteJdbc).cancelar(
-                contextoId,
-                1L,
-                "USUARIO_DESISTIU"
-        );
     }
 
     @Test
@@ -1006,6 +898,23 @@ class FluxoPublicoControllerIT {
     @Test
     @org.junit.jupiter.api.DisplayName("cenario 16: deve criar sessao social publica via token exchange")
     void deveCriarSessaoSocialPublica() throws Exception {
+        when(validadorCredencialSocialNativaService.validar(
+                eq("google"),
+                eq("google-token-externo"),
+                any(CredencialSocialDeclarada.class)))
+                .thenReturn(new CredencialSocialValidada(
+                        "google",
+                        "google-sub-123",
+                        "social@eickrono.com",
+                        "social.user",
+                        "Usuario Social",
+                        "https://cdn.eickrono.store/avatar-social.png"
+                ));
+        when(localizadorLoginSocialProjeto.localizar(1L, "google", "google-sub-123"))
+                .thenReturn(Optional.of(new LoginSocialProjetoResolvido(
+                        UUID.fromString("71717171-7171-7171-7171-717171717171"),
+                        "usuario-social"
+                )));
         when(autenticacaoSessaoInternaServico.autenticarSocial("google", "google-token-externo"))
                 .thenReturn(new com.eickrono.api.identidade.aplicacao.modelo.SessaoInternaAutenticada(
                         true,
@@ -1090,6 +999,23 @@ class FluxoPublicoControllerIT {
     void deveRetornarRegistroInterativoPendenteNoLoginSocialQuandoDispositivoNaoEstiverLiberado() throws Exception {
         UUID registroId = UUID.fromString("51515151-5151-5151-5151-515151515151");
         OffsetDateTime expiraEm = OffsetDateTime.parse("2026-03-28T11:15:30Z");
+        when(validadorCredencialSocialNativaService.validar(
+                eq("google"),
+                eq("google-token-pendente"),
+                any(CredencialSocialDeclarada.class)))
+                .thenReturn(new CredencialSocialValidada(
+                        "google",
+                        "google-sub-pendente",
+                        "social-pendente@eickrono.com",
+                        "social.pendente",
+                        "Usuario Social Pendente",
+                        "https://cdn.eickrono.store/avatar-social-pendente.png"
+                ));
+        when(localizadorLoginSocialProjeto.localizar(1L, "google", "google-sub-pendente"))
+                .thenReturn(Optional.of(new LoginSocialProjetoResolvido(
+                        UUID.fromString("81818181-8181-8181-8181-818181818181"),
+                        "usuario-social-pendente"
+                )));
         when(autenticacaoSessaoInternaServico.autenticarSocial("google", "google-token-pendente"))
                 .thenReturn(new SessaoInternaAutenticada(
                         true,
@@ -1256,23 +1182,19 @@ class FluxoPublicoControllerIT {
 
     @Test
     void deveRetornarSocialSemContaLocalEntrarEVincularNoLoginSocialPublico() throws Exception {
-        UUID contextoId = UUID.fromString("91919191-9191-9191-9191-919191919191");
-        when(autenticacaoSessaoInternaServico.autenticarSocial("google", "google-token-externo"))
-                .thenReturn(new com.eickrono.api.identidade.aplicacao.modelo.SessaoInternaAutenticada(
-                        true,
-                        "Bearer",
-                        "access-token-social",
-                        "refresh-token-social",
-                        1800
+        when(validadorCredencialSocialNativaService.validar(
+                eq("google"),
+                eq("google-token-externo"),
+                any(CredencialSocialDeclarada.class)))
+                .thenReturn(new CredencialSocialValidada(
+                        "google",
+                        "google-sub-123",
+                        "social@eickrono.com",
+                        "social.user",
+                        "Social User",
+                        "https://cdn.eickrono.store/avatar-social.png"
                 ));
-        when(jwtDecoder.decode("access-token-social")).thenReturn(Jwt.withTokenValue("access-token-social")
-                .header("alg", "none")
-                .subject("usuario-sem-conta")
-                .claim("email", "social@eickrono.com")
-                .claim("name", "Social User")
-                .claim("picture", "https://cdn.eickrono.store/avatar-social.png")
-                .build());
-        when(resolvedorContextoAutenticacaoService.buscarPorSubPublico("usuario-sem-conta"))
+        when(localizadorLoginSocialProjeto.localizar(1L, "google", "google-sub-123"))
                 .thenReturn(Optional.empty());
         when(localizadorPerfilSistemaProjetoPorEmail.localizar(1L, "social@eickrono.com"))
                 .thenReturn(Optional.of(new PerfilSistemaProjetoPorEmailResolvido(
@@ -1280,25 +1202,6 @@ class FluxoPublicoControllerIT {
                         "social@eickrono.com",
                         "pedrosotc"
                 )));
-        when(clienteAdministracaoVinculosSociaisKeycloak.listarIdentidadesFederadas("usuario-sem-conta"))
-                .thenReturn(java.util.List.of(new IdentidadeFederadaKeycloak(
-                        ProvedorVinculoSocial.GOOGLE,
-                        "google-sub-123",
-                        "social.user",
-                        "Social User",
-                        "https://cdn.eickrono.store/avatar-social.png"
-                )));
-        when(contextoSocialPendenteJdbc.registrarOuAtualizar(
-                any(ProjetoFluxoPublicoResolvido.class),
-                eq("google"),
-                eq("google-sub-123"),
-                eq("social@eickrono.com"),
-                eq("social.user"),
-                eq("Social User"),
-                eq("https://cdn.eickrono.store/avatar-social.png"),
-                eq(UUID.fromString("92929292-9292-9292-9292-929292929292")),
-                eq("pedrosotc")
-        )).thenReturn(contextoId);
 
         mockMvc.perform(post("/api/publica/sessoes/sociais")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -1350,7 +1253,8 @@ class FluxoPublicoControllerIT {
                 .andExpect(jsonPath("$.detalhes.urlAvatarExterno")
                         .value("https://cdn.eickrono.store/avatar-social.png"))
                 .andExpect(jsonPath("$.detalhes.emailContaExistente").value("social@eickrono.com"))
-                .andExpect(jsonPath("$.detalhes.loginSugerido").value("pedrosotc"))
-                .andExpect(jsonPath("$.detalhes.contextoSocialPendenteId").value(contextoId.toString()));
+                .andExpect(jsonPath("$.detalhes.loginSugerido").value("pedrosotc"));
+
+        Mockito.verifyNoInteractions(autenticacaoSessaoInternaServico);
     }
 }

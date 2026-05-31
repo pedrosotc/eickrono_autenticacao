@@ -977,150 +977,92 @@ Regra tecnica de fechamento:
 
 #### 3.6.1 O que o app faz primeiro
 
-O login social e dividido em duas etapas:
+O app inicia a autenticacao social com o provedor nativo quando disponivel.
+Depois envia a credencial social ao `eickrono-autenticacao-servidor`.
 
-1. criar a sessao central social;
-2. garantir `X-Device-Token` depois.
+Regra alvo:
+
+- antes de existir conta/vinculo definitivo, o servidor valida a credencial
+  social e devolve dados sociais funcionais ao app;
+- nesse ponto nao deve criar usuario no Keycloak;
+- nesse ponto nao deve criar usuario, pessoa, forma social, avatar definitivo
+  ou contexto pendente em banco;
+- o app nao recebe token social temporario;
+- token de sessao do app so nasce depois de login/cadastro efetivado.
 
 #### 3.6.2 Diagrama da primeira etapa
 
 ```mermaid
 flowchart TD
     A[Usuario toca Apple, Google ou outra rede] --> B{Rede tem SDK nativo?}
-    B -- Sim --> C[Obter token externo nativo]
-    B -- Nao --> D[Usar fluxo brokerado OIDC]
+    B -- Sim --> C[Obter credencial externa nativa]
+    B -- Nao --> D[Usar fluxo social suportado pelo app]
     C --> E[POST /api/publica/sessoes/sociais]
     D --> E
-    E --> F[Validar atestacao e seguranca]
-    F --> G[AutenticacaoSessaoInternaServico.autenticarSocial]
-    G --> H[Keycloak token exchange ou broker social]
-    H --> I[Resposta com accessToken e refreshToken]
-    I --> J[Tentar concluir sessao local na mesma borda publica]
-    J --> K{Sessao local concluida?}
-    K -- Sim --> L[Resposta com X-Device-Token]
-    K -- Nao, dispositivo pendente --> M[Resposta com registroDispositivoId e canaisConfirmacao]
-    K -- Nao, sem conta local --> N[409 social_sem_conta_local]
+    E --> F[eickrono-autenticacao-servidor valida atestacao e seguranca]
+    F --> G[eickrono-autenticacao-servidor valida credencial social]
+    G --> H{Rede ja vinculada a usuario correto?}
+    H -- Sim --> I[Emitir sessao pronta ou estado de dispositivo pendente]
+    H -- Nao --> J{Existe usuario local com mesmo e-mail?}
+    J -- Sim --> K[social_sem_conta_local + ENTRAR_E_VINCULAR]
+    J -- Nao --> L[social_sem_conta_local + ABRIR_CADASTRO]
+    G --> M{Rede pertence a outro usuario?}
+    M -- Sim --> N[vinculo_social_pertence_a_outra_conta]
 ```
 
-#### 3.6.3 O que a API publica de sessoes sociais devolve hoje
+#### 3.6.3 O que a API publica de sessoes sociais deve devolver
 
-Hoje `POST /api/publica/sessoes/sociais` devolve:
+`POST /api/publica/sessoes/sociais` deve devolver um destes resultados:
 
-- `accessToken`
-- `refreshToken`
-- `expiresIn`
-- `tokenDispositivo` quando a sessao local consegue ser concluida na mesma chamada
-- `registroDispositivoId`, `registroDispositivoExpiraEm`, `statusRegistroDispositivo` e `canaisConfirmacao`
-  quando a autenticacao central deu certo, mas o dispositivo ainda precisa de confirmacao interativa
+- sessao pronta quando a rede social ja pertence ao usuario correto e o
+  dispositivo esta apto;
+- estado de dispositivo pendente quando a conta esta correta, mas o aparelho
+  ainda precisa de confirmacao;
+- `social_sem_conta_local + ABRIR_CADASTRO` quando a rede social autenticou e
+  nao existe conta local para aquele e-mail;
+- `social_sem_conta_local + ENTRAR_E_VINCULAR` quando a rede social autenticou,
+  existe conta local com o mesmo e-mail e a rede ainda nao esta ligada a ela;
+- `vinculo_social_pertence_a_outra_conta` quando a rede social ja pertence a
+  outro usuario;
+- bloqueios funcionais como `conta_nao_liberada` e `conta_desabilitada`;
+- erros tecnicos trataveis como `autenticacao_social_invalida`, `falha_rede`
+  ou erro inesperado.
 
-Entao o comportamento publico atual passou a ser:
+#### 3.6.4 Keycloak nao decide pre-cadastro
 
-- tentar fechar a sessao local ja no proprio login social;
-- devolver sessao pronta quando isso for possivel;
-- ou devolver estado de `dispositivo pendente` na mesma resposta publica, sem obrigar o app
-  a descobrir isso em uma segunda chamada autenticada;
-- `social_sem_conta_local` continua existindo quando a conta central autenticou, mas nao existe
-  conta local pronta para aquele projeto.
+Keycloak nao deve ser usado como mecanismo que cria usuario ou vinculo social
+durante o pre-cadastro.
 
-#### 3.6.4 Colisao tecnica do broker nao e resposta funcional final
+Se existir uso interno de Keycloak para contas ja definitivas, ele deve ficar
+restrito a usuario/vinculo ja existente. Para os casos sem conta local pronta,
+o `eickrono-autenticacao-servidor` deve responder funcionalmente ao app sem
+persistir pendencia social.
 
-Quando o Keycloak devolver um erro tecnico como:
+### 3.7 Registro silencioso
 
-- `federated_identity_account_exists`
-- `User already exists`
-- ou outro conflito equivalente de broker/token exchange
+O registro silencioso nao deve ser o caminho para descobrir se uma rede social
+sem conta local deve abrir cadastro ou entrar-e-vincular.
 
-o backend nao deve devolver imediatamente erro generico ao app.
+Regra alvo:
 
-Ele precisa classificar o caso funcionalmente.
+- login social inicial resolve a classificacao funcional na borda publica do
+  `eickrono-autenticacao-servidor`;
+- `social_sem_conta_local` nasce dessa classificacao funcional;
+- `registro/silencioso` fica restrito a recomposicao/fechamento de sessao de
+  conta ja identificada, quando ainda for necessario;
+- `registro/silencioso` nao deve criar usuario, pessoa, forma social, avatar ou
+  contexto social pendente.
 
-Os subcasos minimos sao:
-
-1. a conta local do projeto ja existe e a rede social ainda nao esta vinculada
-   a ela
-   - resposta correta: `social_sem_conta_local` com
-     `acaoSugerida = ENTRAR_E_VINCULAR`
-
-2. a identidade social ja pertence a outro usuario local
-   - resposta correta: erro funcional explicito de conflito de vinculacao
-   - nao deve oferecer `ENTRAR_E_VINCULAR`
-
-3. o backend nao consegue provar qual conta local deveria receber o vinculo
-   - resposta correta: conflito funcional explicito
-   - nao deve abrir cadastro novo automaticamente
-
-Em resumo:
-
-- o erro tecnico do Keycloak e apenas a pista;
-- a resposta publica do servidor precisa ser de negocio.
-
-### 3.7 Fluxo tecnico de registro silencioso
-
-#### 3.7.1 Diagrama principal
-
-```mermaid
-flowchart TD
-    A[Sessao social central criada] --> B[POST /api/conta/dispositivos/registro/silencioso]
-    B --> C[Extrair sub do JWT social]
-    C --> D[Resolver contexto por sub]
-    D --> E{Contexto existe?}
-    E -- Nao --> F[409 social_sem_conta_local]
-    E -- Sim --> G{statusPerfilSistema aceita sessao social?}
-    G -- Nao --> H[403 conta_nao_liberada]
-    G -- Sim --> I[Emitir token de dispositivo]
-    I --> J[Sessao completa]
-```
-
-#### 3.7.2 Estados aceitos neste ponto
-
-No `registro/silencioso`, a `identidade` aceita:
-
-- `LIBERADO`
-- `ATIVO`
-
-Entao:
-
-- login por senha aceita so `LIBERADO`;
-- registro silencioso de sessao social aceita `LIBERADO` ou `ATIVO`.
-
-#### 3.7.2.1 Fluxograma explicativo do comportamento atual
-
-```mermaid
-flowchart TD
-    A[Mesma conta no mesmo app] --> B{Qual caminho foi usado?}
-    B -- Login por senha --> C[Validar status do perfil do sistema]
-    C --> D{status == LIBERADO?}
-    D -- Sim --> E[Sessao pode ser concluida]
-    D -- Nao --> F[conta_nao_liberada]
-
-    B -- Login social --> G[Autenticar sessao central]
-    G --> H[Chamar registro silencioso]
-    H --> I[Validar status do perfil do sistema]
-    I --> J{status == LIBERADO ou ATIVO?}
-    J -- Sim --> K[Sessao pode ser concluida]
-    J -- Nao --> L[conta_nao_liberada]
-```
-
-Leitura objetiva:
-
-- a mesma conta pode ser tratada de formas diferentes dependendo do caminho;
-- no estado atual, `ATIVO` pode passar pelo social e falhar na senha;
-- isso e o tipo de divergencia que esta por tras da opiniao da secao `4.2`.
-
-#### 3.7.3 Significado de `social_sem_conta_local`
+#### 3.7.1 Significado de `social_sem_conta_local`
 
 Esse erro nao significa que o login social falhou.
 
 Ele significa:
 
-- a rede social autenticou com sucesso;
-- a sessao central existe;
-- mas ainda nao existe perfil do sistema no projeto atual para aquele `sub`.
-
-Isso e o que aciona as UX de:
-
-- abrir cadastro com dados sociais;
-- ou entrar e vincular a uma conta local ja existente.
+- a credencial social foi validada;
+- ainda nao existe vinculo definitivo que permita entrar diretamente;
+- o app deve decidir entre abrir cadastro ou entrar-e-vincular conforme
+  `detalhes.acaoSugerida`.
 
 ### 3.8 Ramo tecnico `social_sem_conta_local`
 
@@ -1128,53 +1070,65 @@ Isso e o que aciona as UX de:
 
 ```mermaid
 flowchart TD
-    A[registro silencioso retornou 409 social_sem_conta_local] --> B[Identidade olha e-mail social]
-    B --> C{Ja existe usuario local deste projeto com este e-mail?}
-    C -- Nao --> D[acaoSugerida=ABRIR_CADASTRO]
-    C -- Sim --> E[acaoSugerida=ENTRAR_E_VINCULAR]
-    D --> F[Mensagem para abrir cadastro com dados recebidos]
-    E --> G[Mensagem para entrar e vincular a conta existente]
+    A[eickrono-autenticacao-servidor validou a credencial social] --> B{Rede ja esta vinculada a outro usuario?}
+    B -- Sim --> C[vinculo_social_pertence_a_outra_conta]
+    B -- Nao --> D{Ja existe usuario local com o e-mail social?}
+    D -- Nao --> E[acaoSugerida=ABRIR_CADASTRO]
+    D -- Sim --> F[acaoSugerida=ENTRAR_E_VINCULAR]
+    E --> G[App mostra mensagem para abrir cadastro com dados sociais temporarios]
+    F --> H[App mostra mensagem para entrar e vincular a conta existente]
 ```
 
 #### 3.8.2 Campos devolvidos nesse erro
 
-Quando possivel, a `identidade` hoje tenta devolver no erro:
+Quando possivel, o `eickrono-autenticacao-servidor` deve devolver:
 
-- `sub`
-- `email`
-- `acaoSugerida`
-- `provedor`
-- `identificadorExterno`
-- `nomeUsuarioExterno`
-- `nomeExibicaoExterno`
-- `urlAvatarExterno`
-- `loginSugerido`
-- `emailContaExistente`
+- `email`;
+- `acaoSugerida`;
+- `provedor`;
+- `identificadorExterno`;
+- `nomeUsuarioExterno`;
+- `nomeExibicaoExterno`;
+- `urlAvatarExterno`;
+- `loginSugerido`, no caso `ENTRAR_E_VINCULAR`;
+- `emailContaExistente`, no caso `ENTRAR_E_VINCULAR`.
 
-#### 3.8.3 Como o app reage hoje
+Nao deve devolver:
+
+- token social temporario;
+- JWT de sessao antes do cadastro/login efetivado.
+
+#### 3.8.3 Como o app reage
 
 Na tela de login:
 
-- o app registra um contexto social pendente em memoria;
-- encerra a sessao central temporaria localmente;
-- mostra a UX para o operador decidir o proximo passo.
+- o app guarda dados sociais temporarios em memoria/estado local;
+- mostra a UX para o operador decidir o proximo passo;
+- apaga os dados temporarios ao cancelar, exceder tentativas ou fechar o app.
 
 Na tela de foto de perfil e cadastro:
 
-- o app reaproveita o mesmo mecanismo;
-- se a conta ja existir e o `tokenDispositivo` vier, considera autenticacao
-  concluida;
-- se vier `social_sem_conta_local`, leva o contexto para o cadastro prefill (preenchimento inicial).
+- o app agrega os dados sociais temporarios ao cadastro em andamento;
+- se vier `social_sem_conta_local`, usa os dados para prefill e opcoes de
+  avatar, sem abrir novo cadastro;
+- a persistencia definitiva acontece apenas no submit final do cadastro.
 
-### 3.9 Fluxo tecnico social reaproveitado pela tela de foto de perfil
+### 3.9 Fluxo social na tela de foto de perfil
 
-Hoje a tela de foto de perfil nao usa um fluxo social separado de backend.
+No desenho alvo, a tela de foto de perfil nao cria sessao social nem chama
+registro silencioso para decidir cadastro.
 
-Ela reaproveita o mesmo mecanismo de:
+Ela usa o mesmo endpoint publico de validacao social apenas para obter dados
+sociais validados e temporarios:
 
-- sessao social publica;
-- tentativa de `registro/silencioso`;
-- interpretacao de `social_sem_conta_local`.
+- provedor;
+- identificador externo;
+- e-mail;
+- nome;
+- URL de avatar social, quando existir.
+
+Esses dados alimentam o cadastro em andamento. Eles so viram forma de acesso e
+avatar definitivo quando o cadastro for salvo.
 
 #### 3.9.1 Regra de comportamento da tela
 
@@ -1199,31 +1153,29 @@ Fluxograma:
 ```mermaid
 flowchart TD
     A[Usuario esta com cadastro em andamento] --> B[Usuario toca Apple, Google ou outra rede social publicada]
-    B --> C[Autenticar socialmente]
-    C --> D{Sessao trouxe token de dispositivo?}
-    D -- Sim --> E[Conta existente autenticada]
-    D -- Nao --> F[Chamar identidade dispositivos registro silencioso]
-    F --> G{409 social_sem_conta_local?}
-    G -- Sim --> H[Agregar rede ao contexto temporario do cadastro]
-    H --> I[Atualizar dados sociais disponiveis]
-    I --> J[Atualizar avatar social selecionavel]
-    J --> K[Manter foto do dispositivo em cache se ela existir]
-    K --> L[Nao mostrar UX de abrir cadastro novo]
-    G -- Nao --> M[Propagar erro]
-    F --> N{registro silencioso bem sucedido?}
-    N -- Sim --> E
-    L --> O[Ao gravar o cadastro persistir usuario e vincular todas as redes sociais temporarias]
+    B --> C[App autentica com o provedor]
+    C --> D[eickrono-autenticacao-servidor valida a credencial social]
+    D --> E{Credencial social valida?}
+    E -- Nao --> F[Mostrar erro temporario e nao persistir nada]
+    E -- Sim --> G{Cadastro ainda nao foi concluido?}
+    G -- Sim --> H[Agregar dados sociais temporarios no app]
+    H --> I[Atualizar opcoes visuais de avatar no cadastro]
+    I --> J[Manter foto do dispositivo carregada, se existir]
+    J --> K[Nao criar usuario, vinculo social, avatar definitivo ou contexto pendente em banco]
+    K --> L[Ao gravar o cadastro persistir usuario e vincular todas as redes sociais confirmadas]
+    G -- Nao --> M[Tratar como login/vinculacao fora do cadastro]
 ```
 
 Leitura objetiva:
 
 - autenticar socialmente na tela de foto de perfil nao significa concluir
   cadastro;
-- significa tentar descobrir se ja existe conta local pronta ou se a rede deve
-  alimentar cadastro e vinculacao;
+- significa validar dados sociais para alimentar cadastro e vinculacao;
 - se o cadastro ja esta em andamento, a rede autenticada deve ser agregada a
   esse mesmo cadastro;
-- portanto, a UX de "abrir cadastro novo" nao deveria aparecer nessa tela.
+- portanto, a UX de "abrir cadastro novo" nao deveria aparecer nessa tela;
+- antes do cadastro final, esses dados nao devem criar usuario, forma social,
+  avatar definitivo, usuario no Keycloak nem contexto pendente em banco.
 
 #### 3.9.3 Estado tecnico que a tela deveria preservar em memoria
 
@@ -1591,11 +1543,11 @@ Ele nao resolve sozinho:
 | Codigo | Onde nasce | Significado pratico | Reacao atual do app |
 | --- | --- | --- | --- |
 | `credenciais_invalidas` | login por senha | senha ou login invalidos | mostra erro simples |
-| `conta_nao_liberada` | login por senha ou registro silencioso | conta central existe, mas contexto local ainda nao permite uso | mostra aviso inferior com `Sim` / `Nao`; `Sim` abre `/validacao-contatos` |
+| `conta_nao_liberada` | login por senha, login social ou recomposicao de sessao | conta central existe, mas contexto local ainda nao permite uso | mostra aviso inferior com `Sim` / `Nao`; `Sim` abre `/validacao-contatos` |
 | `conta_incompleta` | mapeamento do login por senha | conta central ainda nao terminou configuracao minima | mostra erro |
 | `conta_desabilitada` | mapeamento do login por senha | conta bloqueada ou desabilitada | abre a tela de excecao de usuario bloqueado |
 | `conta_pendente_redefinir_senha` | login por senha | conta precisa regularizar senha | app oferece fluxo de regularizacao |
-| `social_sem_conta_local` | `registro/silencioso` | rede social autenticou, mas nao existe perfil do sistema pronto para este projeto | app abre fluxo de cadastro ou entrar e vincular |
+| `social_sem_conta_local` | login social publico | rede social autenticou, mas ainda nao existe vinculo definitivo que permita entrar diretamente | app abre fluxo de cadastro ou entrar e vincular |
 | `falha_rede` | qualquer etapa | conectividade | app mostra erro de rede |
 
 ### 3.13 Divergencias abertas e erros estruturais confirmados
@@ -1622,12 +1574,16 @@ Isso precisa ser uniformizado.
 
 #### 3.13.3 Login por senha e sessao social aceitam estados diferentes
 
-Hoje:
+Estado que motivou a revisao:
 
 - login por senha exige `LIBERADO`;
-- sessao social com `registro/silencioso` aceita `LIBERADO` ou `ATIVO`.
+- sessao social em fluxo antigo podia aceitar `LIBERADO` ou `ATIVO` por um
+  caminho separado.
 
-Isso e outra divergencia funcional real.
+Regra alvo:
+
+- login por senha, login social e refresh devem usar a mesma classificacao
+  funcional na borda publica do `eickrono-autenticacao-servidor`.
 
 #### 3.13.4 Lista de redes sociais depende do runtime OIDC
 
@@ -1638,13 +1594,17 @@ Hoje um provedor pode aparecer no app porque:
 
 #### 3.13.5 O `X-Device-Token` nao nasce sempre no mesmo passo
 
-Hoje:
+Estado que motivou a revisao:
 
 - no login por senha, a borda publica ja tenta fechar tudo na mesma chamada;
-- no login social, a sessao central vem primeiro e o `tokenDispositivo` vem
-  depois, via `registro/silencioso`.
+- no login social, havia caminho em que a sessao social vinha primeiro e o
+  `tokenDispositivo` era resolvido depois.
 
-Isso explica boa parte da complexidade atual.
+Regra alvo:
+
+- o app deve receber uma resposta publica funcional ja classificada:
+  sessao pronta, dispositivo pendente, abrir cadastro, entrar-e-vincular,
+  bloqueio ou erro tratavel.
 
 ## 4. Diretrizes de consolidacao e decisoes adotadas
 
@@ -1847,7 +1807,6 @@ Sequencia adotada para a migracao:
 | `POST /api/publica/recuperacoes-senha` | `POST /api/publica/recuperacoes-senha` | `autenticacao` | Nao, este e o dono natural | Quando o app migrar |
 | `POST /api/publica/recuperacoes-senha/:fluxoId/confirmacoes/email` | `POST /api/publica/recuperacoes-senha/:fluxoId/confirmacoes/email` | `autenticacao` | Nao, este e o dono natural | Quando o app migrar |
 | `POST /api/publica/recuperacoes-senha/:fluxoId/senha` | `POST /api/publica/recuperacoes-senha/:fluxoId/senha` | `autenticacao` | Nao, este e o dono natural | Quando o app migrar |
-| `DELETE /api/publica/sessoes/contextos-sociais-pendentes/:id` | `DELETE /api/publica/sessoes/contextos-sociais-pendentes/:id` | `autenticacao` | Sim, se o armazenamento ainda estiver fora dela | Quando o app migrar |
 
 ##### Superficie autenticada
 
@@ -1941,9 +1900,9 @@ Entao o problema que eu quis apontar e exatamente este:
 | Tema | Login por senha hoje | Login por rede social autenticada hoje | Diretriz de unificacao | Aplicacao adotada neste projeto |
 | --- | --- | --- | --- | --- |
 | Status `LIBERADO` | aceita | aceita | manter como status plenamente apto para login e sessao pronta | Aprovar sem ressalvas |
-| Status `ATIVO` | bloqueia | aceita via `registro/silencioso` | tratar `ATIVO` como apto temporariamente nos dois caminhos durante a migracao, porque o proprio runtime atual ja prova que ele e operacionalmente utilizavel no social; em paralelo, parar de expor `ATIVO` como status publico final e convergir esse estado para `LIBERADO` | Aceitar `ATIVO` nos dois caminhos agora e programar sua extincao como status publico |
+| Status `ATIVO` | bloqueia | podia ser aceito em caminho social antigo | tratar `ATIVO` como apto temporariamente nos dois caminhos durante a migracao; em paralelo, parar de expor `ATIVO` como status publico final e convergir esse estado para `LIBERADO` | Aceitar `ATIVO` nos dois caminhos agora e programar sua extincao como status publico |
 | Status `PENDENTE_LIBERACAO_PRODUTO` | na `identidade` publica atual tende a bloquear | depende do tronco seguinte; hoje nao e a mesma regra do login por senha | permitir login central nos dois caminhos, mas nao prometer disponibilidade plena do produto; a restricao deve existir apenas nas operacoes que realmente dependem do backend do produto | Permitir sessao central e postergar o bloqueio para o momento de uso do produto |
-| Fonte da regra de prontidao | gate publico da `identidade` | combinacao de sessao social + `registro/silencioso` | extrair uma unica regra canônica de "sessao apta para uso" e aplicá-la em senha, social, refresh e registro silencioso; essa regra deve morar na borda pública final, idealmente `autenticacao` | Centralizar em `autenticacao` |
+| Fonte da regra de prontidao | gate publico da `identidade` | regra historicamente espalhada em mais de uma etapa | extrair uma unica regra canônica de "sessao apta para uso" e aplicá-la em senha, social e refresh; essa regra deve morar na borda pública final, idealmente `autenticacao` | Centralizar em `autenticacao` |
 | Percepcao do operador | "senha nao entrou" | "rede social entrou" | fazer ambos os caminhos retornarem a mesma decisao funcional para o mesmo estado, inclusive com mensagens de erro equivalentes e mesmas opcoes de retomada | Unificar mensagens e comportamento visivel |
 
 #### 4.2.4 Possivel solucao de implementacao e unificacao
@@ -2143,14 +2102,17 @@ esta tentando:
 - ou usar a foto daquela rede;
 - ou descobrir se aquela rede ja casa com uma conta local pronta.
 
-Mesmo assim, por baixo, o app ainda pode passar por:
+No desenho alvo, por baixo, o app deve passar por:
 
-1. autenticacao social central;
-2. tentativa de `registro/silencioso`;
-3. decisao entre:
-   - sessao local pronta;
-   - `social_sem_conta_local`;
-   - ou contexto para cadastro/vinculacao.
+1. autenticacao social nativa;
+2. validacao da credencial no `eickrono-autenticacao-servidor`;
+3. decisao funcional entre:
+   - sessao pronta;
+   - `social_sem_conta_local + ABRIR_CADASTRO`;
+   - `social_sem_conta_local + ENTRAR_E_VINCULAR`;
+   - conflito ou bloqueio funcional;
+4. persistencia definitiva apenas no submit final do cadastro ou no login local
+   valido do entrar-e-vincular.
 
 Entao a confusao aqui e:
 
@@ -2596,20 +2558,18 @@ Request representativo:
   "aceitouTermos": true,
   "aceitouPrivacidade": true,
   "plataformaApp": "IOS",
-  "vinculoSocialPendente": {
+  "vinculoSocialTemporario": {
     "provedor": "google",
     "identificadorExterno": "117200000000000000001",
-    "contextoSocialPendenteId": "11111111-1111-1111-1111-111111111111",
     "nomeUsuarioExterno": "pedrosotc@gmail.com",
     "email": "pedrosotc@gmail.com",
     "nomeCompleto": "Thiago Christian Pedroso",
     "urlAvatarExterno": "https://cdn.test/avatar-google.png"
   },
-  "vinculosSociaisPendentes": [
+  "vinculosSociaisTemporarios": [
     {
       "provedor": "google",
       "identificadorExterno": "117200000000000000001",
-      "contextoSocialPendenteId": "11111111-1111-1111-1111-111111111111",
       "nomeUsuarioExterno": "pedrosotc@gmail.com",
       "email": "pedrosotc@gmail.com",
       "nomeCompleto": "Thiago Christian Pedroso",
@@ -2618,7 +2578,6 @@ Request representativo:
     {
       "provedor": "apple",
       "identificadorExterno": "000000000000000002",
-      "contextoSocialPendenteId": "22222222-2222-2222-2222-222222222222",
       "nomeUsuarioExterno": "pedrosotc.apple",
       "urlAvatarExterno": "https://cdn.test/avatar-apple.png"
     }
@@ -2630,10 +2589,10 @@ Request representativo:
 
 Leitura objetiva:
 
-- `vinculoSocialPendente` continua existindo como campo legado de
-  compatibilidade;
-- `vinculosSociaisPendentes` passa a ser o campo canônico quando o cadastro em
-  andamento agregou mais de uma rede social;
+- `vinculoSocialTemporario` representa a rede social temporaria singular quando
+  houver compatibilidade com payload simples;
+- `vinculosSociaisTemporarios` passa a ser o campo canonico quando o cadastro
+  em andamento agregou mais de uma rede social;
 - no runtime atual do app, o campo singular pode apontar para a rede
   atualmente escolhida como origem do avatar, enquanto a lista plural carrega o
   conjunto completo autenticado naquele cadastro.
@@ -2644,10 +2603,10 @@ Leitura objetiva:
   duas devem ser persistidas como vínculos da pessoa;
 - a rede escolhida para o avatar principal influencia apenas
   `avatar_preferido_*`, nunca a lista final de vínculos persistidos.
-- ao confirmar o e-mail e ativar a conta, o runtime atual do servidor de
-  autenticacao percorre a colecao pendente desse cadastro, vincula cada
-  identidade federada ao `subjectRemoto` confirmado e consome os contextos
-  sociais usados naquele fluxo.
+- ao confirmar o e-mail e ativar a conta, o servidor de autenticacao deve
+  encaminhar ao servidor de identidade apenas os vinculos sociais confirmados
+  no payload final do cadastro; nao deve depender de contextos sociais
+  persistidos previamente.
 
 Response representativo:
 
@@ -2724,7 +2683,6 @@ Request:
   "aplicacaoId": "thimisu-app",
   "login": "pedrosotc@gmail.com",
   "senha": "Senha#123",
-  "contextoSocialPendenteId": null,
   "dispositivo": {},
   "atestacao": {},
   "segurancaAplicativo": {}
@@ -3274,18 +3232,24 @@ Leitura de UX:
   "codigo": "social_sem_conta_local",
   "mensagem": "Esta rede social foi autenticada com sucesso, mas ainda não está ligada a uma conta local deste projeto.",
   "detalhes": {
-    "sub": "0f6f8d4e-3a6e-4f1e-9d87-2e4a92240b11",
     "acaoSugerida": "ABRIR_CADASTRO",
     "email": "pedrosotc@gmail.com",
     "provedor": "google",
     "identificadorExterno": "117200000000000000001",
     "nomeUsuarioExterno": "pedrosotc@gmail.com",
     "nomeExibicaoExterno": "Pedro Sotc",
-    "urlAvatarExterno": "https://lh3.googleusercontent.com/...",
-    "contextoSocialPendenteId": "a3fd8ad9-966f-4d32-8b4d-3e3e83920c6a"
+    "urlAvatarExterno": "https://lh3.googleusercontent.com/..."
   }
 }
 ```
+
+Leitura funcional:
+
+- o `eickrono-autenticacao-servidor` validou a credencial social;
+- ainda nao existe conta local definitiva para entrar;
+- o app pode usar os dados de `detalhes` apenas como estado temporario;
+- o servidor nao deve criar usuario, pessoa, forma social, avatar definitivo,
+  usuario no Keycloak nem contexto social pendente em banco nesse momento.
 
 #### 5.9.2 `social_sem_conta_local` com sugestao de entrar e vincular
 
@@ -3294,7 +3258,6 @@ Leitura de UX:
   "codigo": "social_sem_conta_local",
   "mensagem": "Esta rede social foi autenticada com sucesso, mas ainda não está ligada a uma conta local deste projeto.",
   "detalhes": {
-    "sub": "0f6f8d4e-3a6e-4f1e-9d87-2e4a92240b11",
     "acaoSugerida": "ENTRAR_E_VINCULAR",
     "email": "pedrosotc@gmail.com",
     "provedor": "apple",
@@ -3302,11 +3265,20 @@ Leitura de UX:
     "nomeExibicaoExterno": "Pedro Sotc",
     "urlAvatarExterno": null,
     "loginSugerido": "pedrosotc",
-    "emailContaExistente": "pedrosotc@gmail.com",
-    "contextoSocialPendenteId": "a3fd8ad9-966f-4d32-8b4d-3e3e83920c6a"
+    "emailContaExistente": "pedrosotc@gmail.com"
   }
 }
 ```
+
+Leitura funcional:
+
+- o `eickrono-autenticacao-servidor` validou a credencial social;
+- existe conta local candidata pelo mesmo e-mail;
+- a rede social ainda nao esta vinculada a essa conta;
+- o app deve manter os dados sociais apenas em estado temporario ate o login
+  local concluir;
+- a forma social e o avatar social so podem ser persistidos depois do login
+  local valido.
 
 #### 5.9.3 conflito social quando a rede ja pertence a outro usuario
 
@@ -3368,7 +3340,9 @@ Decisao de UX:
 
 - abrir cadastro;
 - preencher e-mail, nome e avatar quando disponiveis;
-- preservar `contextoSocialPendenteId`.
+- preservar no app apenas os dados sociais temporarios recebidos em `detalhes`;
+- nao depender de token social temporario ou tabela de pendencia social em
+  servidor.
 
 #### 5.10.3 Entrar e vincular depois
 
@@ -3691,13 +3665,16 @@ permitir:
 - sincronizar dados sociais;
 - escolher avatar preferido a partir dessas redes.
 
-#### 7.4.2 Diferenca entre contexto temporario e vinculo persistido
+#### 7.4.2 Diferenca entre dados sociais temporarios e vinculo persistido
 
-Contexto temporario de cadastro:
+Dados sociais temporarios de cadastro:
 
 - existe durante login social pendente ou cadastro em andamento;
 - serve para preechimento de dados, avatar e futura vinculacao;
 - ainda nao significa que a rede ficou persistida na conta do usuario.
+- fica no app enquanto o fluxo esta em andamento;
+- nao deve ser salvo em tabela de pendencia no `eickrono-autenticacao-servidor`
+  nem no `eickrono-identidade-servidor`.
 
 Vinculo persistido:
 
@@ -3782,7 +3759,7 @@ Nao precisa ser persistido como imagem real:
 - o monograma por iniciais;
 - o icone generico;
 - a foto temporaria do dispositivo antes de confirmar cadastro;
-- o contexto social temporario ainda nao vinculado.
+- os dados sociais temporarios ainda nao vinculados.
 
 #### 7.5.3 Regra canônica de precedencia adotada
 
@@ -3915,7 +3892,7 @@ Ela nao substitui:
 | `SESSAO_LOCAL_INCOMPLETA` | existe estado central, mas falta fechar contexto local ou dispositivo | ainda nao entra no app |
 | `TOKEN_DISPOSITIVO_VALIDO` | `X-Device-Token` atual esta apto | permite sessao local pronta |
 | `REGISTRO_DISPOSITIVO_PENDENTE` | dispositivo depende de confirmacao adicional | aponta para fluxo interativo |
-| `CONTEXTO_SOCIAL_PENDENTE` | rede social autenticou, mas ainda nao virou conta local ou vinculo persistido | usado em cadastro, vinculacao e retomada |
+| `DADOS_SOCIAIS_TEMPORARIOS_APP` | rede social autenticou, mas ainda nao virou conta local ou vinculo persistido | estado local do app usado em cadastro, vinculacao e retomada; nao e tabela nem token social temporario |
 | `DISPOSITIVO_REVOGADO` | servidor invalidou o aparelho para uso atual | força nova decisao de entrada |
 | `REFRESH_PENDENTE_RECUPERACAO_LOCAL` | existe tentativa de recompor sessao a partir de `refreshToken` | estado tecnico de bootstrap |
 
@@ -4018,7 +3995,8 @@ Implementacao:
    - sessao pronta;
    - bloqueio;
    - retomada;
-   - ou contexto social de cadastro, quando a tela nao for login;
+   - ou dados sociais temporarios para cadastro/vinculacao, quando ainda nao
+     houver conta/vinculo definitivo;
 3. deixar `registro/silencioso` como mecanismo interno de orquestracao e nao
    como etapa publica visivel para o app;
 4. alinhar o fluxo de bootstrap com o servidor de autenticacao como dono da

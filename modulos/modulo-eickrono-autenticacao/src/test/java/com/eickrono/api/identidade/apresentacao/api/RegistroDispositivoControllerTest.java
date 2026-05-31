@@ -15,7 +15,6 @@ import com.eickrono.api.identidade.aplicacao.modelo.PerfilSistemaProjetoPorEmail
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.servico.ClienteAdministracaoVinculosSociaisKeycloak;
 import com.eickrono.api.identidade.aplicacao.servico.CadastroContaInternaServico;
-import com.eickrono.api.identidade.aplicacao.servico.ContextoSocialPendenteJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.LocalizadorPerfilSistemaProjetoPorEmailJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.OfflineDispositivoService;
 import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoLoginSilenciosoService;
@@ -69,9 +68,6 @@ class RegistroDispositivoControllerTest {
     private ClienteAdministracaoVinculosSociaisKeycloak clienteAdministracaoVinculosSociaisKeycloak;
 
     @Mock
-    private ContextoSocialPendenteJdbc contextoSocialPendenteJdbc;
-
-    @Mock
     private ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico;
 
     @Mock
@@ -87,7 +83,6 @@ class RegistroDispositivoControllerTest {
                 registroDispositivoLoginSilenciosoService,
                 cadastroContaInternaServico,
                 clienteAdministracaoVinculosSociaisKeycloak,
-                contextoSocialPendenteJdbc,
                 resolvedorProjetoFluxoPublico,
                 localizadorPerfilSistemaProjetoPorEmail
         );
@@ -246,7 +241,6 @@ class RegistroDispositivoControllerTest {
         String sub = "usuario-sem-contexto";
         String email = "conta.existente@eickrono.com";
         UUID perfilSistemaId = UUID.randomUUID();
-        UUID contextoSocialPendenteId = UUID.randomUUID();
         DispositivoSessaoApiRequest request = new DispositivoSessaoApiRequest(
                 "IOS",
                 "eickrono-thimisu-app",
@@ -290,17 +284,6 @@ class RegistroDispositivoControllerTest {
         when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
         when(clienteAdministracaoVinculosSociaisKeycloak.listarIdentidadesFederadas(sub))
                 .thenReturn(List.of(identidadeGoogle));
-        when(contextoSocialPendenteJdbc.registrarOuAtualizar(
-                eq(projeto),
-                eq("google"),
-                eq("google-sub-2"),
-                eq(email),
-                eq(email),
-                eq("Conta Existente"),
-                eq("https://cdn.eickrono.test/google-vincular.png"),
-                eq(perfilSistemaId),
-                eq("pedrosotc")))
-                .thenReturn(contextoSocialPendenteId);
 
         assertThatThrownBy(() -> controller.registrarSessaoSilenciosa(request, jwt))
                 .isInstanceOf(FluxoPublicoException.class)
@@ -320,8 +303,7 @@ class RegistroDispositivoControllerTest {
                             Map.entry("identificadorExterno", "google-sub-2"),
                             Map.entry("nomeUsuarioExterno", email),
                             Map.entry("nomeExibicaoExterno", "Conta Existente"),
-                            Map.entry("urlAvatarExterno", "https://cdn.eickrono.test/google-vincular.png"),
-                            Map.entry("contextoSocialPendenteId", contextoSocialPendenteId)
+                            Map.entry("urlAvatarExterno", "https://cdn.eickrono.test/google-vincular.png")
                     ));
                 });
     }

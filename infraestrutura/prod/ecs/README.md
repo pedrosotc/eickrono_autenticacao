@@ -179,7 +179,10 @@ rotacao:
 ```json
 {
   "source": ["aws.secretsmanager"],
-  "detail-type": ["AWS Service Event via CloudTrail"],
+  "detail-type": [
+    "AWS Service Event via CloudTrail",
+    "AWS API Call via CloudTrail"
+  ],
   "detail": {
     "eventSource": ["secretsmanager.amazonaws.com"],
     "eventName": ["RotationSucceeded"]
@@ -191,6 +194,8 @@ Observacao importante:
 
 - o filtro final por segredo monitorado acontece tambem dentro da Lambda;
 - isso evita dependencia do formato exato de `arn` vs `aRN` no payload;
+- a Lambda tambem aceita `detail.additionalEventData.SecretId`, que foi o
+  formato observado na rotacao gerenciada do RDS em `2026-05-24`;
 - e protege contra eventos de rotacao de outros segredos da conta.
 
 ### Comando oficial para instalar ou atualizar a automacao em `hml`

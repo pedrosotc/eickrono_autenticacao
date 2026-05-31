@@ -191,65 +191,26 @@ Observacao:
 - continua sendo aditiva;
 - ainda nao endurece `cliente_ecossistema_id` em `autenticacao.recuperacoes_senha`.
 
-## V34 - Criar tabela de contextos sociais pendentes
+## V34 - Contexto social pendente persistido
 
-Arquivo sugerido:
+Status:
 
-- `V34__criar_tabela_contextos_sociais_pendentes.sql`
+- `cancelada como migration alvo`
 
-Objetivo:
+Motivo:
 
-- materializar `DB-03`
+- o fluxo aprovado nao persiste contexto social pendente no backend;
+- dados sociais antes de cadastro/vinculo definitivo ficam temporariamente no
+  app;
+- o contrato publico usa listas confirmadas:
+  - `vinculosSociaisConfirmados`;
+  - `avataresCadastroConfirmados`.
 
-Mudanca central:
+Regra operacional:
 
-```sql
-CREATE TABLE IF NOT EXISTS autenticacao.contextos_sociais_pendentes (
-    id UUID PRIMARY KEY,
-    cliente_ecossistema_id BIGINT NOT NULL REFERENCES catalogo.clientes_ecossistema (id),
-    provedor VARCHAR(32) NOT NULL,
-    identificador_externo VARCHAR(255) NOT NULL,
-    email_social_normalizado VARCHAR(255) NOT NULL,
-    nome_usuario_externo VARCHAR(255),
-    usuario_id_sugerido UUID REFERENCES autenticacao.usuarios (id),
-    login_sugerido VARCHAR(255),
-    modo_pendente VARCHAR(32) NOT NULL,
-    tentativas_falhas INTEGER NOT NULL DEFAULT 0,
-    tentativas_maximas INTEGER NOT NULL DEFAULT 3,
-    expira_em TIMESTAMP WITH TIME ZONE NOT NULL,
-    cancelado_em TIMESTAMP WITH TIME ZONE,
-    consumido_em TIMESTAMP WITH TIME ZONE,
-    motivo_cancelamento VARCHAR(64),
-    criado_em TIMESTAMP WITH TIME ZONE NOT NULL,
-    atualizado_em TIMESTAMP WITH TIME ZONE NOT NULL
-);
-```
-
-Indices:
-
-```sql
-CREATE UNIQUE INDEX IF NOT EXISTS uk_contextos_sociais_pendentes_projeto_provedor
-    ON autenticacao.contextos_sociais_pendentes (cliente_ecossistema_id, provedor, identificador_externo);
-
-CREATE INDEX IF NOT EXISTS idx_contextos_sociais_pendentes_email_projeto
-    ON autenticacao.contextos_sociais_pendentes (cliente_ecossistema_id, email_social_normalizado);
-
-CREATE INDEX IF NOT EXISTS idx_contextos_sociais_pendentes_usuario_sugerido
-    ON autenticacao.contextos_sociais_pendentes (usuario_id_sugerido, cliente_ecossistema_id);
-```
-
-Pode entrar agora em `local`?
-
-- `sim`
-
-Depende de codigo novo?
-
-- `nao`
-
-Observacao:
-
-- a tabela pode existir antes do runtime usá-la;
-- isso ajuda a escrever testes de persistência cedo.
+- nao criar novos testes que dependam de tabela de pendencia social;
+- se algum ambiente ja tiver artefato legado equivalente, a remocao fisica deve
+  ser planejada em migration futura de drop, com verificacao previa de runtime.
 
 ## V35 - Backfill minimo transitorio de cliente e snapshot
 
@@ -437,9 +398,11 @@ Aplicar em `local` so depois da implementacao:
 
 ### Depois de V34
 
-- tabela `autenticacao.contextos_sociais_pendentes` existe
-- índices principais existem
-- CRUD básico da tabela pode ser exercitado por teste automatizado
+- nenhuma tabela nova de contexto social pendente deve existir por causa deste
+  plano;
+- cadastro/vinculo social deve depender apenas do contrato confirmado em lista;
+- qualquer tabela antiga de pendencia social deve ser tratada como legado ate
+  uma migration futura de remocao.
 
 ### Depois de V35
 

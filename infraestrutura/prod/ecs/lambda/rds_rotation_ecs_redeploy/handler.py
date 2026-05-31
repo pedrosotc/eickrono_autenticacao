@@ -37,6 +37,12 @@ def _extrair_arns_segredo(evento: dict[str, Any]) -> set[str]:
             valor = detalhe.get(chave)
             if isinstance(valor, str) and valor:
                 arns.add(valor)
+        additional_event_data = detalhe.get("additionalEventData")
+        if isinstance(additional_event_data, dict):
+            for chave in ("SecretId", "secretId", "arn", "aRN"):
+                valor = additional_event_data.get(chave)
+                if isinstance(valor, str) and valor:
+                    arns.add(valor)
 
     return arns
 

@@ -70,6 +70,10 @@ identidade:
         token-exchange-client-secret: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_CLIENT_SECRET:${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET:}}
         token-exchange-audience: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_AUDIENCE:app-flutter-hml}
         token-exchange-scope: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_SCOPE:openid identidade:ler vinculos:ler vinculos:escrever offline_access}
+  social:
+    credenciais:
+      apple:
+        audiences: ${IDENTIDADE_SOCIAL_CREDENCIAIS_APPLE_AUDIENCES:com.eickrono.thimisu}
   dispositivo:
     token:
       segredo-hmac: ${IDENTIDADE_DEVICE_TOKEN_SECRET}

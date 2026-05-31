@@ -97,8 +97,6 @@ class SincronizacaoModeloMultiappServiceTest {
         assertThat(paramsVinculo.getValue("clienteEcossistemaId")).isEqualTo(11L);
         assertThat(paramsVinculo.getValue("identificadorPublicoCliente")).isEqualTo("ana.souza");
 
-        MapSqlParameterSource paramsCadastro = localizarParams("INSERT INTO autenticacao.cadastros_conta");
-        assertThat(paramsCadastro.getValue("identificadorPublicoCliente")).isEqualTo("ana.souza");
     }
 
     private MapSqlParameterSource localizarParams(final String sqlEsperado) {

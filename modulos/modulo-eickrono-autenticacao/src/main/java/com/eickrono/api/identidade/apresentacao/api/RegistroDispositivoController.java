@@ -8,7 +8,6 @@ import com.eickrono.api.identidade.aplicacao.modelo.PerfilSistemaProjetoPorEmail
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.servico.ClienteAdministracaoVinculosSociaisKeycloak;
 import com.eickrono.api.identidade.aplicacao.servico.CadastroContaInternaServico;
-import com.eickrono.api.identidade.aplicacao.servico.ContextoSocialPendenteJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.LocalizadorPerfilSistemaProjetoPorEmailJdbc;
 import com.eickrono.api.identidade.apresentacao.dto.ConfirmacaoRegistroRequest;
 import com.eickrono.api.identidade.apresentacao.dto.ConfirmacaoRegistroResponse;
@@ -58,7 +57,6 @@ public class RegistroDispositivoController {
     private final RegistroDispositivoLoginSilenciosoService registroDispositivoLoginSilenciosoService;
     private final CadastroContaInternaServico cadastroContaInternaServico;
     private final ClienteAdministracaoVinculosSociaisKeycloak clienteAdministracaoVinculosSociaisKeycloak;
-    private final ContextoSocialPendenteJdbc contextoSocialPendenteJdbc;
     private final ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico;
     private final LocalizadorPerfilSistemaProjetoPorEmailJdbc localizadorPerfilSistemaProjetoPorEmail;
 
@@ -67,7 +65,6 @@ public class RegistroDispositivoController {
                                          RegistroDispositivoLoginSilenciosoService registroDispositivoLoginSilenciosoService,
                                          CadastroContaInternaServico cadastroContaInternaServico,
                                          ClienteAdministracaoVinculosSociaisKeycloak clienteAdministracaoVinculosSociaisKeycloak,
-                                         ContextoSocialPendenteJdbc contextoSocialPendenteJdbc,
                                          ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico,
                                          LocalizadorPerfilSistemaProjetoPorEmailJdbc localizadorPerfilSistemaProjetoPorEmail) {
         this.registroDispositivoService = registroDispositivoService;
@@ -75,7 +72,6 @@ public class RegistroDispositivoController {
         this.registroDispositivoLoginSilenciosoService = registroDispositivoLoginSilenciosoService;
         this.cadastroContaInternaServico = cadastroContaInternaServico;
         this.clienteAdministracaoVinculosSociaisKeycloak = clienteAdministracaoVinculosSociaisKeycloak;
-        this.contextoSocialPendenteJdbc = contextoSocialPendenteJdbc;
         this.resolvedorProjetoFluxoPublico = resolvedorProjetoFluxoPublico;
         this.localizadorPerfilSistemaProjetoPorEmail = localizadorPerfilSistemaProjetoPorEmail;
     }
@@ -204,7 +200,6 @@ public class RegistroDispositivoController {
         }
         if (request != null && StringUtils.hasText(request.aplicacaoId())) {
             try {
-                ProjetoFluxoPublicoResolvido projeto = resolvedorProjetoFluxoPublico.resolverAtivo(request.aplicacaoId());
                 listarIdentidadesFederadasSeguras(jwt == null ? null : jwt.getSubject()).stream()
                         .findFirst()
                         .ifPresent(identidade -> {
@@ -227,18 +222,6 @@ public class RegistroDispositivoController {
                             if (StringUtils.hasText(urlAvatarExterno)) {
                                 detalhes.put("urlAvatarExterno", urlAvatarExterno);
                             }
-                            UUID contextoSocialPendenteId = contextoSocialPendenteJdbc.registrarOuAtualizar(
-                                    projeto,
-                                    identidade.provedor().getAliasApi(),
-                                    identidade.identificadorExterno(),
-                                    emailSocial.orElse(null),
-                                    identidade.nomeUsuarioExterno(),
-                                    nomeExibicao,
-                                    urlAvatarExterno,
-                                    contaExistente.map(PerfilSistemaProjetoPorEmailResolvido::perfilSistemaId).orElse(null),
-                                    contaExistente.map(PerfilSistemaProjetoPorEmailResolvido::identificadorPublicoSistemaSugerido).orElse(null)
-                            );
-                            detalhes.put("contextoSocialPendenteId", contextoSocialPendenteId);
                         });
             } catch (RuntimeException ignored) {
                 // Mantém o contrato mínimo quando a infraestrutura complementar falhar.

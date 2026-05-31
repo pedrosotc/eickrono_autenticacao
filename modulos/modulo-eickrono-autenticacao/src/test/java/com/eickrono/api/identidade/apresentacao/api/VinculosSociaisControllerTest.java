@@ -12,7 +12,6 @@ import com.eickrono.api.identidade.apresentacao.dto.VinculoSocialDto;
 import com.eickrono.api.identidade.apresentacao.dto.VinculosSociaisDto;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,67 +47,50 @@ class VinculosSociaisControllerTest {
     }
 
     @Test
-    void deveDelegarVinculacaoComContextoSocialPendente() {
+    void deveDelegarVinculacaoComDadosSociaisConfirmados() {
         Jwt jwt = jwt();
-        UUID contextoSocialPendenteId = UUID.fromString("c08d4efb-ea10-4551-a376-4f4fcb4c10d7");
         VincularRedeSocialApiRequest request = new VincularRedeSocialApiRequest(
-                "token-externo-google",
-                contextoSocialPendenteId,
                 "eickrono-thimisu-app",
+                null,
+                "https://cdn.eickrono.test/google.png",
+                "google-sub-123",
+                "google_user",
+                "pessoa@google.test",
                 "Pessoa Google",
-                "https://cdn.eickrono.test/google.png"
+                true
         );
         VinculosSociaisDto respostaEsperada = resposta();
-        when(vinculoSocialService.vincular(
+        when(vinculoSocialService.vincularConfirmado(
                 jwt,
                 "google",
-                "token-externo-google",
-                contextoSocialPendenteId,
-                "eickrono-thimisu-app",
-                "Pessoa Google",
-                "https://cdn.eickrono.test/google.png"
+                new com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro(
+                        "google",
+                        "google-sub-123",
+                        "google_user",
+                        "pessoa@google.test",
+                        "Pessoa Google",
+                        "https://cdn.eickrono.test/google.png",
+                        true
+                ),
+                "eickrono-thimisu-app"
         )).thenReturn(respostaEsperada);
 
         ResponseEntity<VinculosSociaisDto> resposta = controller.vincular("google", request, jwt);
 
         assertThat(resposta.getStatusCode().value()).isEqualTo(200);
         assertThat(resposta.getBody()).isEqualTo(respostaEsperada);
-        verify(vinculoSocialService).vincular(
+        verify(vinculoSocialService).vincularConfirmado(
                 jwt,
                 "google",
-                "token-externo-google",
-                contextoSocialPendenteId,
-                "eickrono-thimisu-app",
-                "Pessoa Google",
-                "https://cdn.eickrono.test/google.png"
-        );
-    }
-
-    @Test
-    void deveDelegarSincronizacaoComAplicacaoIdEContextoSocialPendente() {
-        Jwt jwt = jwt();
-        UUID contextoSocialPendenteId = UUID.fromString("6176fc7d-d619-4579-839f-a3744a03ce4e");
-        VinculosSociaisDto respostaEsperada = resposta();
-        when(vinculoSocialService.sincronizar(
-                jwt,
-                "google",
-                contextoSocialPendenteId,
-                "eickrono-thimisu-app"
-        )).thenReturn(respostaEsperada);
-
-        ResponseEntity<VinculosSociaisDto> resposta = controller.sincronizar(
-                "google",
-                contextoSocialPendenteId,
-                "eickrono-thimisu-app",
-                jwt
-        );
-
-        assertThat(resposta.getStatusCode().value()).isEqualTo(200);
-        assertThat(resposta.getBody()).isEqualTo(respostaEsperada);
-        verify(vinculoSocialService).sincronizar(
-                jwt,
-                "google",
-                contextoSocialPendenteId,
+                new com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro(
+                        "google",
+                        "google-sub-123",
+                        "google_user",
+                        "pessoa@google.test",
+                        "Pessoa Google",
+                        "https://cdn.eickrono.test/google.png",
+                        true
+                ),
                 "eickrono-thimisu-app"
         );
     }

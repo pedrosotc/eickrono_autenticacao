@@ -114,6 +114,15 @@ identidade:
         token-exchange-scope: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_SCOPE:}
         password-pepper: ${EICKRONO_PASSWORD_PEPPER:}
         timeout: PT5S
+  social:
+    credenciais:
+      timeout: ${IDENTIDADE_SOCIAL_CREDENCIAIS_TIMEOUT:PT5S}
+      google:
+        user-info-url: ${IDENTIDADE_SOCIAL_CREDENCIAIS_GOOGLE_USER_INFO_URL:https://www.googleapis.com/oauth2/v3/userinfo}
+      apple:
+        issuer: ${IDENTIDADE_SOCIAL_CREDENCIAIS_APPLE_ISSUER:https://appleid.apple.com}
+        jwk-set-uri: ${IDENTIDADE_SOCIAL_CREDENCIAIS_APPLE_JWK_SET_URI:https://appleid.apple.com/auth/keys}
+        audiences: ${IDENTIDADE_SOCIAL_CREDENCIAIS_APPLE_AUDIENCES:com.eickrono.thimisu}
   dispositivo:
     onboarding:
       sms-habilitado: false

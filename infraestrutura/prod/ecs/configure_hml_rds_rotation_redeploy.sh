@@ -221,7 +221,10 @@ PY
 cat >"$EVENT_PATTERN_FILE" <<'EOF'
 {
   "source": ["aws.secretsmanager"],
-  "detail-type": ["AWS Service Event via CloudTrail"],
+  "detail-type": [
+    "AWS Service Event via CloudTrail",
+    "AWS API Call via CloudTrail"
+  ],
   "detail": {
     "eventSource": ["secretsmanager.amazonaws.com"],
     "eventName": ["RotationSucceeded"]
@@ -288,6 +291,11 @@ create_lambda_with_retry() {
   done
 }
 
+wait_lambda_updated() {
+  "${AWS_CMD[@]}" lambda wait function-updated \
+    --function-name "$FUNCTION_NAME"
+}
+
 print_plan() {
   cat <<EOF
 CLUSTER=${CLUSTER}
@@ -339,10 +347,12 @@ fi
 
 if ! "${AWS_CMD[@]}" lambda get-function --function-name "$FUNCTION_NAME" >/dev/null 2>&1; then
   create_lambda_with_retry >/dev/null
+  wait_lambda_updated
 else
   "${AWS_CMD[@]}" lambda update-function-code \
     --function-name "$FUNCTION_NAME" \
     --zip-file "fileb://${ZIP_PATH}" >/dev/null
+  wait_lambda_updated
   "${AWS_CMD[@]}" lambda update-function-configuration \
     --function-name "$FUNCTION_NAME" \
     --role "$LAMBDA_ROLE_ARN" \
@@ -351,6 +361,7 @@ else
     --memory-size "$MEMORY_SIZE" \
     --timeout "$TIMEOUT" \
     --environment "file://${LAMBDA_ENV_FILE}" >/dev/null
+  wait_lambda_updated
 fi
 
 "${AWS_CMD[@]}" events put-rule \

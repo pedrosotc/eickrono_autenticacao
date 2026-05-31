@@ -35,7 +35,7 @@ class DisponibilidadeUsuarioSistemaServiceTest {
                 eq(Boolean.class)))
                 .thenAnswer(invocation -> {
                     String sql = invocation.getArgument(0, String.class);
-                    return sql.contains("FROM identidade.cadastros_conta");
+                    return sql.contains("FROM autenticacao.cadastros_conta");
                 });
 
         boolean disponivel = service.usuarioDisponivel(" Ana.Souza ", "eickrono-thimisu-app");

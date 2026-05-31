@@ -1,6 +1,7 @@
 package com.eickrono.api.identidade.aplicacao.servico;
 
 import com.eickrono.api.identidade.aplicacao.excecao.FluxoPublicoException;
+import com.eickrono.api.identidade.aplicacao.modelo.AvatarCadastroConfirmado;
 import com.eickrono.api.identidade.aplicacao.modelo.CadastroInternoRealizado;
 import com.eickrono.api.identidade.aplicacao.modelo.CadastroKeycloakProvisionado;
 import com.eickrono.api.identidade.aplicacao.modelo.ConfirmacaoEmailCadastroInternoRealizada;
@@ -10,6 +11,7 @@ import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.PessoaCanonicaConfirmada;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.ProvisionamentoPerfilSistemaRealizado;
+import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.dominio.modelo.CadastroConta;
 import com.eickrono.api.identidade.dominio.modelo.CanalValidacaoTelefoneCadastro;
 import com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial;
@@ -65,8 +67,10 @@ public class CadastroContaInternaServico {
     private final Clock clock;
     private final SincronizacaoModeloMultiappService sincronizacaoModeloMultiappService;
     private final RegistradorPendenciaIntegracaoProdutoService registradorPendenciaIntegracaoProdutoService;
-    private final ContextoSocialPendenteJdbc contextoSocialPendenteJdbc;
     private final ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico;
+    private final CadastroVinculoSocialConfirmadoJdbc cadastroVinculoSocialConfirmadoJdbc;
+    private final CadastroAvatarConfirmadoJdbc cadastroAvatarConfirmadoJdbc;
+    private final AvatarSocialProjetoJdbc avatarSocialProjetoJdbc;
     private ProvisionamentoIdentidadeService provisionamentoIdentidadeServiceCompat;
     private final HexFormat hexFormat = HexFormat.of();
 
@@ -84,8 +88,10 @@ public class CadastroContaInternaServico {
                                        final Clock clock,
                                        final SincronizacaoModeloMultiappService sincronizacaoModeloMultiappService,
                                        final RegistradorPendenciaIntegracaoProdutoService registradorPendenciaIntegracaoProdutoService,
-                                       final ContextoSocialPendenteJdbc contextoSocialPendenteJdbc,
-                                       final ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico) {
+                                       final ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico,
+                                       final CadastroVinculoSocialConfirmadoJdbc cadastroVinculoSocialConfirmadoJdbc,
+                                       final CadastroAvatarConfirmadoJdbc cadastroAvatarConfirmadoJdbc,
+                                       final AvatarSocialProjetoJdbc avatarSocialProjetoJdbc) {
         this(
                 cadastroContaRepositorio,
                 clienteContextoPessoaPerfilSistema,
@@ -100,8 +106,10 @@ public class CadastroContaInternaServico {
                 clock,
                 sincronizacaoModeloMultiappService,
                 registradorPendenciaIntegracaoProdutoService,
-                contextoSocialPendenteJdbc,
                 resolvedorProjetoFluxoPublico,
+                cadastroVinculoSocialConfirmadoJdbc,
+                cadastroAvatarConfirmadoJdbc,
+                avatarSocialProjetoJdbc,
                 true
         );
     }
@@ -118,7 +126,6 @@ public class CadastroContaInternaServico {
                                        final DispositivoProperties dispositivoProperties,
                                        final Clock clock,
                                        final RegistradorPendenciaIntegracaoProdutoService registradorPendenciaIntegracaoProdutoService,
-                                       final ContextoSocialPendenteJdbc contextoSocialPendenteJdbc,
                                        final ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico) {
         this(
                 cadastroContaRepositorio,
@@ -134,8 +141,10 @@ public class CadastroContaInternaServico {
                 clock,
                 null,
                 registradorPendenciaIntegracaoProdutoService,
-                contextoSocialPendenteJdbc,
                 resolvedorProjetoFluxoPublico,
+                null,
+                null,
+                null,
                 true
         );
     }
@@ -162,6 +171,8 @@ public class CadastroContaInternaServico {
                 },
                 dispositivoProperties,
                 clock,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -193,6 +204,8 @@ public class CadastroContaInternaServico {
                 canalNotificacaoTentativaCadastroEmail,
                 dispositivoProperties,
                 clock,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -229,6 +242,83 @@ public class CadastroContaInternaServico {
                 registradorPendenciaIntegracaoProdutoService,
                 null,
                 null,
+                null,
+                null,
+                true
+        );
+    }
+
+    public CadastroContaInternaServico(final CadastroContaRepositorio cadastroContaRepositorio,
+                                       final ClienteContextoPessoaPerfilSistema clienteContextoPessoaPerfilSistema,
+                                       final ClienteAdministracaoCadastroKeycloak clienteAdministracaoCadastroKeycloak,
+                                       final ProvisionadorPerfilSistemaServico provisionadorPerfilSistemaServico,
+                                       final ConfirmadorPessoaCadastroServico confirmadorPessoaCadastroServico,
+                                       final DisponibilidadeUsuarioSistemaService disponibilidadeUsuarioSistemaService,
+                                       final ProvisionamentoIdentidadeService provisionamentoIdentidadeService,
+                                       final CanalEnvioCodigoCadastroEmail canalEnvioCodigoCadastroEmail,
+                                       final CanalNotificacaoTentativaCadastroEmail canalNotificacaoTentativaCadastroEmail,
+                                       final DispositivoProperties dispositivoProperties,
+                                       final Clock clock,
+                                       final RegistradorPendenciaIntegracaoProdutoService registradorPendenciaIntegracaoProdutoService,
+                                       final ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico,
+                                       final CadastroVinculoSocialConfirmadoJdbc cadastroVinculoSocialConfirmadoJdbc,
+                                       final AvatarSocialProjetoJdbc avatarSocialProjetoJdbc) {
+        this(
+                cadastroContaRepositorio,
+                clienteContextoPessoaPerfilSistema,
+                clienteAdministracaoCadastroKeycloak,
+                provisionadorPerfilSistemaServico,
+                confirmadorPessoaCadastroServico,
+                disponibilidadeUsuarioSistemaService,
+                provisionamentoIdentidadeService,
+                canalEnvioCodigoCadastroEmail,
+                canalNotificacaoTentativaCadastroEmail,
+                dispositivoProperties,
+                clock,
+                null,
+                registradorPendenciaIntegracaoProdutoService,
+                resolvedorProjetoFluxoPublico,
+                cadastroVinculoSocialConfirmadoJdbc,
+                null,
+                avatarSocialProjetoJdbc,
+                true
+        );
+    }
+
+    public CadastroContaInternaServico(final CadastroContaRepositorio cadastroContaRepositorio,
+                                       final ClienteContextoPessoaPerfilSistema clienteContextoPessoaPerfilSistema,
+                                       final ClienteAdministracaoCadastroKeycloak clienteAdministracaoCadastroKeycloak,
+                                       final ProvisionadorPerfilSistemaServico provisionadorPerfilSistemaServico,
+                                       final ConfirmadorPessoaCadastroServico confirmadorPessoaCadastroServico,
+                                       final DisponibilidadeUsuarioSistemaService disponibilidadeUsuarioSistemaService,
+                                       final ProvisionamentoIdentidadeService provisionamentoIdentidadeService,
+                                       final CanalEnvioCodigoCadastroEmail canalEnvioCodigoCadastroEmail,
+                                       final CanalNotificacaoTentativaCadastroEmail canalNotificacaoTentativaCadastroEmail,
+                                       final DispositivoProperties dispositivoProperties,
+                                       final Clock clock,
+                                       final RegistradorPendenciaIntegracaoProdutoService registradorPendenciaIntegracaoProdutoService,
+                                       final ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico,
+                                       final CadastroVinculoSocialConfirmadoJdbc cadastroVinculoSocialConfirmadoJdbc,
+                                       final CadastroAvatarConfirmadoJdbc cadastroAvatarConfirmadoJdbc,
+                                       final AvatarSocialProjetoJdbc avatarSocialProjetoJdbc) {
+        this(
+                cadastroContaRepositorio,
+                clienteContextoPessoaPerfilSistema,
+                clienteAdministracaoCadastroKeycloak,
+                provisionadorPerfilSistemaServico,
+                confirmadorPessoaCadastroServico,
+                disponibilidadeUsuarioSistemaService,
+                provisionamentoIdentidadeService,
+                canalEnvioCodigoCadastroEmail,
+                canalNotificacaoTentativaCadastroEmail,
+                dispositivoProperties,
+                clock,
+                null,
+                registradorPendenciaIntegracaoProdutoService,
+                resolvedorProjetoFluxoPublico,
+                cadastroVinculoSocialConfirmadoJdbc,
+                cadastroAvatarConfirmadoJdbc,
+                avatarSocialProjetoJdbc,
                 true
         );
     }
@@ -246,8 +336,10 @@ public class CadastroContaInternaServico {
                                         final Clock clock,
                                         final SincronizacaoModeloMultiappService sincronizacaoModeloMultiappService,
                                         final RegistradorPendenciaIntegracaoProdutoService registradorPendenciaIntegracaoProdutoService,
-                                        final ContextoSocialPendenteJdbc contextoSocialPendenteJdbc,
                                         final ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico,
+                                        final CadastroVinculoSocialConfirmadoJdbc cadastroVinculoSocialConfirmadoJdbc,
+                                        final CadastroAvatarConfirmadoJdbc cadastroAvatarConfirmadoJdbc,
+                                        final AvatarSocialProjetoJdbc avatarSocialProjetoJdbc,
                                         final boolean exigirProvisionadorPerfil) {
         this.cadastroContaRepositorio = Objects.requireNonNull(cadastroContaRepositorio, "cadastroContaRepositorio é obrigatório");
         this.clienteContextoPessoaPerfilSistema = Objects.requireNonNull(
@@ -272,8 +364,10 @@ public class CadastroContaInternaServico {
         this.clock = Objects.requireNonNull(clock, "clock é obrigatório");
         this.sincronizacaoModeloMultiappService = sincronizacaoModeloMultiappService;
         this.registradorPendenciaIntegracaoProdutoService = registradorPendenciaIntegracaoProdutoService;
-        this.contextoSocialPendenteJdbc = contextoSocialPendenteJdbc;
         this.resolvedorProjetoFluxoPublico = resolvedorProjetoFluxoPublico;
+        this.cadastroVinculoSocialConfirmadoJdbc = cadastroVinculoSocialConfirmadoJdbc;
+        this.cadastroAvatarConfirmadoJdbc = cadastroAvatarConfirmadoJdbc;
+        this.avatarSocialProjetoJdbc = avatarSocialProjetoJdbc;
         this.provisionamentoIdentidadeServiceCompat = provisionamentoIdentidadeServiceCompat;
     }
 
@@ -299,7 +393,9 @@ public class CadastroContaInternaServico {
                 senhaPura,
                 sistemaSolicitante,
                 ipSolicitante,
-                userAgentSolicitante
+                userAgentSolicitante,
+                List.of(),
+                List.of()
         );
     }
 
@@ -317,6 +413,76 @@ public class CadastroContaInternaServico {
                                                      final String sistemaSolicitante,
                                                      final String ipSolicitante,
                                                      final String userAgentSolicitante) {
+        return cadastrarPublico(
+                tipoPessoa,
+                nomeCompleto,
+                nomeFantasia,
+                usuario,
+                sexo,
+                paisNascimento,
+                dataNascimento,
+                emailPrincipal,
+                telefonePrincipal,
+                tipoValidacaoTelefone,
+                senhaPura,
+                sistemaSolicitante,
+                ipSolicitante,
+                userAgentSolicitante,
+                List.of()
+        );
+    }
+
+    public CadastroInternoRealizado cadastrarPublico(final TipoPessoaCadastro tipoPessoa,
+                                                     final String nomeCompleto,
+                                                     final String nomeFantasia,
+                                                     final String usuario,
+                                                     final SexoPessoaCadastro sexo,
+                                                     final String paisNascimento,
+                                                     final LocalDate dataNascimento,
+                                                     final String emailPrincipal,
+                                                     final String telefonePrincipal,
+                                                     final CanalValidacaoTelefoneCadastro tipoValidacaoTelefone,
+                                                     final String senhaPura,
+                                                     final String sistemaSolicitante,
+                                                     final String ipSolicitante,
+                                                     final String userAgentSolicitante,
+                                                     final List<VinculoSocialConfirmadoCadastro> vinculosSociaisConfirmados) {
+        return cadastrarPublico(
+                tipoPessoa,
+                nomeCompleto,
+                nomeFantasia,
+                usuario,
+                sexo,
+                paisNascimento,
+                dataNascimento,
+                emailPrincipal,
+                telefonePrincipal,
+                tipoValidacaoTelefone,
+                senhaPura,
+                sistemaSolicitante,
+                ipSolicitante,
+                userAgentSolicitante,
+                vinculosSociaisConfirmados,
+                List.of()
+        );
+    }
+
+    public CadastroInternoRealizado cadastrarPublico(final TipoPessoaCadastro tipoPessoa,
+                                                     final String nomeCompleto,
+                                                     final String nomeFantasia,
+                                                     final String usuario,
+                                                     final SexoPessoaCadastro sexo,
+                                                     final String paisNascimento,
+                                                     final LocalDate dataNascimento,
+                                                     final String emailPrincipal,
+                                                     final String telefonePrincipal,
+                                                     final CanalValidacaoTelefoneCadastro tipoValidacaoTelefone,
+                                                     final String senhaPura,
+                                                     final String sistemaSolicitante,
+                                                     final String ipSolicitante,
+                                                     final String userAgentSolicitante,
+                                                     final List<VinculoSocialConfirmadoCadastro> vinculosSociaisConfirmados,
+                                                     final List<AvatarCadastroConfirmado> avataresConfirmados) {
         return cadastrarCompleto(
                 Objects.requireNonNull(tipoPessoa, "tipoPessoa é obrigatório"),
                 nomeCompleto,
@@ -331,7 +497,9 @@ public class CadastroContaInternaServico {
                 senhaPura,
                 sistemaSolicitante,
                 ipSolicitante,
-                userAgentSolicitante
+                userAgentSolicitante,
+                vinculosSociaisConfirmados,
+                avataresConfirmados
         );
     }
 
@@ -489,7 +657,9 @@ public class CadastroContaInternaServico {
                                                        final String senhaPura,
                                                        final String sistemaSolicitante,
                                                        final String ipSolicitante,
-                                                       final String userAgentSolicitante) {
+                                                       final String userAgentSolicitante,
+                                                       final List<VinculoSocialConfirmadoCadastro> vinculosSociaisConfirmados,
+                                                       final List<AvatarCadastroConfirmado> avataresConfirmados) {
         String nomeNormalizado = obrigatorio(nomeCompleto, "nomeCompleto");
         String emailNormalizado = obrigatorio(emailPrincipal, "emailPrincipal").toLowerCase(Locale.ROOT);
         String telefoneNormalizado = normalizarOpcional(telefonePrincipal);
@@ -503,7 +673,11 @@ public class CadastroContaInternaServico {
         String usuarioNormalizado = normalizarUsuarioOpcional(usuario);
         String nomeFantasiaNormalizado = normalizarOpcional(nomeFantasia);
         String paisNascimentoNormalizado = normalizarOpcional(paisNascimento);
-
+        List<VinculoSocialConfirmadoCadastro> vinculosSociaisNormalizados =
+                validarVinculosSociaisConfirmados(vinculosSociaisConfirmados);
+        List<AvatarCadastroConfirmado> avataresNormalizados =
+                validarAvataresConfirmados(avataresConfirmados);
+        validarPreferenciaAvatarUnica(vinculosSociaisNormalizados, avataresNormalizados);
         validarDuplicidadeUsuario(usuarioNormalizado, sistemaNormalizado);
         validarDuplicidadeEmail(emailNormalizado);
 
@@ -537,6 +711,15 @@ public class CadastroContaInternaServico {
                 agora,
                 agora
         ));
+        LOGGER.info(
+                "qa_cadastro_pendente_criado cadastroId={} sistema={} emailConfirmado={} usuarioPresente={} vinculosSociaisConfirmados={} avataresConfirmados={}",
+                cadastroConta.getCadastroId(),
+                sistemaNormalizado,
+                cadastroConta.emailJaConfirmado(),
+                normalizarUsuarioOpcional(cadastroConta.getUsuario()) != null,
+                vinculosSociaisNormalizados.size(),
+                avataresNormalizados.size()
+        );
 
         if (provisionamentoIdentidadeServiceCompat != null) {
             provisionamentoIdentidadeServiceCompat.provisionarCadastroPendente(
@@ -548,6 +731,17 @@ public class CadastroContaInternaServico {
         }
 
         sincronizarCadastroSeConfigurado(cadastroConta);
+        registrarVinculosSociaisConfirmadosDoCadastro(cadastroConta, vinculosSociaisNormalizados);
+        registrarAvataresConfirmadosDoCadastro(cadastroConta, avataresNormalizados);
+        LOGGER.info(
+                "qa_cadastro_confirmados_registrados cadastroId={} sistema={} vinculosSociaisConfirmados={} avataresConfirmados={} avatarPreferidoTotal={}",
+                cadastroConta.getCadastroId(),
+                sistemaNormalizado,
+                vinculosSociaisNormalizados.size(),
+                avataresNormalizados.size(),
+                vinculosSociaisNormalizados.stream().filter(VinculoSocialConfirmadoCadastro::avatarPreferido).count()
+                        + avataresNormalizados.stream().filter(AvatarCadastroConfirmado::preferido).count()
+        );
         canalEnvioCodigoCadastroEmail.enviar(cadastroConta, codigoClaro);
 
         return new CadastroInternoRealizado(
@@ -634,65 +828,192 @@ public class CadastroContaInternaServico {
                 cadastroConta.getNomeCompleto(),
                 cadastroConta.getDataNascimento()
         );
-        vincularIdentidadesSociaisPendentesDoCadastro(cadastroConta);
+        LOGGER.info(
+                "qa_cadastro_email_consumo_confirmados_inicio cadastroId={} sistema={} subjectPresente={}",
+                cadastroConta.getCadastroId(),
+                cadastroConta.getSistemaSolicitante(),
+                normalizarOpcional(cadastroConta.getSubjectRemoto()) != null
+        );
+        vincularIdentidadesSociaisConfirmadasDoCadastro(cadastroConta, agora);
+        sincronizarAvataresConfirmadosDoCadastro(cadastroConta, agora);
+        LOGGER.info(
+                "qa_cadastro_email_consumo_confirmados_fim cadastroId={} sistema={} statusPerfilSistema={}",
+                cadastroConta.getCadastroId(),
+                cadastroConta.getSistemaSolicitante(),
+                statusPerfilSistema
+        );
         cadastroConta.marcarEmailConfirmado(agora);
         sincronizarCadastroSeConfigurado(cadastroConta);
 
         return montarRespostaConfirmacao(cadastroConta, statusPerfilSistema);
     }
 
-    private void vincularIdentidadesSociaisPendentesDoCadastro(final CadastroConta cadastroConta) {
-        if (contextoSocialPendenteJdbc == null || resolvedorProjetoFluxoPublico == null || cadastroConta == null) {
-            return;
+    private List<VinculoSocialConfirmadoCadastro> validarVinculosSociaisConfirmados(
+            final List<VinculoSocialConfirmadoCadastro> vinculosSociaisConfirmados) {
+        if (vinculosSociaisConfirmados == null || vinculosSociaisConfirmados.isEmpty()) {
+            return List.of();
         }
-        try {
-            ProjetoFluxoPublicoResolvido projeto = resolvedorProjetoFluxoPublico
-                    .resolverAtivo(cadastroConta.getSistemaSolicitante());
-            if (projeto == null) {
-                return;
-            }
-            List<ContextoSocialPendenteJdbc.ContextoSocialPendenteCadastro> contextos = contextoSocialPendenteJdbc
-                    .listarPendentesAberturaCadastro(projeto.clienteEcossistemaId(), cadastroConta.getEmailPrincipal());
-            for (ContextoSocialPendenteJdbc.ContextoSocialPendenteCadastro contexto : contextos) {
-                Optional<ProvedorVinculoSocial> provedor = ProvedorVinculoSocial.fromAlias(contexto.provedor());
-                if (provedor.isEmpty()) {
-                    LOGGER.warn(
-                            "contexto_social_pendente_ignorado_provedor_desconhecido cadastroId={} provedor={}",
-                            cadastroConta.getCadastroId(),
-                            contexto.provedor()
-                    );
-                    continue;
-                }
-                try {
-                    clienteAdministracaoCadastroKeycloak.vincularIdentidadeFederada(
-                            cadastroConta.getSubjectRemoto(),
-                            new IdentidadeFederadaKeycloak(
-                                    provedor.orElseThrow(),
-                                    contexto.identificadorExterno(),
-                                    contexto.nomeUsuarioExterno(),
-                                    contexto.nomeExibicaoExterno(),
-                                    contexto.urlAvatarExterno()
-                            )
-                    );
-                    contextoSocialPendenteJdbc.consumir(contexto.id());
-                } catch (RuntimeException exception) {
-                    LOGGER.warn(
-                            "falha_vinculo_social_pendente_pos_confirmacao cadastroId={} contextoId={} provedor={} motivo={}",
-                            cadastroConta.getCadastroId(),
-                            contexto.id(),
-                            contexto.provedor(),
-                            exception.getMessage()
-                    );
-                }
-            }
-        } catch (RuntimeException exception) {
-            LOGGER.warn(
-                    "falha_resolucao_contextos_sociais_pendentes_pos_confirmacao cadastroId={} sistema={} motivo={}",
-                    cadastroConta.getCadastroId(),
-                    cadastroConta.getSistemaSolicitante(),
-                    exception.getMessage()
+        return vinculosSociaisConfirmados.stream()
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private List<AvatarCadastroConfirmado> validarAvataresConfirmados(
+            final List<AvatarCadastroConfirmado> avataresConfirmados) {
+        if (avataresConfirmados == null || avataresConfirmados.isEmpty()) {
+            return List.of();
+        }
+        return avataresConfirmados.stream()
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private void validarPreferenciaAvatarUnica(
+            final List<VinculoSocialConfirmadoCadastro> vinculosSociaisConfirmados,
+            final List<AvatarCadastroConfirmado> avataresConfirmados) {
+        long preferidosSociais = vinculosSociaisConfirmados.stream()
+                .filter(VinculoSocialConfirmadoCadastro::avatarPreferido)
+                .count();
+        long preferidosAvatares = avataresConfirmados.stream()
+                .filter(AvatarCadastroConfirmado::preferido)
+                .count();
+        if (preferidosSociais + preferidosAvatares > 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Apenas uma opção de avatar confirmada pode ser preferida."
             );
         }
+    }
+
+    private void registrarVinculosSociaisConfirmadosDoCadastro(
+            final CadastroConta cadastroConta,
+            final List<VinculoSocialConfirmadoCadastro> vinculosSociaisConfirmados) {
+        if (cadastroVinculoSocialConfirmadoJdbc == null
+                || cadastroConta == null
+                || vinculosSociaisConfirmados == null
+                || vinculosSociaisConfirmados.isEmpty()) {
+            return;
+        }
+        cadastroVinculoSocialConfirmadoJdbc.registrar(cadastroConta.getCadastroId(), vinculosSociaisConfirmados);
+    }
+
+    private void registrarAvataresConfirmadosDoCadastro(
+            final CadastroConta cadastroConta,
+            final List<AvatarCadastroConfirmado> avataresConfirmados) {
+        if (cadastroAvatarConfirmadoJdbc == null
+                || cadastroConta == null
+                || avataresConfirmados == null
+                || avataresConfirmados.isEmpty()) {
+            return;
+        }
+        cadastroAvatarConfirmadoJdbc.registrar(cadastroConta.getCadastroId(), avataresConfirmados);
+    }
+
+    private void vincularIdentidadesSociaisConfirmadasDoCadastro(final CadastroConta cadastroConta,
+                                                                 final OffsetDateTime agora) {
+        if (cadastroVinculoSocialConfirmadoJdbc == null || cadastroConta == null) {
+            return;
+        }
+        List<VinculoSocialConfirmadoCadastro> vinculos = cadastroVinculoSocialConfirmadoJdbc
+                .listarAtivos(cadastroConta.getCadastroId());
+        if (vinculos.isEmpty()) {
+            return;
+        }
+        List<IdentidadeFederadaKeycloak> identidadesFederadas = vinculos.stream()
+                .map(this::converterVinculoSocialConfirmado)
+                .toList();
+        try {
+            for (IdentidadeFederadaKeycloak identidade : identidadesFederadas) {
+                clienteAdministracaoCadastroKeycloak.vincularIdentidadeFederada(
+                        cadastroConta.getSubjectRemoto(),
+                        identidade
+                );
+            }
+            sincronizarAvataresSociaisConfirmados(cadastroConta, agora, vinculos, identidadesFederadas);
+            cadastroVinculoSocialConfirmadoJdbc.consumir(cadastroConta.getCadastroId());
+        } catch (RuntimeException exception) {
+            LOGGER.error(
+                    "falha_vinculos_sociais_confirmados_pos_confirmacao cadastroId={} sistema={} motivo={}",
+                    cadastroConta.getCadastroId(),
+                    cadastroConta.getSistemaSolicitante(),
+                    exception.getMessage(),
+                    exception
+            );
+            throw FluxoPublicoException.conflito(
+                    "vinculo_social_confirmado_nao_materializado",
+                    "Não foi possível concluir o vínculo social confirmado do cadastro."
+            );
+        }
+    }
+
+    private void sincronizarAvataresConfirmadosDoCadastro(final CadastroConta cadastroConta,
+                                                          final OffsetDateTime agora) {
+        if (cadastroAvatarConfirmadoJdbc == null
+                || resolvedorProjetoFluxoPublico == null
+                || cadastroConta == null) {
+            return;
+        }
+        ProjetoFluxoPublicoResolvido projeto = resolvedorProjetoFluxoPublico
+                .resolverAtivo(cadastroConta.getSistemaSolicitante());
+        if (projeto == null || projeto.clienteEcossistemaId() == null) {
+            return;
+        }
+        cadastroAvatarConfirmadoJdbc.consumirParaUsuario(
+                cadastroConta.getCadastroId(),
+                cadastroConta.getSubjectRemoto(),
+                projeto.clienteEcossistemaId(),
+                agora
+        );
+    }
+
+    private IdentidadeFederadaKeycloak converterVinculoSocialConfirmado(
+            final VinculoSocialConfirmadoCadastro vinculo) {
+        ProvedorVinculoSocial provedor = ProvedorVinculoSocial.fromAlias(vinculo.provedor())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Provedor social confirmado desconhecido."
+                ));
+        return new IdentidadeFederadaKeycloak(
+                provedor,
+                vinculo.identificadorExterno(),
+                vinculo.nomeUsuarioExterno(),
+                vinculo.nomeCompleto(),
+                vinculo.urlAvatarExterno()
+        );
+    }
+
+    private void sincronizarAvataresSociaisConfirmados(
+            final CadastroConta cadastroConta,
+            final OffsetDateTime agora,
+            final List<VinculoSocialConfirmadoCadastro> vinculos,
+            final List<IdentidadeFederadaKeycloak> identidadesFederadas) {
+        if (avatarSocialProjetoJdbc == null || resolvedorProjetoFluxoPublico == null) {
+            return;
+        }
+        ProjetoFluxoPublicoResolvido projeto = resolvedorProjetoFluxoPublico
+                .resolverAtivo(cadastroConta.getSistemaSolicitante());
+        if (projeto == null || projeto.clienteEcossistemaId() == null) {
+            return;
+        }
+        avatarSocialProjetoJdbc.sincronizar(
+                cadastroConta.getSubjectRemoto(),
+                cadastroConta.getEmailPrincipal(),
+                projeto.clienteEcossistemaId(),
+                cadastroConta.getCriadoEm(),
+                agora,
+                identidadesFederadas
+        );
+        vinculos.stream()
+                .filter(VinculoSocialConfirmadoCadastro::avatarPreferido)
+                .filter(vinculo -> normalizarOpcional(vinculo.urlAvatarExterno()) != null)
+                .findFirst()
+                .flatMap(vinculo -> ProvedorVinculoSocial.fromAlias(vinculo.provedor()))
+                .ifPresent(provedor -> avatarSocialProjetoJdbc.definirAvatarSocial(
+                        cadastroConta.getSubjectRemoto(),
+                        projeto.clienteEcossistemaId(),
+                        provedor,
+                        agora
+                ));
     }
 
     private PessoaCanonicaConfirmada confirmarPessoaCanonicaPublica(final CadastroConta cadastroConta,

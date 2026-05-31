@@ -61,6 +61,10 @@ identidade:
     interna:
       keycloak:
         client-id: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_ID:app-flutter-local}
+  social:
+    credenciais:
+      apple:
+        audiences: ${IDENTIDADE_SOCIAL_CREDENCIAIS_APPLE_AUDIENCES:com.eickrono.thimisu}
   dispositivo:
     token:
       segredo-hmac: ${IDENTIDADE_DEVICE_TOKEN_SECRET:dev-device-token-secret}

@@ -13,7 +13,7 @@
   "containerDefinitions": [
     {
       "name": "identidade",
-      "image": "531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-identidade-servidor:hml-20260426-09",
+      "image": "531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-identidade-servidor:hml-20260521-avatar-s3-01",
       "essential": true,
       "portMappings": [
         {
@@ -54,6 +54,11 @@
         { "name": "IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR", "value": "smtp" },
         { "name": "IDENTIDADE_CADASTRO_EMAIL_REMETENTE", "value": "info@eickrono.com" },
         { "name": "IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO", "value": "Eickrono HML" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_TIPO", "value": "s3" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_BUCKET", "value": "eickrono-avatares-hml" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_REGION", "value": "sa-east-1" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_PUBLIC_URL_BASE", "value": "https://id-hml.eickrono.store/identidade/avatares/publicos" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_MAX_BYTES", "value": "5242880" },
         { "name": "SPRING_MAIL_HOST", "value": "smtp.mail.me.com" },
         { "name": "SPRING_MAIL_PORT", "value": "587" },
         { "name": "SPRING_MAIL_SMTP_AUTH", "value": "true" },

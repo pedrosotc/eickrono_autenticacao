@@ -1,14 +1,41 @@
-# Plano de Vínculos Sociais com Keycloak
+# Plano histórico de Vínculos Sociais com Keycloak
 
-Este documento consolida o desenho técnico decidido para a primeira entrega de vínculos sociais no ecossistema Eickrono.
+> Status deste documento: **histórico para novas implementações**.
+>
+> Este documento registra o desenho técnico da primeira entrega de vínculos
+> sociais com Keycloak. Ele nao deve ser usado como regra vigente para o fluxo
+> de login social antes de cadastro ou antes de entrar-e-vincular.
+>
+> A regra vigente esta em:
+>
+> - `eickrono-identidade-servidor/documentacao/plano_migracao_avatar_usuario_autenticacao_identidade_thimisu.md`;
+> - `eickrono-identidade-servidor/documentacao/avatar_perfil_schema_alvo.dbml`;
+> - `eickrono-autenticacao-servidor/documentacao/fluxograma_login_social_app.md`;
+> - `eickrono-autenticacao-servidor/documentacao/guia_fluxos_login_autenticacao_app.md`.
+>
+> Decisao vigente:
+>
+> - o app autentica Google/Apple nativamente;
+> - o `eickrono-autenticacao-servidor` valida a credencial social;
+> - antes de cadastro ou entrar-e-vincular final, dados sociais ficam apenas no
+>   app como dados temporarios;
+> - nao ha token social temporario entre app e servidor;
+> - nao ha persistencia de contexto social pendente em banco;
+> - Keycloak nao deve criar usuario/vinculo no pre-cadastro social;
+> - vinculo social definitivo so nasce depois de usuario/pessoa definitivos.
+>
+> As secoes abaixo podem ser consultadas apenas como historico. Quando houver
+> conflito, prevalece a documentacao vigente listada acima.
+
+Este documento consolidava o desenho técnico decidido para a primeira entrega de vínculos sociais no ecossistema Eickrono.
 
 ## Fonte canonica complementar no app
 
-Este documento continua focado em:
+Historicamente, este documento ficava focado em:
 
 - desenho tecnico do vinculo social;
 - contrato HTTP da API canonica;
-- papel do Keycloak como fonte de verdade.
+- papel do Keycloak como fonte de verdade na primeira entrega.
 
 Os cenarios detalhados do app, incluindo conectividade, experiencia de login
 social, reacao da UI, cobertura automatizada atual e backlog de testes, agora
@@ -295,7 +322,8 @@ No `eickrono-autenticacao-servidor`, a implementação recomendada é:
 - criar serviço de aplicação para vínculos sociais;
 - criar cliente para Admin API do Keycloak;
 - mapear provedores suportados de forma canônica;
-- reconciliar a tabela local `vinculos_sociais` com o estado real do Keycloak;
+- reconciliar formas de acesso e avatar canônico com o estado real do Keycloak,
+  sem recriar ou consultar a tabela legada `vinculos_sociais`;
 - registrar auditoria de sincronização e remoção.
 
 ## Integrações Necessárias Fora do Backend

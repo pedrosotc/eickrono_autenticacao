@@ -28,8 +28,8 @@ public record CadastroApiRequest(
         @AssertTrue boolean aceitouTermos,
         @AssertTrue boolean aceitouPrivacidade,
         @NotNull PlataformaAtestacaoApp plataformaApp,
-        @Valid VinculoSocialPendenteApiRequest vinculoSocialPendente,
-        List<@Valid VinculoSocialPendenteApiRequest> vinculosSociaisPendentes,
+        List<@Valid VinculoSocialConfirmadoApiRequest> vinculosSociaisConfirmados,
+        List<@Valid AvatarCadastroConfirmadoApiRequest> avataresCadastroConfirmados,
         @Valid @NotNull AtestacaoOperacaoApiRequest atestacao,
         @Valid @NotNull SegurancaAplicativoApiRequest segurancaAplicativo
 ) {

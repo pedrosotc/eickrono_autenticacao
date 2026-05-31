@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.eickrono.api.identidade.aplicacao.excecao.FluxoPublicoException;
+import com.eickrono.api.identidade.aplicacao.modelo.AvatarCadastroConfirmado;
 import com.eickrono.api.identidade.aplicacao.modelo.CadastroInternoRealizado;
 import com.eickrono.api.identidade.aplicacao.modelo.CadastroKeycloakProvisionado;
 import com.eickrono.api.identidade.aplicacao.modelo.ConfirmacaoEmailCadastroInternoRealizada;
@@ -19,6 +21,7 @@ import com.eickrono.api.identidade.aplicacao.modelo.ContextoPessoaPerfilSistema;
 import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.PessoaCanonicaConfirmada;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
+import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.dominio.modelo.CanalValidacaoTelefoneCadastro;
 import com.eickrono.api.identidade.dominio.modelo.CadastroConta;
 import com.eickrono.api.identidade.dominio.modelo.StatusCadastroConta;
@@ -84,10 +87,16 @@ class CadastroContaInternaServicoTest {
     private RegistradorPendenciaIntegracaoProdutoService registradorPendenciaIntegracaoProdutoService;
 
     @Mock
-    private ContextoSocialPendenteJdbc contextoSocialPendenteJdbc;
+    private ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico;
 
     @Mock
-    private ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico;
+    private CadastroVinculoSocialConfirmadoJdbc cadastroVinculoSocialConfirmadoJdbc;
+
+    @Mock
+    private CadastroAvatarConfirmadoJdbc cadastroAvatarConfirmadoJdbc;
+
+    @Mock
+    private AvatarSocialProjetoJdbc avatarSocialProjetoJdbc;
 
     @Captor
     private ArgumentCaptor<CadastroConta> cadastroCaptor;
@@ -133,8 +142,10 @@ class CadastroContaInternaServicoTest {
                 dispositivoProperties,
                 clock,
                 registradorPendenciaIntegracaoProdutoService,
-                contextoSocialPendenteJdbc,
-                resolvedorProjetoFluxoPublico
+                resolvedorProjetoFluxoPublico,
+                cadastroVinculoSocialConfirmadoJdbc,
+                cadastroAvatarConfirmadoJdbc,
+                avatarSocialProjetoJdbc
         );
     }
 
@@ -411,8 +422,8 @@ class CadastroContaInternaServicoTest {
     }
 
     @Test
-    @DisplayName("deve vincular e consumir todos os contextos sociais pendentes do cadastro ao confirmar o e-mail")
-    void deveVincularContextosSociaisPendentesAoConfirmarCadastroPublico() {
+    @DisplayName("deve vincular e consumir todos os vínculos sociais confirmados do cadastro ao confirmar o e-mail")
+    void deveVincularVinculosSociaisConfirmadosAoConfirmarCadastroPublico() {
         AtomicReference<CadastroConta> salvo = new AtomicReference<>();
         when(disponibilidadeUsuarioSistemaService.identificadorPublicoSistemaDisponivel(
                 "ana.souza",
@@ -449,27 +460,26 @@ class CadastroContaInternaServicoTest {
                         "MOBILE",
                         false
                 ));
-        java.util.UUID googleId = java.util.UUID.randomUUID();
-        java.util.UUID appleId = java.util.UUID.randomUUID();
-        when(contextoSocialPendenteJdbc.listarPendentesAberturaCadastro(99L, "ana@eickrono.com"))
-                .thenReturn(List.of(
-                        new ContextoSocialPendenteJdbc.ContextoSocialPendenteCadastro(
-                                googleId,
-                                "google",
-                                "google-123",
-                                "ana.google",
-                                "Ana Google",
-                                "https://img/google.png"
-                        ),
-                        new ContextoSocialPendenteJdbc.ContextoSocialPendenteCadastro(
-                                appleId,
-                                "apple",
-                                "apple-123",
-                                "ana.apple",
-                                "Ana Apple",
-                                "https://img/apple.png"
-                        )
-                ));
+        List<VinculoSocialConfirmadoCadastro> vinculosSociaisConfirmados = List.of(
+                new VinculoSocialConfirmadoCadastro(
+                        "google",
+                        "google-123",
+                        "ana.google",
+                        "ana.google@social.test",
+                        "Ana Google",
+                        "https://img/google.png",
+                        true
+                ),
+                new VinculoSocialConfirmadoCadastro(
+                        "apple",
+                        "apple-123",
+                        "ana.apple",
+                        null,
+                        "Ana Apple",
+                        "https://img/apple.png",
+                        false
+                )
+        );
 
         CadastroInternoRealizado cadastro = servicoPublico.cadastrarPublico(
                 TipoPessoaCadastro.FISICA,
@@ -485,9 +495,13 @@ class CadastroContaInternaServicoTest {
                 "SenhaForte@123",
                 "eickrono-thimisu-app",
                 "127.0.0.1",
-                "JUnit"
+                "JUnit",
+                vinculosSociaisConfirmados
         );
         verify(canalEnvioCodigoCadastroEmail).enviar(any(CadastroConta.class), codigoCaptor.capture());
+        verify(cadastroVinculoSocialConfirmadoJdbc).registrar(cadastro.cadastroId(), vinculosSociaisConfirmados);
+        when(cadastroVinculoSocialConfirmadoJdbc.listarAtivos(cadastro.cadastroId()))
+                .thenReturn(vinculosSociaisConfirmados);
         when(cadastroContaRepositorio.findByCadastroId(cadastro.cadastroId())).thenReturn(Optional.of(salvo.get()));
 
         servicoPublico.confirmarEmailPublico(cadastro.cadastroId(), codigoCaptor.getValue());
@@ -497,8 +511,227 @@ class CadastroContaInternaServicoTest {
         assertThat(identidadeFederadaCaptor.getAllValues())
                 .extracting(IdentidadeFederadaKeycloak::identificadorCanonico)
                 .containsExactly("google-123", "apple-123");
-        verify(contextoSocialPendenteJdbc).consumir(googleId);
-        verify(contextoSocialPendenteJdbc).consumir(appleId);
+        verify(avatarSocialProjetoJdbc).sincronizar(
+                eq("sub-ana"),
+                eq("ana@eickrono.com"),
+                eq(99L),
+                eq(salvo.get().getCriadoEm()),
+                any(),
+                any()
+        );
+        verify(avatarSocialProjetoJdbc).definirAvatarSocial(
+                eq("sub-ana"),
+                eq(99L),
+                eq(com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial.GOOGLE),
+                any()
+        );
+        verify(cadastroVinculoSocialConfirmadoJdbc).consumir(cadastro.cadastroId());
+    }
+
+    @Test
+    @DisplayName("deve falhar sem consumir vínculo social confirmado quando materialização social falhar")
+    void deveFalharSemConsumirVinculoSocialConfirmadoQuandoMaterializacaoFalhar() {
+        AtomicReference<CadastroConta> salvo = new AtomicReference<>();
+        when(disponibilidadeUsuarioSistemaService.identificadorPublicoSistemaDisponivel(
+                "ana.souza",
+                "eickrono-thimisu-app"
+        )).thenReturn(true);
+        when(cadastroContaRepositorio.findByEmailPrincipal("ana@eickrono.com")).thenReturn(Optional.empty());
+        when(clienteContextoPessoaPerfilSistema.buscarPorEmail("ana@eickrono.com")).thenReturn(Optional.empty());
+        when(clienteAdministracaoCadastroKeycloak.criarUsuarioPendente(
+                "Ana Souza", "ana@eickrono.com", "SenhaForte@123"))
+                .thenReturn(new CadastroKeycloakProvisionado("sub-ana", "ana@eickrono.com", "Ana Souza"));
+        when(cadastroContaRepositorio.save(any(CadastroConta.class))).thenAnswer(invocation -> {
+            CadastroConta cadastro = invocation.getArgument(0);
+            salvo.set(cadastro);
+            return cadastro;
+        });
+        when(confirmadorPessoaCadastroServico.confirmarEmailCadastro(
+                eq("sub-ana"),
+                eq("ana@eickrono.com"),
+                eq("Ana Souza"),
+                any()
+        )).thenReturn(new PessoaCanonicaConfirmada(77L, "sub-ana", "ana@eickrono.com"));
+        when(provisionadorPerfilSistemaServico.provisionarCadastroConfirmado(any(CadastroConta.class), eq(77L)))
+                .thenReturn(new com.eickrono.api.identidade.aplicacao.modelo.ProvisionamentoPerfilSistemaRealizado(
+                        "usuario-001",
+                        "LIBERADO"
+                ));
+        List<VinculoSocialConfirmadoCadastro> vinculosSociaisConfirmados = List.of(
+                new VinculoSocialConfirmadoCadastro(
+                        "google",
+                        "google-123",
+                        "ana.google",
+                        "ana.google@social.test",
+                        "Ana Google",
+                        "https://img/google.png",
+                        true
+                )
+        );
+
+        CadastroInternoRealizado cadastro = servicoPublico.cadastrarPublico(
+                TipoPessoaCadastro.FISICA,
+                "Ana Souza",
+                null,
+                "ana.souza",
+                null,
+                null,
+                null,
+                "ana@eickrono.com",
+                "+5511999999999",
+                CanalValidacaoTelefoneCadastro.SMS,
+                "SenhaForte@123",
+                "eickrono-thimisu-app",
+                "127.0.0.1",
+                "JUnit",
+                vinculosSociaisConfirmados
+        );
+        verify(canalEnvioCodigoCadastroEmail).enviar(any(CadastroConta.class), codigoCaptor.capture());
+        when(cadastroVinculoSocialConfirmadoJdbc.listarAtivos(cadastro.cadastroId()))
+                .thenReturn(vinculosSociaisConfirmados);
+        when(cadastroContaRepositorio.findByCadastroId(cadastro.cadastroId())).thenReturn(Optional.of(salvo.get()));
+        doThrow(new IllegalStateException("Keycloak indisponivel"))
+                .when(clienteAdministracaoCadastroKeycloak)
+                .vincularIdentidadeFederada(eq("sub-ana"), any(IdentidadeFederadaKeycloak.class));
+
+        assertThatThrownBy(() -> servicoPublico.confirmarEmailPublico(cadastro.cadastroId(), codigoCaptor.getValue()))
+                .isInstanceOf(FluxoPublicoException.class)
+                .extracting("codigo")
+                .isEqualTo("vinculo_social_confirmado_nao_materializado");
+        assertThat(salvo.get().emailJaConfirmado()).isFalse();
+        verify(cadastroVinculoSocialConfirmadoJdbc, never()).consumir(cadastro.cadastroId());
+        verify(avatarSocialProjetoJdbc, never()).definirAvatarSocial(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("deve registrar avatar local do cadastro e materializar na confirmação de e-mail")
+    void deveRegistrarAvatarLocalConfirmadoEConsumirNaConfirmacaoEmail() {
+        AtomicReference<CadastroConta> salvo = new AtomicReference<>();
+        when(disponibilidadeUsuarioSistemaService.identificadorPublicoSistemaDisponivel(
+                "ana.souza",
+                "eickrono-thimisu-app"
+        )).thenReturn(true);
+        when(cadastroContaRepositorio.findByEmailPrincipal("ana@eickrono.com")).thenReturn(Optional.empty());
+        when(clienteContextoPessoaPerfilSistema.buscarPorEmail("ana@eickrono.com")).thenReturn(Optional.empty());
+        when(clienteAdministracaoCadastroKeycloak.criarUsuarioPendente(
+                "Ana Souza", "ana@eickrono.com", "SenhaForte@123"))
+                .thenReturn(new CadastroKeycloakProvisionado("sub-ana", "ana@eickrono.com", "Ana Souza"));
+        when(cadastroContaRepositorio.save(any(CadastroConta.class))).thenAnswer(invocation -> {
+            CadastroConta cadastro = invocation.getArgument(0);
+            salvo.set(cadastro);
+            return cadastro;
+        });
+        when(confirmadorPessoaCadastroServico.confirmarEmailCadastro(
+                eq("sub-ana"),
+                eq("ana@eickrono.com"),
+                eq("Ana Souza"),
+                any()
+        )).thenReturn(new PessoaCanonicaConfirmada(77L, "sub-ana", "ana@eickrono.com"));
+        when(provisionadorPerfilSistemaServico.provisionarCadastroConfirmado(any(CadastroConta.class), eq(77L)))
+                .thenReturn(new com.eickrono.api.identidade.aplicacao.modelo.ProvisionamentoPerfilSistemaRealizado(
+                        "usuario-001",
+                        "LIBERADO"
+                ));
+        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app"))
+                .thenReturn(new ProjetoFluxoPublicoResolvido(
+                        99L,
+                        "eickrono-thimisu-app",
+                        "Thimisu",
+                        "APP",
+                        "Thimisu",
+                        "MOBILE",
+                        false
+                ));
+        List<AvatarCadastroConfirmado> avatares = List.of(new AvatarCadastroConfirmado(
+                "THIMISU",
+                "https://cdn.eickrono.test/avatar/ana.png",
+                "usuarios/sub-ana/avatar/thimisu.png",
+                null,
+                "image/png",
+                12345L,
+                "hash-avatar",
+                "versao-avatar",
+                null,
+                true
+        ));
+
+        CadastroInternoRealizado cadastro = servicoPublico.cadastrarPublico(
+                TipoPessoaCadastro.FISICA,
+                "Ana Souza",
+                null,
+                "ana.souza",
+                null,
+                null,
+                null,
+                "ana@eickrono.com",
+                "+5511999999999",
+                CanalValidacaoTelefoneCadastro.SMS,
+                "SenhaForte@123",
+                "eickrono-thimisu-app",
+                "127.0.0.1",
+                "JUnit",
+                List.of(),
+                avatares
+        );
+        verify(canalEnvioCodigoCadastroEmail).enviar(any(CadastroConta.class), codigoCaptor.capture());
+        verify(cadastroAvatarConfirmadoJdbc).registrar(cadastro.cadastroId(), avatares);
+        when(cadastroContaRepositorio.findByCadastroId(cadastro.cadastroId())).thenReturn(Optional.of(salvo.get()));
+
+        servicoPublico.confirmarEmailPublico(cadastro.cadastroId(), codigoCaptor.getValue());
+
+        verify(cadastroAvatarConfirmadoJdbc).consumirParaUsuario(
+                eq(cadastro.cadastroId()),
+                eq("sub-ana"),
+                eq(99L),
+                any()
+        );
+    }
+
+    @Test
+    @DisplayName("deve rejeitar mais de uma opção de avatar preferida no cadastro")
+    void deveRejeitarPreferenciaDuplicadaEntreAvatarSocialELocal() {
+        List<VinculoSocialConfirmadoCadastro> vinculosSociais = List.of(new VinculoSocialConfirmadoCadastro(
+                "google",
+                "google-123",
+                "ana.google",
+                "ana.google@social.test",
+                "Ana Google",
+                "https://img/google.png",
+                true
+        ));
+        List<AvatarCadastroConfirmado> avatares = List.of(new AvatarCadastroConfirmado(
+                "THIMISU",
+                "https://cdn.eickrono.test/avatar/ana.png",
+                "usuarios/sub-ana/avatar/thimisu.png",
+                null,
+                "image/png",
+                12345L,
+                "hash-avatar",
+                "versao-avatar",
+                null,
+                true
+        ));
+
+        assertThatThrownBy(() -> servicoPublico.cadastrarPublico(
+                TipoPessoaCadastro.FISICA,
+                "Ana Souza",
+                null,
+                "ana.souza",
+                null,
+                null,
+                null,
+                "ana@eickrono.com",
+                "+5511999999999",
+                CanalValidacaoTelefoneCadastro.SMS,
+                "SenhaForte@123",
+                "eickrono-thimisu-app",
+                "127.0.0.1",
+                "JUnit",
+                vinculosSociais,
+                avatares
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Apenas uma opção de avatar confirmada pode ser preferida.");
     }
 
     @Test

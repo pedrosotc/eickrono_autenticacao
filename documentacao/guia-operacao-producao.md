@@ -28,6 +28,115 @@ Este guia descreve processos para operar o ecossistema **Eickrono Autenticação
 - **Auditoria:** revisar tabelas `auditoria_eventos` e `auditoria_acessos` das APIs periodicamente; arquivar registros em storage seguro.  
 - **Gestão de incidentes:** seguir runbooks, acionar comunicação e registrar lições aprendidas no pós-incidente.
 
+## Acesso AWS SSO para operação assistida
+
+Quando for necessário pedir autorização interativa para operar a AWS pelo
+profile local `Codex-cli_aws`, o comando padrão deve usar o fluxo de device
+code, porque ele gera o link com o código já preenchido:
+
+```bash
+aws sso login \
+  --profile Codex-cli_aws \
+  --no-browser \
+  --use-device-code
+```
+
+Não usar apenas `--no-browser` para esse caso operacional, porque o AWS CLI
+pode cair no fluxo PKCE e gerar um link longo sem o código visível.
+
+## Storage S3 de avatares do identidade-servidor
+
+### Regra operacional
+
+Avatares controlados pela Eickrono devem usar bucket S3 dedicado por ambiente.
+O app não deve conhecer bucket nem `storage_key`; ele recebe somente a URL
+pública/controlada entregue pelo `eickrono-identidade-servidor`.
+
+Buckets definidos:
+
+- HML: `eickrono-avatares-hml`
+- Produção: `eickrono-avatares-prod`
+
+Configuração obrigatória dos buckets:
+
+- bloqueio de acesso público direto habilitado;
+- criptografia padrão `AES256`;
+- versionamento habilitado.
+
+Em HML, a leitura pública/controlada continua pela rota:
+
+```text
+https://id-hml.eickrono.store/identidade/avatares/publicos/**
+```
+
+### Variáveis obrigatórias no `identidade-hml`
+
+```text
+IDENTIDADE_AVATAR_STORAGE_TIPO=s3
+IDENTIDADE_AVATAR_STORAGE_BUCKET=eickrono-avatares-hml
+IDENTIDADE_AVATAR_STORAGE_REGION=sa-east-1
+IDENTIDADE_AVATAR_STORAGE_PUBLIC_URL_BASE=https://id-hml.eickrono.store/identidade/avatares/publicos
+IDENTIDADE_AVATAR_STORAGE_MAX_BYTES=5242880
+```
+
+### Permissões IAM obrigatórias
+
+A role ECS do `identidade-hml` precisa desta policy mínima:
+
+- `s3:ListBucket` em `arn:aws:s3:::eickrono-avatares-hml`;
+- `s3:GetObject` e `s3:PutObject` em
+  `arn:aws:s3:::eickrono-avatares-hml/*`.
+
+Motivo do `ListBucket`:
+
+- sem ele, um `GetObject` de arquivo inexistente pode voltar `AccessDenied`;
+- nesse caso o `eickrono-identidade-servidor` interpreta como falha de storage
+  e responde HTTP 502;
+- com `ListBucket`, objeto inexistente volta como ausência real e a rota pública
+  responde HTTP 404.
+
+Comando de validação da policy:
+
+```bash
+aws iam get-role-policy \
+  --role-name eickrono-hml-ecs-task-role \
+  --policy-name eickrono-hml-identidade-avatares-s3 \
+  --profile Codex-cli_aws
+```
+
+### Validação pós-deploy
+
+```bash
+curl https://id-hml.eickrono.store/actuator/health
+```
+
+Resposta esperada:
+
+```json
+{"status":"UP","groups":["liveness","readiness"]}
+```
+
+Validação de rota pública para arquivo inexistente:
+
+```bash
+curl -i https://id-hml.eickrono.store/identidade/avatares/publicos/avatares/thimisu/arquivo-inexistente.png
+```
+
+Resposta esperada:
+
+- HTTP 404;
+- não deve retornar HTTP 502.
+
+Validação de leitura S3 pela rota pública:
+
+1. Enviar um PNG temporário para
+   `s3://eickrono-avatares-hml/avatares/thimisu/validacao-s3-hml.png`.
+2. Ler pela URL
+   `https://id-hml.eickrono.store/identidade/avatares/publicos/avatares/thimisu/validacao-s3-hml.png`.
+3. Confirmar HTTP 200, `content-type: image/png` e
+   `cache-control: public, max-age=86400`.
+4. Remover o objeto de teste do bucket.
+
 ## Automação obrigatória para rotação do segredo RDS em ECS
 
 ### Regra operacional
@@ -75,7 +184,10 @@ Baseado na documentação oficial da AWS para eventos de rotação do
 ```json
 {
   "source": ["aws.secretsmanager"],
-  "detail-type": ["AWS Service Event via CloudTrail"],
+  "detail-type": [
+    "AWS Service Event via CloudTrail",
+    "AWS API Call via CloudTrail"
+  ],
   "detail": {
     "eventSource": ["secretsmanager.amazonaws.com"],
     "eventName": ["RotationSucceeded"]
@@ -89,6 +201,7 @@ Além desse filtro, a Lambda valida internamente:
 - `detail.responseElements.arn`
 - `detail.responseElements.aRN`
 - `detail.secretId`
+- `detail.additionalEventData.SecretId`
 
 Isso elimina dependência do formato exato do payload do CloudTrail.
 

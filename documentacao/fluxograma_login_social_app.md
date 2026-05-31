@@ -15,7 +15,7 @@ ou telas de perfil. Ele cobre apenas o recorte:
 
 - `operador toca no botao de rede social`
 - `app autentica com o provedor`
-- `backend responde`
+- `eickrono-autenticacao-servidor responde`
 - `app decide o que mostrar`
 
 ## 1. Etapas do fluxo
@@ -31,12 +31,13 @@ Quando o operador toca em um botao social:
   - `nomeUsuario`
   - `identificadorExterno`
   - `urlAvatarExterno`, quando existir;
-- depois o app chama o backend publico de login social.
+- depois o app chama o endpoint publico de login social do
+  `eickrono-autenticacao-servidor`.
 
 ### 1.2 Decisao principal
 
-Depois que o backend responde, o app nao pode tratar tudo como "mensagem de
-erro".
+Depois que o `eickrono-autenticacao-servidor` responde, o app nao pode tratar
+tudo como "mensagem de erro".
 
 O app precisa olhar:
 
@@ -52,7 +53,7 @@ O app precisa olhar:
 | --- | --- | --- |
 | Sessao pronta | autenticacao concluida e sessao local finalizada | entrar no app |
 | Dispositivo pendente | contexto de registro/confirmacao de dispositivo | abrir tela de confirmacao de dispositivo |
-| Abrir cadastro | `codigo = social_sem_conta_local` + `detalhes.acaoSugerida = ABRIR_CADASTRO` | mostrar aviso inferior com `Sim, abrir cadastro` e `Agora nao`; se confirmar, abrir `/cadastro` com contexto social e foto da rede quando existir |
+| Abrir cadastro | `codigo = social_sem_conta_local` + `detalhes.acaoSugerida = ABRIR_CADASTRO` | mostrar aviso inferior com `Sim, abrir cadastro` e `Agora nao`; se confirmar, abrir `/cadastro` com dados sociais temporarios no app e foto da rede quando existir |
 | Entrar e vincular | `codigo = social_sem_conta_local` + `detalhes.acaoSugerida = ENTRAR_E_VINCULAR` | mostrar aviso inferior com `Entrar e vincular` e `Agora nao`; se confirmar, pedir login local e vincular a rede ao usuario ao concluir |
 | Rede social ja pertence a outra conta | `codigo = vinculo_social_pertence_a_outra_conta` | mostrar conflito explicito; nao oferecer vinculacao automatica nem cadastro novo |
 | Conta desabilitada | `codigo = conta_desabilitada` | abrir direto a tela de excecao de usuario bloqueado; voltar retorna ao login |
@@ -123,7 +124,6 @@ O que vem do servidor:
   - `nomeUsuarioExterno`
   - `nomeExibicaoExterno`
   - `urlAvatarExterno`
-  - `contextoSocialPendenteId`
 
 Para que serve:
 
@@ -131,6 +131,9 @@ Para que serve:
 - mas ainda nao existe usuario local valido neste projeto para receber esse
   vinculo;
 - e a proxima acao correta e abrir cadastro novo usando os dados dessa rede.
+- neste ponto o `eickrono-autenticacao-servidor` nao deve criar usuario,
+  forma social, avatar, pessoa, cadastro finalizado nem contexto pendente em
+  banco.
 
 Uso no app:
 
@@ -148,7 +151,6 @@ O que vem do servidor:
   - `provedor`
   - `identificadorExterno`
   - `nomeUsuarioExterno`
-  - `contextoSocialPendenteId`
 
 Para que serve:
 
@@ -157,6 +159,8 @@ Para que serve:
 - mas essa rede ainda nao esta vinculada a esse usuario;
 - e a proxima acao correta e entrar com a conta local para concluir a
   vinculacao.
+- neste ponto o `eickrono-autenticacao-servidor` nao deve criar forma social,
+  avatar ou contexto pendente em banco.
 
 Uso no app:
 
@@ -228,8 +232,8 @@ O que vem do servidor:
 
 Para que serve:
 
-- indicar que o token exchange ou a autenticacao social recebida nao pode ser
-  aceita pelo backend.
+- indicar que a credencial social recebida nao pode ser aceita pelo
+  `eickrono-autenticacao-servidor`.
 
 Uso no app:
 
@@ -316,7 +320,7 @@ Acao de `Sim, abrir cadastro`:
 
 - fecha a mensagem inferior;
 - abre `/cadastro`;
-- leva o contexto social temporario para o cadastro;
+- leva os dados sociais temporarios do app para o cadastro;
 - se existir foto da rede social, essa foto deve ir preenchida;
 - se nao existir foto da rede, o cadastro inicia com o avatar padrao de usuario.
 
@@ -324,7 +328,7 @@ Acao de `Agora nao`:
 
 - fecha a mensagem inferior;
 - mantem o operador no login;
-- limpa o contexto social temporario.
+- limpa os dados sociais temporarios.
 
 ### 3.2 `ENTRAR_E_VINCULAR`
 
@@ -347,23 +351,24 @@ Acao de `Entrar e vincular`:
 - mantem o operador no login;
 - preenche o campo de login com `loginSugerido`, quando existir;
 - limpa o campo de senha;
-- mantem o contexto social temporario ativo;
+- mantem os dados sociais temporarios ativos;
 - espera o operador concluir o login local para finalizar a vinculacao;
 - se o login local concluir, a rede social e vinculada automaticamente ao usuario;
-- se a senha falhar 3 vezes, a vinculacao pendente e cancelada e o contexto social temporario e apagado.
+- se a senha falhar 3 vezes, a vinculacao pendente e cancelada e os dados sociais temporarios sao apagados.
 
 Acao de `Agora nao`:
 
 - fecha a mensagem inferior;
 - mantem o operador no login;
-- limpa o contexto social temporario.
+- limpa os dados sociais temporarios.
 
-## 4. Regras para o contexto social temporario
+## 4. Regras para os dados sociais temporarios no app
 
-O contexto social temporario existe para o app lembrar o que acabou de voltar
-do login social.
+Os dados sociais temporarios existem apenas para o app lembrar o que acabou de
+voltar do login social. Eles nao representam usuario, cadastro, vinculo social
+ou avatar persistido.
 
-Ele deve carregar, quando disponiveis:
+O app pode manter em memoria/estado local, quando disponiveis:
 
 - `redeSocial`
 - `email`
@@ -372,17 +377,25 @@ Ele deve carregar, quando disponiveis:
 - `identificadorExterno`
 - `nomeUsuarioExterno`
 - `urlAvatarExterno`
-- `contextoSocialPendenteId`
 - `loginSugerido`
 - `acaoSugerida`
 
-Esse contexto deve:
+Esse estado deve:
 
-- ser criado quando o backend devolver um caso funcional pendente;
+- ser criado quando o `eickrono-autenticacao-servidor` devolver um caso
+  funcional pendente;
 - ser consumido pela UX da mensagem inferior;
 - ser apagado quando o operador tocar `Agora nao`;
 - ser apagado depois que o fluxo terminar com sucesso;
 - nao vazar para outra tentativa futura depois de cancelado.
+
+Esse estado nao deve:
+
+- virar JWT ou token social temporario;
+- virar registro em banco no `eickrono-autenticacao-servidor`;
+- virar registro em banco no `eickrono-identidade-servidor`;
+- virar usuario no Keycloak;
+- virar conta local recente no app.
 
 ## 5. Regras de separacao entre casos
 
@@ -403,16 +416,16 @@ Esse contexto deve:
 
 - a mensagem inferior aparece
 - aparecem `Sim, abrir cadastro` e `Agora nao`
-- `Sim` abre cadastro com o contexto social e a foto da rede quando existir
-- `Agora nao` limpa o contexto temporario
+- `Sim` abre cadastro com os dados sociais temporarios e a foto da rede quando existir
+- `Agora nao` limpa os dados sociais temporarios
 
 ### 6.3 `social_sem_conta_local` + `ENTRAR_E_VINCULAR`
 
 - a mensagem inferior aparece
 - aparecem `Entrar e vincular` e `Agora nao`
-- `Entrar e vincular` mantem o contexto temporario e inicia a vinculacao pelo login local
-- 3 falhas de senha cancelam a vinculacao pendente e limpam o contexto temporario
-- `Agora nao` limpa o contexto temporario
+- `Entrar e vincular` mantem os dados sociais temporarios e inicia a vinculacao pelo login local
+- 3 falhas de senha cancelam a vinculacao pendente e limpam os dados sociais temporarios
+- `Agora nao` limpa os dados sociais temporarios
 
 ### 6.4 `vinculo_social_pertence_a_outra_conta`
 

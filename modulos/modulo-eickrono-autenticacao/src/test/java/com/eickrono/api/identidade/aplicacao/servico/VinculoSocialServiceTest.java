@@ -12,20 +12,17 @@ import com.eickrono.api.identidade.aplicacao.excecao.ApiAutenticadaException;
 import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.SessaoInternaAutenticada;
+import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.apresentacao.dto.AtualizarAvatarPreferidoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.VinculoSocialDto;
 import com.eickrono.api.identidade.apresentacao.dto.VinculosSociaisDto;
 import com.eickrono.api.identidade.dominio.modelo.AuditoriaEventoIdentidade;
 import com.eickrono.api.identidade.dominio.modelo.FormaAcesso;
-import com.eickrono.api.identidade.dominio.modelo.PerfilIdentidade;
 import com.eickrono.api.identidade.dominio.modelo.Pessoa;
 import com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial;
 import com.eickrono.api.identidade.dominio.modelo.TipoFormaAcesso;
-import com.eickrono.api.identidade.dominio.modelo.VinculoSocial;
 import com.eickrono.api.identidade.dominio.repositorio.AuditoriaEventoIdentidadeRepositorio;
 import com.eickrono.api.identidade.dominio.repositorio.FormaAcessoRepositorio;
-import com.eickrono.api.identidade.dominio.repositorio.PerfilIdentidadeRepositorio;
-import com.eickrono.api.identidade.dominio.repositorio.VinculoSocialRepositorio;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.time.OffsetDateTime;
@@ -35,7 +32,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,14 +40,11 @@ import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class VinculoSocialServiceTest {
 
-    @Mock
-    private PerfilIdentidadeRepositorio perfilRepositorio;
     @Mock
     private ProvisionamentoIdentidadeService provisionamentoIdentidadeService;
     @Mock
@@ -59,36 +52,27 @@ class VinculoSocialServiceTest {
     @Mock
     private AutenticacaoSessaoInternaServico autenticacaoSessaoInternaServico;
     @Mock
-    private JwtDecoder jwtDecoder;
-    @Mock
-    private ContextoSocialPendenteJdbc contextoSocialPendenteJdbc;
-    @Mock
     private ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico;
     @Mock
     private AvatarSocialProjetoJdbc avatarSocialProjetoJdbc;
 
-    private final List<VinculoSocial> vinculosPersistidos = new ArrayList<>();
     private final List<FormaAcesso> formasAcessoPersistidas = new ArrayList<>();
     private final List<AuditoriaEventoIdentidade> auditorias = new ArrayList<>();
     private final ClienteAdministracaoVinculosSociaisKeycloakFake clienteAdministracaoVinculosSociaisKeycloak =
             new ClienteAdministracaoVinculosSociaisKeycloakFake();
 
     private VinculoSocialService vinculoSocialService;
-    private long proximoIdVinculo = 42L;
     private long proximoIdFormaAcesso = 100L;
 
     @Test
     @DisplayName("listar vínculos sociais: deve retornar os provedores suportados e ignorar vínculos legados não suportados")
     void deveListarProvedoresSuportados() throws Exception {
         inicializarServico();
-        PerfilIdentidade perfil = criarPerfil();
         Pessoa pessoa = criarPessoa();
         Jwt jwt = jwt("sub-123");
         when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
-        when(perfilRepositorio.findBySub("sub-123")).thenReturn(Optional.of(perfil));
 
-        vinculosPersistidos.add(criarVinculo(perfil, 1L, "google", "teste@gmail.com"));
-        vinculosPersistidos.add(criarVinculo(perfil, 2L, "GITHUB", "legacy"));
+        formasAcessoPersistidas.add(criarFormaAcesso(pessoa, 1L, "GOOGLE", "teste@gmail.com"));
 
         VinculosSociaisDto resposta = vinculoSocialService.listar(jwt);
 
@@ -105,111 +89,47 @@ class VinculoSocialServiceTest {
     }
 
     @Test
-    @DisplayName("sincronizar vínculos sociais: deve reconciliar Keycloak, projeção local e formas de acesso")
-    void deveSincronizarVinculosComKeycloak() throws Exception {
+    @DisplayName("entrar e vincular: deve materializar vínculo social confirmado sem contexto pendente e sem token externo")
+    void deveVincularDadosSociaisConfirmadosAposLoginLocal() throws Exception {
         inicializarServico();
-        PerfilIdentidade perfil = criarPerfil();
         Pessoa pessoa = criarPessoa();
         Jwt jwt = jwt("sub-123");
         when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
-        when(perfilRepositorio.findBySub("sub-123")).thenReturn(Optional.of(perfil));
 
-        vinculosPersistidos.add(criarVinculo(perfil, 1L, "google", "antigo"));
-        vinculosPersistidos.add(criarVinculo(perfil, 2L, "apple", "sera-removido"));
-        formasAcessoPersistidas.add(criarFormaAcesso(
-                pessoa,
-                10L,
-                "GOOGLE",
-                "legacy-google-id"));
-        formasAcessoPersistidas.add(criarFormaAcesso(
-                pessoa,
-                11L,
-                "APPLE",
-                "legacy-apple-id"));
-
-        clienteAdministracaoVinculosSociaisKeycloak.definir(
-                "sub-123",
-                List.of(
-                        new IdentidadeFederadaKeycloak(
-                                ProvedorVinculoSocial.GOOGLE,
-                                "google-sub-1",
-                                "teste@gmail.com"),
-                        new IdentidadeFederadaKeycloak(
-                                ProvedorVinculoSocial.LINKEDIN,
-                                "linkedin-sub-55",
-                                "thiago-linkedin")));
-
-        VinculosSociaisDto resposta = vinculoSocialService.sincronizar(jwt, "google");
-
-        assertThat(auditorias).hasSize(1);
-        assertThat(auditorias.getFirst().getTipoEvento()).isEqualTo("VINCULO_SOCIAL_SINCRONIZADO");
-
-        assertThat(vinculosPersistidos)
-                .extracting(VinculoSocial::getProvedor, VinculoSocial::getIdentificador)
-                .containsExactlyInAnyOrder(
-                        org.assertj.core.groups.Tuple.tuple("google", "teste@gmail.com"),
-                        org.assertj.core.groups.Tuple.tuple("linkedin", "thiago-linkedin"));
-
-        assertThat(formasAcessoPersistidas)
-                .extracting(FormaAcesso::getProvedor, FormaAcesso::getIdentificador)
-                .containsExactlyInAnyOrder(
-                        org.assertj.core.groups.Tuple.tuple("GOOGLE", "google-sub-1"),
-                        org.assertj.core.groups.Tuple.tuple("LINKEDIN", "linkedin-sub-55"));
-
-        assertThat(resposta.provedores())
-                .extracting(VinculoSocialDto::provedor, VinculoSocialDto::vinculado)
-                .contains(
-                        org.assertj.core.groups.Tuple.tuple("google", true),
-                        org.assertj.core.groups.Tuple.tuple("linkedin", true),
-                        org.assertj.core.groups.Tuple.tuple("apple", false));
-    }
-
-    @Test
-    @DisplayName("entrar e vincular: deve materializar vínculo social pendente sem novo token social")
-    void deveVincularContextoPendenteAposLoginLocal() throws Exception {
-        inicializarServico();
-        PerfilIdentidade perfil = criarPerfil();
-        Pessoa pessoa = criarPessoa();
-        Jwt jwt = jwt("sub-123");
-        UUID contextoId = UUID.fromString("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb");
-        ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo contexto =
-                new ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo(
-                        contextoId,
-                        1L,
-                        "apple",
-                        "apple-user-id",
-                        "apple-user",
-                        "Pessoa Apple",
-                        null,
-                        UUID.fromString("cccccccc-1111-2222-3333-dddddddddddd"),
-                        "teste@eickrono.com",
-                        "ENTRAR_E_VINCULAR",
-                        0,
-                        3
-                );
-        when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
-        when(perfilRepositorio.findBySub("sub-123")).thenReturn(Optional.of(perfil));
-
-        vinculoSocialService.vincularContextoPendenteAposLoginLocal(
+        VinculosSociaisDto resposta = vinculoSocialService.vincularConfirmado(
                 jwt,
-                contexto,
+                "google",
+                new VinculoSocialConfirmadoCadastro(
+                        "google",
+                        "google-sub-confirmado",
+                        "google-user",
+                        "teste@google.test",
+                        "Pessoa Google",
+                        "https://cdn.eickrono.test/google.png",
+                        true),
                 "eickrono-thimisu-app");
 
         verify(clienteAdministracaoCadastroKeycloak).vincularIdentidadeFederada(
                 eq("sub-123"),
                 eq(new IdentidadeFederadaKeycloak(
-                        ProvedorVinculoSocial.APPLE,
-                        "apple-user-id",
-                        "apple-user",
-                        "Pessoa Apple",
-                        null)));
-        verify(contextoSocialPendenteJdbc).consumirSeCompativel(contextoId, "teste@eickrono.com");
-        assertThat(vinculosPersistidos)
-                .extracting(VinculoSocial::getProvedor, VinculoSocial::getIdentificador)
-                .containsExactly(org.assertj.core.groups.Tuple.tuple("apple", "apple-user"));
+                        ProvedorVinculoSocial.GOOGLE,
+                        "google-sub-confirmado",
+                        "google-user",
+                        "Pessoa Google",
+                        "https://cdn.eickrono.test/google.png")));
+        verify(avatarSocialProjetoJdbc).definirAvatarSocial(
+                eq("sub-123"),
+                eq(1L),
+                eq(ProvedorVinculoSocial.GOOGLE),
+                any());
         assertThat(formasAcessoPersistidas)
                 .extracting(FormaAcesso::getProvedor, FormaAcesso::getIdentificador)
-                .containsExactly(org.assertj.core.groups.Tuple.tuple("APPLE", "apple-user-id"));
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("GOOGLE", "google-sub-confirmado"));
+        assertThat(resposta.provedores().stream()
+                .filter(item -> item.provedor().equals("google"))
+                .findFirst()
+                .orElseThrow()
+                .vinculado()).isTrue();
         assertThat(auditorias).hasSize(1);
         assertThat(auditorias.getFirst().getTipoEvento()).isEqualTo("VINCULO_SOCIAL_VINCULADO");
     }
@@ -218,13 +138,10 @@ class VinculoSocialServiceTest {
     @DisplayName("remover vínculo social: deve remover no Keycloak e limpar a projeção local")
     void deveRemoverVinculoSocial() throws Exception {
         inicializarServico();
-        PerfilIdentidade perfil = criarPerfil();
         Pessoa pessoa = criarPessoa();
         Jwt jwt = jwt("sub-123");
         when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
-        when(perfilRepositorio.findBySub("sub-123")).thenReturn(Optional.of(perfil));
 
-        vinculosPersistidos.add(criarVinculo(perfil, 1L, "google", "teste@gmail.com"));
         formasAcessoPersistidas.add(criarFormaAcessoEmailSenha(
                 pessoa,
                 9L,
@@ -247,10 +164,8 @@ class VinculoSocialServiceTest {
 
         VinculosSociaisDto resposta = vinculoSocialService.remover(jwt, "google", "SenhaAtual123", null);
 
-        verify(perfilRepositorio).findBySub("sub-123");
         assertThat(clienteAdministracaoVinculosSociaisKeycloak.provedorRemovido("sub-123"))
                 .contains(ProvedorVinculoSocial.GOOGLE);
-        assertThat(vinculosPersistidos).isEmpty();
         assertThat(formasAcessoPersistidas)
                 .extracting(FormaAcesso::getTipo, FormaAcesso::getIdentificador)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(
@@ -268,13 +183,10 @@ class VinculoSocialServiceTest {
     @DisplayName("remover vínculo social: deve exigir senha atual para confirmar a desvinculação")
     void deveExigirSenhaAtualParaRemoverVinculoSocial() throws Exception {
         inicializarServico();
-        PerfilIdentidade perfil = criarPerfil();
         Pessoa pessoa = criarPessoa();
         Jwt jwt = jwt("sub-123");
         when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
-        when(perfilRepositorio.findBySub("sub-123")).thenReturn(Optional.of(perfil));
 
-        vinculosPersistidos.add(criarVinculo(perfil, 1L, "google", "teste@gmail.com"));
         formasAcessoPersistidas.add(criarFormaAcessoEmailSenha(
                 pessoa,
                 9L,
@@ -296,13 +208,10 @@ class VinculoSocialServiceTest {
     @DisplayName("remover vínculo social: deve rejeitar senha incorreta")
     void deveRejeitarSenhaIncorretaAoRemoverVinculoSocial() throws Exception {
         inicializarServico();
-        PerfilIdentidade perfil = criarPerfil();
         Pessoa pessoa = criarPessoa();
         Jwt jwt = jwt("sub-123");
         when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
-        when(perfilRepositorio.findBySub("sub-123")).thenReturn(Optional.of(perfil));
 
-        vinculosPersistidos.add(criarVinculo(perfil, 1L, "google", "teste@gmail.com"));
         formasAcessoPersistidas.add(criarFormaAcessoEmailSenha(
                 pessoa,
                 9L,
@@ -323,27 +232,13 @@ class VinculoSocialServiceTest {
     }
 
     @Test
-    @DisplayName("sincronizar vínculos sociais: deve rejeitar provedor não suportado")
-    void deveRejeitarProvedorNaoSuportado() {
-        inicializarServico();
-
-        assertThatThrownBy(() -> vinculoSocialService.sincronizar(jwt("sub-123"), "github"))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Provedor social não suportado");
-    }
-
-    @Test
     @DisplayName("atualizar avatar preferido: deve refletir o avatar social principal do projeto")
     void deveAtualizarAvatarPreferidoSocialDoProjeto() throws Exception {
         inicializarServico();
-        PerfilIdentidade perfil = criarPerfil();
         Pessoa pessoa = criarPessoa();
         Jwt jwt = jwt("sub-123");
         when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
-        when(perfilRepositorio.findBySub("sub-123")).thenReturn(Optional.of(perfil));
 
-        VinculoSocial vinculo = criarVinculo(perfil, 1L, "google", "teste@gmail.com");
-        vinculosPersistidos.add(vinculo);
         FormaAcesso formaAcesso = criarFormaAcesso(pessoa, 10L, "GOOGLE", "google-sub-1");
         formaAcesso.atualizarDadosExternos(
                 "Pessoa Google",
@@ -354,7 +249,9 @@ class VinculoSocialServiceTest {
                 .thenReturn(new AvatarSocialProjetoJdbc.PreferenciaAvatarProjeto(
                         "SOCIAL",
                         "https://cdn.eickrono.test/google.png",
-                        "GOOGLE"));
+                        "GOOGLE",
+                        "avatar-v-google",
+                        OffsetDateTime.parse("2024-05-03T10:00:00Z")));
 
         VinculosSociaisDto resposta = vinculoSocialService.atualizarAvatarPreferido(
                 jwt,
@@ -376,28 +273,24 @@ class VinculoSocialServiceTest {
     }
 
     @Test
-    @DisplayName("sincronizar vínculos sociais: deve manter o vínculo mesmo quando o provedor não informar foto")
-    void deveSincronizarVinculoSocialSemFotoDisponivel() throws Exception {
+    @DisplayName("vincular rede social confirmada: deve manter o vínculo mesmo quando o provedor não informar foto")
+    void deveVincularRedeSocialConfirmadaSemFotoDisponivel() throws Exception {
         inicializarServico();
-        PerfilIdentidade perfil = criarPerfil();
         Pessoa pessoa = criarPessoa();
         Jwt jwt = jwt("sub-123");
         when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
-        when(perfilRepositorio.findBySub("sub-123")).thenReturn(Optional.of(perfil));
 
-        clienteAdministracaoVinculosSociaisKeycloak.definir(
-                "sub-123",
-                List.of(new IdentidadeFederadaKeycloak(
-                        ProvedorVinculoSocial.GOOGLE,
-                        "google-sub-1",
-                        "teste@gmail.com",
-                        "Pessoa Google",
-                        null)));
-
-        VinculosSociaisDto resposta = vinculoSocialService.sincronizar(
+        VinculosSociaisDto resposta = vinculoSocialService.vincularConfirmado(
                 jwt,
                 "google",
-                null,
+                new VinculoSocialConfirmadoCadastro(
+                        "google",
+                        "google-sub-1",
+                        "teste@gmail.com",
+                        "teste@gmail.com",
+                        "Pessoa Google",
+                        null,
+                        false),
                 "eickrono-thimisu-app");
 
         VinculoSocialDto google = resposta.provedores().stream()
@@ -410,33 +303,28 @@ class VinculoSocialServiceTest {
         assertThat(google.statusAvatarSocial()).isEqualTo("FOTO_NAO_DISPONIVEL");
         assertThat(google.mensagemAvatarSocial())
                 .isEqualTo("Esta conta esta vinculada, mas nao ha foto disponivel para usar no perfil neste momento.");
-        assertThat(vinculosPersistidos.getFirst().getUrlAvatarExterno()).isNull();
         assertThat(formasAcessoPersistidas.getFirst().getUrlAvatarExterno()).isNull();
     }
 
     @Test
-    @DisplayName("sincronizar vínculos sociais: deve manter o vínculo da Apple mesmo quando o provedor não informar foto")
-    void deveSincronizarVinculoAppleSemFotoDisponivel() throws Exception {
+    @DisplayName("vincular rede social confirmada: deve manter o vínculo da Apple mesmo quando o provedor não informar foto")
+    void deveVincularRedeSocialConfirmadaAppleSemFotoDisponivel() throws Exception {
         inicializarServico();
-        PerfilIdentidade perfil = criarPerfil();
         Pessoa pessoa = criarPessoa();
         Jwt jwt = jwt("sub-123");
         when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
-        when(perfilRepositorio.findBySub("sub-123")).thenReturn(Optional.of(perfil));
 
-        clienteAdministracaoVinculosSociaisKeycloak.definir(
-                "sub-123",
-                List.of(new IdentidadeFederadaKeycloak(
-                        ProvedorVinculoSocial.APPLE,
-                        "apple-sub-1",
-                        "usuario@icloud.test",
-                        "Pessoa Apple",
-                        "   ")));
-
-        VinculosSociaisDto resposta = vinculoSocialService.sincronizar(
+        VinculosSociaisDto resposta = vinculoSocialService.vincularConfirmado(
                 jwt,
                 "apple",
-                null,
+                new VinculoSocialConfirmadoCadastro(
+                        "apple",
+                        "apple-sub-1",
+                        "usuario@icloud.test",
+                        "usuario@icloud.test",
+                        "Pessoa Apple",
+                        "   ",
+                        false),
                 "eickrono-thimisu-app");
 
         VinculoSocialDto apple = resposta.provedores().stream()
@@ -449,8 +337,6 @@ class VinculoSocialServiceTest {
         assertThat(apple.statusAvatarSocial()).isEqualTo("PROVEDOR_SEM_SUPORTE_DE_FOTO");
         assertThat(apple.mensagemAvatarSocial())
                 .isEqualTo("Esta conta esta vinculada, mas este provedor nao disponibiliza foto para uso no perfil neste aplicativo.");
-        assertThat(vinculosPersistidos.getFirst().getProvedor()).isEqualTo("apple");
-        assertThat(vinculosPersistidos.getFirst().getUrlAvatarExterno()).isNull();
         assertThat(formasAcessoPersistidas.getFirst().getProvedor()).isEqualTo("APPLE");
         assertThat(formasAcessoPersistidas.getFirst().getUrlAvatarExterno()).isNull();
     }
@@ -496,11 +382,9 @@ class VinculoSocialServiceTest {
     }
 
     private void inicializarServico() {
-        vinculosPersistidos.clear();
         formasAcessoPersistidas.clear();
         auditorias.clear();
         clienteAdministracaoVinculosSociaisKeycloak.limpar();
-        proximoIdVinculo = 42L;
         proximoIdFormaAcesso = 100L;
         Mockito.lenient().when(avatarSocialProjetoJdbc.buscarPreferencia(any(), any()))
                 .thenReturn(AvatarSocialProjetoJdbc.PreferenciaAvatarProjeto.vazia());
@@ -516,40 +400,14 @@ class VinculoSocialServiceTest {
 
         AuditoriaService auditoriaService = new AuditoriaService(auditoriaRepositorio());
         vinculoSocialService = new VinculoSocialService(
-                Objects.requireNonNull(perfilRepositorio),
-                vinculoRepositorio(),
                 formaAcessoRepositorio(),
                 auditoriaService,
                 Objects.requireNonNull(provisionamentoIdentidadeService),
                 clienteAdministracaoVinculosSociaisKeycloak,
                 Objects.requireNonNull(clienteAdministracaoCadastroKeycloak),
                 Objects.requireNonNull(autenticacaoSessaoInternaServico),
-                Objects.requireNonNull(jwtDecoder),
-                Objects.requireNonNull(contextoSocialPendenteJdbc),
                 Objects.requireNonNull(resolvedorProjetoFluxoPublico),
                 Objects.requireNonNull(avatarSocialProjetoJdbc));
-    }
-
-    private VinculoSocialRepositorio vinculoRepositorio() {
-        return (VinculoSocialRepositorio) Proxy.newProxyInstance(
-                VinculoSocialRepositorio.class.getClassLoader(),
-                new Class<?>[] {VinculoSocialRepositorio.class},
-                (proxy, method, args) -> switch (method.getName()) {
-                    case "findByPerfil" -> vinculosPersistidos.stream()
-                            .filter(vinculo -> vinculo.getPerfil().equals(Objects.requireNonNull(args)[0]))
-                            .toList();
-                    case "save" -> salvarVinculo((VinculoSocial) Objects.requireNonNull(args)[0]);
-                    case "deleteAll" -> {
-                        for (Object item : (Iterable<?>) Objects.requireNonNull(args)[0]) {
-                            vinculosPersistidos.remove(item);
-                        }
-                        yield null;
-                    }
-                    case "hashCode" -> System.identityHashCode(proxy);
-                    case "equals" -> proxy == args[0];
-                    case "toString" -> "VinculoSocialRepositorioFake";
-                    default -> throw new UnsupportedOperationException(method.getName());
-                });
     }
 
     private FormaAcessoRepositorio formaAcessoRepositorio() {
@@ -607,16 +465,6 @@ class VinculoSocialServiceTest {
                 .toList();
     }
 
-    private PerfilIdentidade criarPerfil() {
-        return new PerfilIdentidade(
-                "sub-123",
-                "teste@eickrono.com",
-                "Pessoa Teste",
-                Set.of("CLIENTE"),
-                Set.of("ROLE_cliente"),
-                OffsetDateTime.parse("2024-05-01T12:00:00Z"));
-    }
-
     private Pessoa criarPessoa() {
         return new Pessoa(
                 "sub-123",
@@ -634,22 +482,6 @@ class VinculoSocialServiceTest {
                 .claim("name", "Pessoa Teste")
                 .header("alg", "none")
                 .build();
-    }
-
-    private VinculoSocial criarVinculo(final PerfilIdentidade perfil,
-                                       final Long id,
-                                       final String provedor,
-                                       final String identificador) throws Exception {
-        VinculoSocial vinculo = new VinculoSocial(
-                perfil,
-                provedor,
-                identificador,
-                OffsetDateTime.parse("2024-05-02T15:00:00Z"),
-                null,
-                null,
-                null);
-        definirId(VinculoSocial.class, vinculo, id);
-        return vinculo;
     }
 
     private FormaAcesso criarFormaAcesso(final Pessoa pessoa,
@@ -683,16 +515,6 @@ class VinculoSocialServiceTest {
                 OffsetDateTime.parse("2024-05-02T15:00:00Z"));
         definirId(FormaAcesso.class, formaAcesso, id);
         return formaAcesso;
-    }
-
-    private VinculoSocial salvarVinculo(final VinculoSocial vinculo) throws Exception {
-        VinculoSocial salvo = Objects.requireNonNull(vinculo);
-        if (salvo.getId() == null) {
-            definirId(VinculoSocial.class, salvo, proximoIdVinculo++);
-        }
-        vinculosPersistidos.removeIf(existente -> Objects.equals(existente.getId(), salvo.getId()));
-        vinculosPersistidos.add(salvo);
-        return salvo;
     }
 
     private FormaAcesso salvarFormaAcesso(final FormaAcesso formaAcesso) throws Exception {

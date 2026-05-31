@@ -17,9 +17,7 @@ import com.eickrono.api.identidade.aplicacao.servico.AutenticacaoSessaoInternaSe
 import com.eickrono.api.identidade.dominio.modelo.FormaAcesso;
 import com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial;
 import com.eickrono.api.identidade.dominio.modelo.TipoFormaAcesso;
-import com.eickrono.api.identidade.dominio.modelo.VinculoSocial;
 import com.eickrono.api.identidade.dominio.repositorio.FormaAcessoRepositorio;
-import com.eickrono.api.identidade.dominio.repositorio.VinculoSocialRepositorio;
 import com.eickrono.api.identidade.support.ClienteAdministracaoCadastroKeycloakStubConfiguration;
 import com.eickrono.api.identidade.support.InfraestruturaTesteIdentidade;
 import java.time.OffsetDateTime;
@@ -55,9 +53,6 @@ class VinculosSociaisControllerIT {
     private ClienteAdministracaoCadastroKeycloakStubConfiguration keycloakStub;
 
     @Autowired
-    private VinculoSocialRepositorio vinculoSocialRepositorio;
-
-    @Autowired
     private FormaAcessoRepositorio formaAcessoRepositorio;
 
     @MockBean
@@ -66,7 +61,6 @@ class VinculosSociaisControllerIT {
     @BeforeEach
     void limparEstado() {
         keycloakStub.limparIdentidadesFederadas();
-        vinculoSocialRepositorio.deleteAll();
         formaAcessoRepositorio.deleteAll();
         when(autenticacaoSessaoInternaServico.autenticar("teste@eickrono.com", "SenhaAtual123"))
                 .thenReturn(new SessaoInternaAutenticada(true, "Bearer", "access", "refresh", 300L));
@@ -88,9 +82,6 @@ class VinculosSociaisControllerIT {
                 .andExpect(jsonPath("$.provedores[0].vinculado").value(true))
                 .andExpect(jsonPath("$.provedores[0].identificadorMascarado").value("t***@gmail.com"));
 
-        assertThat(vinculoSocialRepositorio.findAll())
-                .extracting(VinculoSocial::getProvedor, VinculoSocial::getIdentificador)
-                .containsExactly(org.assertj.core.groups.Tuple.tuple("google", "teste@gmail.com"));
         assertThat(formaAcessoRepositorio.findAll().stream()
                 .filter(forma -> forma.getTipo() == TipoFormaAcesso.SOCIAL)
                 .toList())
@@ -125,7 +116,6 @@ class VinculosSociaisControllerIT {
                 .andExpect(jsonPath("$.provedores[0].provedor").value("google"))
                 .andExpect(jsonPath("$.provedores[0].vinculado").value(false));
 
-        assertThat(vinculoSocialRepositorio.findAll()).isEmpty();
         assertThat(formaAcessoRepositorio.findAll().stream()
                 .filter(forma -> forma.getTipo() == TipoFormaAcesso.SOCIAL)
                 .toList()).isEmpty();

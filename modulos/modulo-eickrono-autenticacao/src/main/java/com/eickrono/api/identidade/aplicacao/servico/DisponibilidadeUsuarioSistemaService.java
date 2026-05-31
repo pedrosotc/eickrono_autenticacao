@@ -74,11 +74,11 @@ public class DisponibilidadeUsuarioSistemaService {
         return Optional.ofNullable(jdbcTemplate.queryForObject("""
                 SELECT EXISTS (
                     SELECT 1
-                    FROM identidade.cadastros_conta cadastro
+                    FROM autenticacao.cadastros_conta cadastro
                     JOIN catalogo.clientes_ecossistema cliente
                       ON cliente.id = cadastro.cliente_ecossistema_id
-                    WHERE cadastro.usuario IS NOT NULL
-                      AND LOWER(cadastro.usuario) = :identificadorPublicoSistema
+                    WHERE cadastro.identificador_publico_cliente IS NOT NULL
+                      AND LOWER(cadastro.identificador_publico_cliente) = :identificadorPublicoSistema
                       AND LOWER(cliente.codigo) = LOWER(:codigoCliente)
                 )
                 """, params, Boolean.class)).orElse(false);

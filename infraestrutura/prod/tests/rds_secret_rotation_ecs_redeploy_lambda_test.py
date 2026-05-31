@@ -84,6 +84,58 @@ class RotationRedeployLambdaTest(unittest.TestCase):
             ecs_client.calls,
         )
 
+    def test_redeploys_when_rds_rotation_reports_secret_in_additional_event_data(self):
+        ecs_client = EcsClientFake()
+        event = {
+            "detail-type": "AWS Service Event via CloudTrail",
+            "resources": [],
+            "detail": {
+                "eventSource": "secretsmanager.amazonaws.com",
+                "eventName": "RotationSucceeded",
+                "responseElements": None,
+                "additionalEventData": {
+                    "SecretId": (
+                        "arn:aws:secretsmanager:sa-east-1:531708494702:"
+                        "secret:rds!db-abc"
+                    ),
+                },
+            },
+        }
+
+        result = handler.processar_evento(
+            event,
+            ecs_client=ecs_client,
+            secret_arn="arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc",
+            cluster="eickrono-hml",
+            services=["auth-hml", "identidade-hml", "thimisu-backend-hml"],
+        )
+
+        self.assertTrue(result["matched"])
+        self.assertEqual(
+            ["auth-hml", "identidade-hml", "thimisu-backend-hml"],
+            result["servicesRedeployed"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "cluster": "eickrono-hml",
+                    "service": "auth-hml",
+                    "forceNewDeployment": True,
+                },
+                {
+                    "cluster": "eickrono-hml",
+                    "service": "identidade-hml",
+                    "forceNewDeployment": True,
+                },
+                {
+                    "cluster": "eickrono-hml",
+                    "service": "thimisu-backend-hml",
+                    "forceNewDeployment": True,
+                },
+            ],
+            ecs_client.calls,
+        )
+
     def test_ignores_event_for_other_secret(self):
         ecs_client = EcsClientFake()
         event = {

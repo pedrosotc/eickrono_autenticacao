@@ -1,13 +1,13 @@
 package com.eickrono.api.identidade.apresentacao.api;
 
 import com.eickrono.api.identidade.aplicacao.servico.VinculoSocialService;
+import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.apresentacao.dto.AtualizarAvatarPreferidoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.VincularRedeSocialApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.ConfirmacaoSenhaApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.VinculosSociaisDto;
 import jakarta.validation.Valid;
 import java.util.Objects;
-import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -47,28 +47,20 @@ public class VinculosSociaisController {
     public ResponseEntity<VinculosSociaisDto> vincular(@PathVariable("provedor") final String provedor,
                                                        @Valid @RequestBody final VincularRedeSocialApiRequest requisicao,
                                                        @AuthenticationPrincipal final Jwt jwt) {
-        return ResponseEntity.ok(vinculoSocialService.vincular(
+        VincularRedeSocialApiRequest requisicaoLocal = Objects.requireNonNull(requisicao, "requisicao é obrigatória");
+        return ResponseEntity.ok(vinculoSocialService.vincularConfirmado(
                 Objects.requireNonNull(jwt, "jwt é obrigatório"),
                 provedor,
-                Objects.requireNonNull(requisicao, "requisicao é obrigatória").tokenExterno(),
-                requisicao.contextoSocialPendenteId(),
-                requisicao.aplicacaoId(),
-                requisicao.nomeExibicaoExterno(),
-                requisicao.urlAvatarExterno()));
-    }
-
-    @PostMapping("/{provedor}/sincronizacao")
-    public ResponseEntity<VinculosSociaisDto> sincronizar(@PathVariable("provedor") final String provedor,
-                                                          @RequestParam(value = "contextoSocialPendenteId", required = false)
-                                                          final UUID contextoSocialPendenteId,
-                                                          @RequestParam(value = "aplicacaoId", required = false)
-                                                          final String aplicacaoId,
-                                                          @AuthenticationPrincipal final Jwt jwt) {
-        return ResponseEntity.ok(vinculoSocialService.sincronizar(
-                Objects.requireNonNull(jwt, "jwt é obrigatório"),
-                provedor,
-                contextoSocialPendenteId,
-                aplicacaoId));
+                new VinculoSocialConfirmadoCadastro(
+                        provedor,
+                        requisicaoLocal.identificadorExterno(),
+                        requisicaoLocal.nomeUsuarioExterno(),
+                        requisicaoLocal.email(),
+                        primeiroTexto(requisicaoLocal.nomeCompleto(), requisicaoLocal.nomeExibicaoExterno()),
+                        requisicaoLocal.urlAvatarExterno(),
+                        Boolean.TRUE.equals(requisicaoLocal.avatarPreferido())
+                ),
+                requisicaoLocal.aplicacaoId()));
     }
 
     @DeleteMapping("/{provedor}")
@@ -91,5 +83,19 @@ public class VinculosSociaisController {
         return ResponseEntity.ok(vinculoSocialService.atualizarAvatarPreferido(
                 Objects.requireNonNull(jwt, "jwt é obrigatório"),
                 Objects.requireNonNull(requisicao, "requisicao é obrigatória")));
+    }
+
+    private static boolean temTexto(final String valor) {
+        return valor != null && !valor.isBlank();
+    }
+
+    private static String primeiroTexto(final String primeiro, final String segundo) {
+        if (temTexto(primeiro)) {
+            return primeiro.trim();
+        }
+        if (temTexto(segundo)) {
+            return segundo.trim();
+        }
+        return null;
     }
 }

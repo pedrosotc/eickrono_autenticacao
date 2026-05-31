@@ -1,12 +1,34 @@
-# Especificação de avatar social por vínculo e avatar preferido por projeto
+# Especificação histórica de avatar social por vínculo e avatar preferido por projeto
 
-> Status deste documento: **canônico no seu escopo**.
+> Status deste documento: **histórico para novas implementações**.
 >
-> Este documento trata do desenho de avatar social, avatar preferido por
-> sistema e cache local no app.
+> Este documento registra a primeira entrega de avatar social e avatar preferido,
+> mas nao deve ser usado como fonte canônica para novas migrations, novos DTOs
+> ou novos fluxos de cadastro/login.
 >
-> Ele nao substitui o consolidado de migracao para decisoes de ownership entre
-> `autenticacao`, `identidade` e backend do produto.
+> A regra vigente esta em:
+>
+> - `eickrono-identidade-servidor/documentacao/plano_migracao_avatar_usuario_autenticacao_identidade_thimisu.md`;
+> - `eickrono-identidade-servidor/documentacao/avatar_perfil_schema_alvo.dbml`;
+> - `eickrono-autenticacao-servidor/documentacao/fluxograma_login_social_app.md`;
+> - `eickrono-autenticacao-servidor/documentacao/guia_fluxos_login_autenticacao_app.md`.
+>
+> Decisao vigente:
+>
+> - avatar definitivo fica em `identidade.avatar_usuario`;
+> - origem de avatar fica em `identidade.avatar_origens`;
+> - somente `identidade.avatar_usuario.preferido` decide a foto principal por
+>   usuario/projeto;
+> - dados sociais antes do cadastro/vinculo final ficam apenas no app como dados
+>   temporarios;
+> - nao deve existir token social temporario no app;
+> - nao deve existir persistencia de contexto social pendente em banco para o
+>   fluxo alvo;
+> - Keycloak nao deve criar usuario/vinculo no pre-cadastro social.
+>
+> As secoes abaixo podem ser consultadas apenas como historico da primeira
+> entrega. Quando houver conflito, prevalece a documentacao vigente listada
+> acima.
 
 ## Objetivo
 
@@ -16,23 +38,31 @@ Definir o desenho canônico para:
 - permitir que o usuário escolha um avatar principal para uso dentro de um projeto/app da Eickrono;
 - manter um cache local mínimo e estável no app, sem precisar persistir todas as redes sociais localmente na primeira versão.
 
-Este documento passou a refletir a implementação da primeira entrega:
+Historicamente, este documento refletia a implementação da primeira entrega:
 
 - migration única `V37__adicionar_avatar_social_e_avatar_preferido.sql`;
 - DTOs e endpoints já expostos no servidor de identidade;
 - cliente compartilhado e app Thimisu já ajustados para consumir o contrato;
 - TDD dedicado em backend, cliente e app.
 
-## Estado atual
+## Estado histórico registrado
 
-Hoje o ecossistema não possui um modelo canônico de foto por rede social vinculada.
+Esta seção descreve o estado observado antes da migração para o modelo canônico
+de `identidade.avatar_usuario`. Ela não representa a regra operacional atual.
 
-No servidor, antes da implementação:
+No servidor, antes da implementação atual:
 
-- `public.vinculos_sociais` persiste apenas `provedor`, `identificador` e `vinculado_em`;
-- `public.pessoas_formas_acesso` persiste apenas dados de acesso social, sem foto;
-- `autenticacao.usuarios_formas_acesso` também não tem campos de nome/foto externa;
-- `autenticacao.contextos_sociais_pendentes` guarda e-mail e nome externo, mas não guarda URL de foto.
+- `public.vinculos_sociais` existia como tabela legada de vínculo por perfil;
+- `public.pessoas_formas_acesso` existia como tabela legada normalizada;
+- `autenticacao.usuarios_formas_acesso` ainda podia receber dados visuais de
+  avatar social em propostas intermediárias.
+
+Regra atual:
+
+- `vinculos_sociais` não deve ser consultada, recriada nem usada em fluxo novo;
+- `usuarios_formas_acesso` autentica, mas não decide avatar preferido;
+- `identidade.avatar_usuario` é a fonte canônica das opções e da preferência de
+  avatar por usuário/projeto.
 
 No app, antes da implementação:
 
@@ -62,7 +92,19 @@ Observacao importante:
 
 ### 1. Foto por rede social vinculada
 
-A fonte canônica recomendada para a foto por rede social é `autenticacao.usuarios_formas_acesso`, porque ela já representa o vínculo multiapp de formas de acesso do usuário.
+Historicamente, este documento recomendou guardar foto social em
+`autenticacao.usuarios_formas_acesso`. Essa decisão foi substituída.
+
+A regra vigente é:
+
+- `autenticacao.usuarios_formas_acesso` guarda a credencial/vínculo de
+  autenticação;
+- `identidade.avatar_usuario` guarda a foto recebida pela rede social como uma
+  opção de avatar;
+- `identidade.avatar_usuario.preferido` é o único marcador de avatar principal
+  do usuário no projeto.
+
+O bloco abaixo fica preservado apenas para leitura histórica do desenho antigo.
 
 Campos propostos em `autenticacao.usuarios_formas_acesso`:
 
@@ -79,9 +121,18 @@ Regras:
 
 ### 2. Avatar principal do usuário no projeto atual
 
-O avatar principal não deve ser deduzido implicitamente da última rede usada. Ele deve ser uma preferência explícita do usuário no contexto do projeto/app.
+O avatar principal não deve ser deduzido implicitamente da última rede usada. Ele
+deve ser uma preferência explícita do usuário no contexto do projeto/app.
 
-A fonte recomendada para isso é `autenticacao.usuarios_clientes_ecossistema`, porque ela representa o vínculo do usuário com cada projeto do ecossistema.
+Historicamente, este documento recomendou guardar a preferência em
+`autenticacao.usuarios_clientes_ecossistema`. Essa decisão também foi
+substituída pelo modelo atual:
+
+- `autenticacao.usuarios_clientes_ecossistema` guarda estado de acesso ao
+  projeto;
+- `identidade.avatar_usuario` guarda as opções de avatar e a preferência visual.
+
+O bloco abaixo fica preservado apenas como histórico da proposta antiga.
 
 Campos propostos em `autenticacao.usuarios_clientes_ecossistema`:
 
@@ -124,36 +175,43 @@ Em outras palavras:
   persistida;
 - escolher foto do dispositivo não apaga nenhum vínculo social.
 
-### 3. Contexto social pendente
+### 3. Dados sociais temporarios no app
 
-Quando o usuário entra por rede social sem vínculo final consumido, o contexto pendente já pode carregar a foto externa para melhorar a UX de:
+Quando o usuário autentica uma rede social antes de existir vínculo final, os
+dados recebidos do provedor ficam temporariamente no app. O backend não deve
+criar nem consumir um registro persistido de contexto social pendente para esse
+caso.
+
+Esse estado temporário existe apenas para:
 
 - abrir cadastro com prefill (preenchimento inicial);
-- entrar e vincular;
+- entrar e vincular depois do login local;
 - mostrar confirmação visual da conta social em processo.
 
-Campos propostos em `autenticacao.contextos_sociais_pendentes`:
+Ao concluir o cadastro ou o vínculo, o app envia listas confirmadas:
 
-- `nome_exibicao_externo VARCHAR(255) NULL`
-- `url_avatar_externo VARCHAR(2048) NULL`
-- `avatar_externo_atualizado_em TIMESTAMP WITH TIME ZONE NULL`
+- `vinculosSociaisConfirmados`;
+- `avataresCadastroConfirmados`.
 
 Regra:
 
-- esse dado é transitório e não substitui o vínculo final em `autenticacao.usuarios_formas_acesso`;
-- serve apenas para enriquecer a jornada antes do consumo ou cancelamento do contexto.
+- esses dados temporários não substituem o vínculo final em
+  `autenticacao.usuarios_formas_acesso`;
+- a persistência só acontece quando o cadastro ou o vínculo local for
+  confirmado;
+- o contrato singular antigo e qualquer dependência de contexto social pendente
+  persistido devem ser tratados como legado.
 
-## Modelo de banco implementado
+## Modelo de banco histórico substituído
 
-### Migration única `V37`
+### Migration histórica `V37`
 
-A entrega atual consolidou em uma única migration:
+A entrega histórica consolidou em uma única migration:
 
 - `vinculos_sociais`
 - `pessoas_formas_acesso`
 - `autenticacao.usuarios_formas_acesso`
 - `autenticacao.usuarios_clientes_ecossistema`
-- `autenticacao.contextos_sociais_pendentes`
 
 DDL consolidado principal:
 
@@ -189,28 +247,22 @@ Constraint sugerida:
 ALTER TABLE autenticacao.usuarios_clientes_ecossistema
     ADD CONSTRAINT ck_usuarios_clientes_ecossistema_avatar_origem
     CHECK (avatar_preferido_origem IN ('SOCIAL', 'UPLOAD_USUARIO', 'URL_EXTERNA', 'NENHUM'));
-
-ALTER TABLE autenticacao.contextos_sociais_pendentes
-    ADD COLUMN nome_exibicao_externo VARCHAR(255),
-    ADD COLUMN url_avatar_externo VARCHAR(2048),
-    ADD COLUMN avatar_externo_atualizado_em TIMESTAMP WITH TIME ZONE;
 ```
 
 ## Compatibilidade com o legado
 
-Enquanto o runtime ainda mantiver cópia temporária de parte do domínio entre
-modelo legado e modelo multiapp, a sincronização deve seguir estas regras:
+O runtime novo não deve manter dependência de `vinculos_sociais`. Se algum
+ambiente antigo ainda tiver essa tabela por histórico de migration, ela deve ser
+tratada apenas como origem de migração ou alvo de drop, nunca como fonte de
+decisão funcional.
 
-1. A gravação canônica da foto social nasce em `autenticacao.usuarios_formas_acesso`.
-2. Se o legado continuar sendo usado por algum fluxo intermediário, os campos equivalentes podem ser replicados em:
-   - `public.pessoas_formas_acesso`
-   - ou `public.vinculos_sociais`
-3. Essa cópia transitória não deve substituir a definição canônica do multiapp.
+Regra atual:
 
-Recomendação:
-
-- evitar criar duas fontes canônicas de avatar social;
-- usar o legado apenas como cópia temporária, se ainda houver fluxo que dependa dele.
+1. A gravação canônica da foto social fica em `identidade.avatar_usuario`.
+2. O vínculo social definitivo fica em formas de acesso atuais do usuário.
+3. `vinculos_sociais` não deve ser replicada, sincronizada nem reconstruída.
+4. Migrations históricas podem mencionar `vinculos_sociais`, mas migrations
+   novas devem removê-la quando ela existir.
 
 ## Contratos de API recomendados
 

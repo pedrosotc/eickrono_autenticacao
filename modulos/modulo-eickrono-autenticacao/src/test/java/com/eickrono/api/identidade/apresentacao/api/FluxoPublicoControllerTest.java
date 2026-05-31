@@ -2,23 +2,25 @@ package com.eickrono.api.identidade.apresentacao.api;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.eickrono.api.identidade.aplicacao.excecao.FluxoPublicoException;
 import com.eickrono.api.identidade.aplicacao.modelo.ContextoPessoaPerfilSistema;
+import com.eickrono.api.identidade.aplicacao.modelo.CredencialSocialDeclarada;
+import com.eickrono.api.identidade.aplicacao.modelo.CredencialSocialValidada;
 import com.eickrono.api.identidade.aplicacao.modelo.DispositivoSessaoRegistrado;
-import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
+import com.eickrono.api.identidade.aplicacao.modelo.LoginSocialProjetoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.PerfilSistemaProjetoPorEmailResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
-import com.eickrono.api.identidade.aplicacao.servico.ClienteAdministracaoVinculosSociaisKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.SessaoInternaAutenticada;
+import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.aplicacao.servico.AtestacaoAppServico;
 import com.eickrono.api.identidade.aplicacao.servico.AutenticacaoSessaoInternaServico;
 import com.eickrono.api.identidade.aplicacao.servico.AvaliacaoSegurancaAplicativoService;
+import com.eickrono.api.identidade.aplicacao.servico.AvatarSocialProjetoJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.CadastroContaInternaServico;
-import com.eickrono.api.identidade.aplicacao.servico.ContextoSocialPendenteJdbc;
+import com.eickrono.api.identidade.aplicacao.servico.LocalizadorLoginSocialProjetoJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.LocalizadorPerfilSistemaProjetoPorEmailJdbc;
 import com.eickrono.api.identidade.aplicacao.servico.RecuperacaoSenhaService;
 import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoService;
@@ -26,7 +28,7 @@ import com.eickrono.api.identidade.aplicacao.servico.RegistroDispositivoLoginSil
 import com.eickrono.api.identidade.aplicacao.servico.ResolvedorContextoAutenticacaoService;
 import com.eickrono.api.identidade.aplicacao.servico.ResolvedorProjetoFluxoPublico;
 import com.eickrono.api.identidade.aplicacao.servico.TokenDispositivoService;
-import com.eickrono.api.identidade.aplicacao.servico.VinculoSocialService;
+import com.eickrono.api.identidade.aplicacao.servico.ValidadorCredencialSocialNativaService;
 import com.eickrono.api.identidade.apresentacao.dto.RegistroDispositivoResponse;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.AtestacaoOperacaoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.CadastroApiRequest;
@@ -36,13 +38,12 @@ import com.eickrono.api.identidade.apresentacao.dto.fluxo.DispositivoSessaoApiRe
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.RenovarSessaoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.SegurancaAplicativoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.SessaoApiResposta;
-import com.eickrono.api.identidade.apresentacao.dto.fluxo.VinculoSocialPendenteApiRequest;
+import com.eickrono.api.identidade.apresentacao.dto.fluxo.VinculoSocialConfirmadoApiRequest;
 import com.eickrono.api.identidade.dominio.modelo.CanalVerificacao;
 import com.eickrono.api.identidade.dominio.modelo.CanalValidacaoTelefoneCadastro;
 import com.eickrono.api.identidade.dominio.modelo.TipoPessoaCadastro;
 import com.eickrono.api.identidade.dominio.modelo.PlataformaAtestacaoApp;
 import com.eickrono.api.identidade.dominio.modelo.ProvedorAtestacaoApp;
-import com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial;
 import com.eickrono.api.identidade.dominio.modelo.SexoPessoaCadastro;
 import com.eickrono.api.identidade.dominio.modelo.StatusRegistroDispositivo;
 import com.eickrono.api.identidade.dominio.modelo.TipoComprovanteAtestacaoApp;
@@ -52,9 +53,9 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -79,10 +80,7 @@ class FluxoPublicoControllerTest {
     private ResolvedorContextoAutenticacaoService resolvedorContextoAutenticacaoService;
 
     @Mock
-    private ClienteAdministracaoVinculosSociaisKeycloak clienteAdministracaoVinculosSociaisKeycloak;
-
-    @Mock
-    private ContextoSocialPendenteJdbc contextoSocialPendenteJdbc;
+    private LocalizadorLoginSocialProjetoJdbc localizadorLoginSocialProjeto;
 
     @Mock
     private LocalizadorPerfilSistemaProjetoPorEmailJdbc localizadorPerfilSistemaProjetoPorEmail;
@@ -103,7 +101,10 @@ class FluxoPublicoControllerTest {
     private TokenDispositivoService tokenDispositivoService;
 
     @Mock
-    private VinculoSocialService vinculoSocialService;
+    private ValidadorCredencialSocialNativaService validadorCredencialSocialNativaService;
+
+    @Mock
+    private AvatarSocialProjetoJdbc avatarSocialProjetoJdbc;
 
     @Mock
     private JwtDecoder jwtDecoder;
@@ -111,150 +112,55 @@ class FluxoPublicoControllerTest {
     @Mock
     private HttpServletRequest servletRequest;
 
+    @InjectMocks
     private FluxoPublicoController controller;
 
-    @BeforeEach
-    void setUp() {
-        controller = new FluxoPublicoController(
-                cadastroContaInternaServico,
-                atestacaoAppServico,
-                avaliacaoSegurancaAplicativoService,
-                autenticacaoSessaoInternaServico,
-                resolvedorContextoAutenticacaoService,
-                clienteAdministracaoVinculosSociaisKeycloak,
-                contextoSocialPendenteJdbc,
-                localizadorPerfilSistemaProjetoPorEmail,
-                resolvedorProjetoFluxoPublico,
-                recuperacaoSenhaService,
-                registroDispositivoService,
-                registroDispositivoLoginSilenciosoService,
-                tokenDispositivoService,
-                vinculoSocialService,
-                jwtDecoder
-        );
-    }
-
     @Test
-    void deveAtualizarContextosSociaisPendentesAoCriarCadastroComListaPlural() {
-        setUp();
+    void deveAceitarVinculosSociaisConfirmadosSemCriarContextoPendenteAoCriarCadastro() {
         CadastroApiRequest request = novoCadastroApiRequest(
-                new VinculoSocialPendenteApiRequest(
-                        "google",
-                        "google-user-123",
-                        "google-contexto-1",
-                        "ana.google",
-                        "ana.social@example.com",
-                        "Ana Social",
-                        "https://cdn.test/avatar-google.png"
-                ),
                 List.of(
-                        new VinculoSocialPendenteApiRequest(
+                        new VinculoSocialConfirmadoApiRequest(
                                 "google",
                                 "google-user-123",
-                                "google-contexto-1",
                                 "ana.google",
                                 "ana.social@example.com",
                                 "Ana Social",
-                                "https://cdn.test/avatar-google.png"
+                                "https://cdn.test/avatar-google.png",
+                                true
                         ),
-                        new VinculoSocialPendenteApiRequest(
+                        new VinculoSocialConfirmadoApiRequest(
                                 "apple",
                                 "apple-user-456",
-                                "apple-contexto-2",
                                 "ana.apple",
                                 null,
                                 null,
-                                "https://cdn.test/avatar-apple.png"
+                                "https://cdn.test/avatar-apple.png",
+                                false
                         )
                 )
         );
-        ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
-                77L,
-                "eickrono-thimisu-app",
-                "Thimisu",
-                "APP",
-                "Thimisu",
-                "MOBILE",
-                false
-        );
-        when(servletRequest.getHeader("X-Forwarded-For")).thenReturn(null);
-        when(servletRequest.getHeader("User-Agent")).thenReturn("JUnit");
-        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
-        when(cadastroContaInternaServico.cadastrarPublico(
-                TipoPessoaCadastro.FISICA,
-                "Ana Souza",
-                null,
-                "ana.souza",
-                SexoPessoaCadastro.FEMININO,
-                "BR",
-                LocalDate.parse("1994-08-17"),
-                "ana@eickrono.com",
-                "+5511999999999",
-                CanalValidacaoTelefoneCadastro.SMS,
-                "SenhaForte123",
-                "eickrono-thimisu-app",
-                null,
-                "JUnit"))
-                .thenReturn(new com.eickrono.api.identidade.aplicacao.modelo.CadastroInternoRealizado(
-                        UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                        "sub-ana",
-                        "ana@eickrono.com",
-                        true
-                ));
-
-        controller.criarCadastro(request, servletRequest);
-
-        verify(resolvedorProjetoFluxoPublico).resolverAtivo("eickrono-thimisu-app");
-        verify(contextoSocialPendenteJdbc).registrarOuAtualizar(
-                projeto,
-                "google",
-                "google-user-123",
-                "ana.social@example.com",
-                "ana.google",
-                "Ana Social",
-                "https://cdn.test/avatar-google.png",
-                null,
-                null
-        );
-        verify(contextoSocialPendenteJdbc).registrarOuAtualizar(
-                projeto,
-                "apple",
-                "apple-user-456",
-                "ana@eickrono.com",
-                "ana.apple",
-                null,
-                "https://cdn.test/avatar-apple.png",
-                null,
-                null
-        );
-    }
-
-    @Test
-    void deveAtualizarContextoSocialPendenteAoCriarCadastroComCampoLegadoSingular() {
-        CadastroApiRequest request = novoCadastroApiRequest(
-                new VinculoSocialPendenteApiRequest(
+        List<VinculoSocialConfirmadoCadastro> vinculosEsperados = List.of(
+                new VinculoSocialConfirmadoCadastro(
                         "google",
                         "google-user-123",
-                        "google-contexto-1",
                         "ana.google",
-                        null,
+                        "ana.social@example.com",
                         "Ana Social",
-                        null
+                        "https://cdn.test/avatar-google.png",
+                        true
                 ),
-                null
-        );
-        ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
-                77L,
-                "eickrono-thimisu-app",
-                "Thimisu",
-                "APP",
-                "Thimisu",
-                "MOBILE",
-                false
+                new VinculoSocialConfirmadoCadastro(
+                        "apple",
+                        "apple-user-456",
+                        "ana.apple",
+                        null,
+                        null,
+                        "https://cdn.test/avatar-apple.png",
+                        false
+                )
         );
         when(servletRequest.getHeader("X-Forwarded-For")).thenReturn(null);
         when(servletRequest.getHeader("User-Agent")).thenReturn("JUnit");
-        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
         when(cadastroContaInternaServico.cadastrarPublico(
                 TipoPessoaCadastro.FISICA,
                 "Ana Souza",
@@ -269,7 +175,9 @@ class FluxoPublicoControllerTest {
                 "SenhaForte123",
                 "eickrono-thimisu-app",
                 null,
-                "JUnit"))
+                "JUnit",
+                vinculosEsperados,
+                List.of()))
                 .thenReturn(new com.eickrono.api.identidade.aplicacao.modelo.CadastroInternoRealizado(
                         UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                         "sub-ana",
@@ -278,23 +186,10 @@ class FluxoPublicoControllerTest {
                 ));
 
         controller.criarCadastro(request, servletRequest);
-
-        verify(contextoSocialPendenteJdbc).registrarOuAtualizar(
-                projeto,
-                "google",
-                "google-user-123",
-                "ana@eickrono.com",
-                "ana.google",
-                "Ana Social",
-                null,
-                null,
-                null
-        );
     }
 
     private CadastroApiRequest novoCadastroApiRequest(
-            final VinculoSocialPendenteApiRequest vinculoSocialPendente,
-            final List<VinculoSocialPendenteApiRequest> vinculosSociaisPendentes) {
+            final List<VinculoSocialConfirmadoApiRequest> vinculosSociaisConfirmados) {
         return new CadastroApiRequest(
                 "eickrono-thimisu-app",
                 TipoPessoaCadastro.FISICA,
@@ -312,8 +207,8 @@ class FluxoPublicoControllerTest {
                 true,
                 true,
                 PlataformaAtestacaoApp.IOS,
-                vinculoSocialPendente,
-                vinculosSociaisPendentes,
+                vinculosSociaisConfirmados,
+                null,
                 new AtestacaoOperacaoApiRequest(
                         PlataformaAtestacaoApp.IOS,
                         ProvedorAtestacaoApp.APPLE_APP_ATTEST,
@@ -341,30 +236,6 @@ class FluxoPublicoControllerTest {
                         "TEAM123",
                         null
                 )
-        );
-    }
-
-    @Test
-    void deveCancelarContextoSocialPendenteNoProjetoAtual() {
-        UUID contextoId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
-                77L,
-                "eickrono-thimisu-app",
-                "Thimisu",
-                "APP",
-                "Thimisu",
-                "MOBILE",
-                false
-        );
-        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
-
-        controller.cancelarContextoSocialPendente(contextoId, "eickrono-thimisu-app");
-
-        verify(resolvedorProjetoFluxoPublico).resolverAtivo("eickrono-thimisu-app");
-        verify(contextoSocialPendenteJdbc).cancelar(
-                contextoId,
-                77L,
-                "USUARIO_DESISTIU"
         );
     }
 
@@ -566,14 +437,42 @@ class FluxoPublicoControllerTest {
                 null,
                 "LIBERADO"
         );
+        ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
+                77L,
+                "THIMISU",
+                "Thimisu",
+                "APP",
+                "Thimisu",
+                "MOBILE",
+                false
+        );
         DispositivoSessaoRegistrado dispositivoRegistrado = new DispositivoSessaoRegistrado(
                 "device-social",
                 OffsetDateTime.parse("2026-05-05T19:00:00Z")
         );
+        when(validadorCredencialSocialNativaService.validar(
+                "google",
+                "google-token",
+                credencialSocialDeclarada()
+        )).thenReturn(credencialGoogleValidada());
+        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
+        when(localizadorLoginSocialProjeto.localizar(77L, "google", "google-sub-123"))
+                .thenReturn(Optional.of(new LoginSocialProjetoResolvido(
+                        UUID.fromString("81818181-8181-8181-8181-818181818181"),
+                        "usuario-social"
+                )));
         when(autenticacaoSessaoInternaServico.autenticarSocial("google", "google-token")).thenReturn(sessao);
         when(jwtDecoder.decode("access-social")).thenReturn(jwtSessaoCentral);
         when(resolvedorContextoAutenticacaoService.buscarPorSubPublico("usuario-social"))
                 .thenReturn(Optional.of(contexto));
+        when(avatarSocialProjetoJdbc.buscarPreferencia("usuario-social", 77L))
+                .thenReturn(new AvatarSocialProjetoJdbc.PreferenciaAvatarProjeto(
+                        "SOCIAL",
+                        "https://cdn.eickrono.test/google.png",
+                        "google",
+                        "avatar-v-google",
+                        OffsetDateTime.parse("2026-05-05T18:30:00Z")
+                ));
         when(registroDispositivoLoginSilenciosoService.registrar(contexto, request.dispositivo()))
                 .thenReturn(dispositivoRegistrado);
         when(servletRequest.getHeader("X-Forwarded-For")).thenReturn(null);
@@ -588,6 +487,10 @@ class FluxoPublicoControllerTest {
         assertThat(resposta.statusPerfilSistema()).isEqualTo("LIBERADO");
         assertThat(resposta.emailPrincipal()).isEqualTo("social@eickrono.com");
         assertThat(resposta.usuario()).isEqualTo("usuario.social");
+        assertThat(resposta.avatarPreferidoUrl()).isEqualTo("https://cdn.eickrono.test/google.png");
+        assertThat(resposta.avatarPreferidoOrigem()).isEqualTo("GOOGLE");
+        assertThat(resposta.avatarPreferidoVersao()).isEqualTo("avatar-v-google");
+        assertThat(resposta.avatarPreferidoAtualizadoEm()).isEqualTo(OffsetDateTime.parse("2026-05-05T18:30:00Z"));
         assertThat(resposta.podeOferecerBiometria()).isTrue();
     }
 
@@ -614,6 +517,26 @@ class FluxoPublicoControllerTest {
                 null,
                 "LIBERADO"
         );
+        ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
+                77L,
+                "THIMISU",
+                "Thimisu",
+                "APP",
+                "Thimisu",
+                "MOBILE",
+                false
+        );
+        when(validadorCredencialSocialNativaService.validar(
+                "google",
+                "google-token",
+                credencialSocialDeclarada()
+        )).thenReturn(credencialGoogleValidada());
+        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
+        when(localizadorLoginSocialProjeto.localizar(77L, "google", "google-sub-123"))
+                .thenReturn(Optional.of(new LoginSocialProjetoResolvido(
+                        UUID.fromString("81818181-8181-8181-8181-818181818181"),
+                        "usuario-social"
+                )));
         when(autenticacaoSessaoInternaServico.autenticarSocial("google", "google-token")).thenReturn(sessao);
         when(jwtDecoder.decode("access-social")).thenReturn(jwtSessaoCentral);
         when(resolvedorContextoAutenticacaoService.buscarPorSubPublico("usuario-social"))
@@ -652,7 +575,6 @@ class FluxoPublicoControllerTest {
                 "eickrono-thimisu-app",
                 "teste@eickrono.com",
                 "Senha#123",
-                null,
                 new DispositivoSessaoApiRequest(
                         "IOS",
                         "eickrono-thimisu-app",
@@ -740,137 +662,8 @@ class FluxoPublicoControllerTest {
     }
 
     @Test
-    void deveConcluirVinculoSocialPendenteAoCriarSessaoComLoginLocal() {
-        UUID contextoId = UUID.fromString("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb");
-        CriarSessaoApiRequest request = new CriarSessaoApiRequest(
-                "eickrono-thimisu-app",
-                "teste@eickrono.com",
-                "Senha#123",
-                contextoId,
-                new DispositivoSessaoApiRequest(
-                        "IOS",
-                        "eickrono-thimisu-app",
-                        "instalacao-login",
-                        "iphone17,1",
-                        "apple",
-                        "ios",
-                        "18.0",
-                        "1.0.0"
-                ),
-                new AtestacaoOperacaoApiRequest(
-                        PlataformaAtestacaoApp.IOS,
-                        ProvedorAtestacaoApp.APPLE_APP_ATTEST,
-                        TipoComprovanteAtestacaoApp.OBJETO_ATESTACAO,
-                        "desafio",
-                        "ZGVzYWZpbw==",
-                        "dG9rZW0=",
-                        OffsetDateTime.parse("2026-05-05T18:00:00Z"),
-                        null
-                ),
-                new SegurancaAplicativoApiRequest(
-                        "IOS",
-                        "APPLE_APP_ATTEST",
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        true,
-                        true,
-                        java.util.List.of(),
-                        0,
-                        "store.eickrono.thimisu",
-                        null,
-                        null,
-                        null
-                )
-        );
-        ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
-                77L,
-                "thimisu",
-                "Thimisu",
-                "Aplicacao",
-                "Thimisu",
-                "Mobile",
-                false);
-        ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo contextoPendente =
-                new ContextoSocialPendenteJdbc.ContextoSocialPendenteAtivo(
-                        contextoId,
-                        77L,
-                        "apple",
-                        "apple-user-id",
-                        "apple-user",
-                        "Usuario Apple",
-                        null,
-                        UUID.fromString("cccccccc-1111-2222-3333-dddddddddddd"),
-                        "teste@eickrono.com",
-                        "ENTRAR_E_VINCULAR",
-                        0,
-                        3
-                );
-        SessaoInternaAutenticada sessao = new SessaoInternaAutenticada(
-                true,
-                "Bearer",
-                "access-login",
-                "refresh-login",
-                1800L
-        );
-        Jwt jwtSessaoCentral = Jwt.withTokenValue("access-login")
-                .header("alg", "none")
-                .subject("usuario-xyz")
-                .claim("email", "teste@eickrono.com")
-                .build();
-        ContextoPessoaPerfilSistema contexto = new ContextoPessoaPerfilSistema(
-                123L,
-                "usuario-xyz",
-                "teste@eickrono.com",
-                "Usuario Teste",
-                null,
-                "LIBERADO"
-        );
-        DispositivoSessaoRegistrado dispositivoRegistrado = new DispositivoSessaoRegistrado(
-                "device-token",
-                OffsetDateTime.parse("2026-05-05T18:00:00Z")
-        );
-        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
-        when(contextoSocialPendenteJdbc.buscarAtivo(contextoId, 77L)).thenReturn(Optional.of(contextoPendente));
-        when(servletRequest.getHeader("X-Forwarded-For")).thenReturn(null);
-        when(servletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-        when(autenticacaoSessaoInternaServico.autenticar("teste@eickrono.com", "Senha#123")).thenReturn(sessao);
-        when(jwtDecoder.decode("access-login")).thenReturn(jwtSessaoCentral);
-        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublico("teste@eickrono.com"))
-                .thenReturn(Optional.of(contexto));
-        when(registroDispositivoLoginSilenciosoService.registrar(contexto, request.dispositivo()))
-                .thenReturn(dispositivoRegistrado);
-
-        SessaoApiResposta resposta = controller.criarSessao(request, servletRequest);
-
-        assertThat(resposta.autenticado()).isTrue();
-        assertThat(resposta.tokenDispositivo()).isEqualTo("device-token");
-        verify(vinculoSocialService).vincularContextoPendenteAposLoginLocal(
-                jwtSessaoCentral,
-                contextoPendente,
-                "eickrono-thimisu-app"
-        );
-    }
-
-    @Test
     void deveRetornarSocialSemContaLocalComEntrarEVincularNoLoginSocialQuandoContaLocalExistirPorEmail() {
         CriarSessaoSocialApiRequest request = criarSessaoSocialRequest();
-        SessaoInternaAutenticada sessao = new SessaoInternaAutenticada(
-                true,
-                "Bearer",
-                "access-social",
-                "refresh-social",
-                1800L
-        );
-        Jwt jwtSessaoCentral = Jwt.withTokenValue("access-social")
-                .header("alg", "none")
-                .subject("usuario-sem-conta")
-                .claim("email", "social@eickrono.com")
-                .claim("name", "Social User")
-                .claim("picture", "https://cdn.eickrono.store/avatar-social.png")
-                .build();
         ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
                 1L,
                 "eickrono-thimisu-app",
@@ -880,40 +673,20 @@ class FluxoPublicoControllerTest {
                 "MOBILE",
                 false
         );
-        UUID contextoPendenteId = UUID.fromString("91919191-9191-9191-9191-919191919191");
-        when(autenticacaoSessaoInternaServico.autenticarSocial("google", "google-token")).thenReturn(sessao);
-        when(jwtDecoder.decode("access-social")).thenReturn(jwtSessaoCentral);
-        when(resolvedorContextoAutenticacaoService.buscarPorSubPublico("usuario-sem-conta"))
-                .thenReturn(Optional.empty());
+        when(validadorCredencialSocialNativaService.validar(
+                "google",
+                "google-token",
+                credencialSocialDeclarada()
+        )).thenReturn(credencialGoogleValidada());
         when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
+        when(localizadorLoginSocialProjeto.localizar(1L, "google", "google-sub-123"))
+                .thenReturn(Optional.empty());
         when(localizadorPerfilSistemaProjetoPorEmail.localizar(1L, "social@eickrono.com"))
                 .thenReturn(Optional.of(new PerfilSistemaProjetoPorEmailResolvido(
                         UUID.fromString("92929292-9292-9292-9292-929292929292"),
                         "social@eickrono.com",
                         "pedrosotc"
                 )));
-        when(clienteAdministracaoVinculosSociaisKeycloak.listarIdentidadesFederadas("usuario-sem-conta"))
-                .thenReturn(java.util.List.of(new IdentidadeFederadaKeycloak(
-                        ProvedorVinculoSocial.GOOGLE,
-                        "google-sub-123",
-                        "social.user",
-                        "Social User",
-                        "https://cdn.eickrono.store/avatar-social.png"
-                )));
-        when(contextoSocialPendenteJdbc.registrarOuAtualizar(
-                projeto,
-                "google",
-                "google-sub-123",
-                "social@eickrono.com",
-                "social.user",
-                "Social User",
-                "https://cdn.eickrono.store/avatar-social.png",
-                UUID.fromString("92929292-9292-9292-9292-929292929292"),
-                "pedrosotc"
-        )).thenReturn(contextoPendenteId);
-        when(servletRequest.getHeader("X-Forwarded-For")).thenReturn(null);
-        when(servletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
-
         assertThatThrownBy(() -> controller.criarSessaoSocial(request, servletRequest))
                 .isInstanceOf(FluxoPublicoException.class)
                 .satisfies(excecao -> {
@@ -926,9 +699,49 @@ class FluxoPublicoControllerTest {
                             .containsEntry("provedor", "google")
                             .containsEntry("identificadorExterno", "google-sub-123")
                             .containsEntry("nomeExibicaoExterno", "Social User")
-                            .containsEntry("urlAvatarExterno", "https://cdn.eickrono.store/avatar-social.png")
-                            .containsEntry("contextoSocialPendenteId", contextoPendenteId);
+                            .containsEntry("urlAvatarExterno", "https://cdn.eickrono.store/avatar-social.png");
                 });
+        verifyNoInteractions(autenticacaoSessaoInternaServico);
+        verifyNoInteractions(jwtDecoder);
+    }
+
+    @Test
+    void deveRetornarSocialSemContaLocalComAbrirCadastroSemTokenExchangeQuandoNaoExistirContaPorEmail() {
+        CriarSessaoSocialApiRequest request = criarSessaoSocialRequest();
+        ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
+                1L,
+                "eickrono-thimisu-app",
+                "Thimisu",
+                "APP",
+                "Thimisu",
+                "MOBILE",
+                false
+        );
+        when(validadorCredencialSocialNativaService.validar(
+                "google",
+                "google-token",
+                credencialSocialDeclarada()
+        )).thenReturn(credencialGoogleValidada());
+        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
+        when(localizadorLoginSocialProjeto.localizar(1L, "google", "google-sub-123"))
+                .thenReturn(Optional.empty());
+        when(localizadorPerfilSistemaProjetoPorEmail.localizar(1L, "social@eickrono.com"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> controller.criarSessaoSocial(request, servletRequest))
+                .isInstanceOf(FluxoPublicoException.class)
+                .satisfies(excecao -> {
+                    FluxoPublicoException erro = (FluxoPublicoException) excecao;
+                    assertThat(erro.getCodigo()).isEqualTo("social_sem_conta_local");
+                    assertThat(erro.getDetalhes())
+                            .containsEntry("acaoSugerida", "ABRIR_CADASTRO")
+                            .containsEntry("provedor", "google")
+                            .containsEntry("identificadorExterno", "google-sub-123")
+                            .containsEntry("nomeExibicaoExterno", "Social User")
+                            .containsEntry("urlAvatarExterno", "https://cdn.eickrono.store/avatar-social.png");
+                });
+        verifyNoInteractions(autenticacaoSessaoInternaServico);
+        verifyNoInteractions(jwtDecoder);
     }
 
     private CriarSessaoSocialApiRequest criarSessaoSocialRequest() {
@@ -936,6 +749,11 @@ class FluxoPublicoControllerTest {
                 "eickrono-thimisu-app",
                 "google",
                 "google-token",
+                "google-sub-123",
+                "social@eickrono.com",
+                "social.user",
+                "Social User",
+                "https://cdn.eickrono.store/avatar-social.png",
                 new DispositivoSessaoApiRequest(
                         "ANDROID",
                         null,
@@ -973,6 +791,27 @@ class FluxoPublicoControllerTest {
                         null,
                         null
                 )
+        );
+    }
+
+    private CredencialSocialDeclarada credencialSocialDeclarada() {
+        return new CredencialSocialDeclarada(
+                "google-sub-123",
+                "social@eickrono.com",
+                "social.user",
+                "Social User",
+                "https://cdn.eickrono.store/avatar-social.png"
+        );
+    }
+
+    private CredencialSocialValidada credencialGoogleValidada() {
+        return new CredencialSocialValidada(
+                "google",
+                "google-sub-123",
+                "social@eickrono.com",
+                "social.user",
+                "Social User",
+                "https://cdn.eickrono.store/avatar-social.png"
         );
     }
 }
