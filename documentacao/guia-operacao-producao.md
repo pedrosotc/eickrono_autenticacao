@@ -147,6 +147,7 @@ ECS que consomem essa senha por variável de ambiente precisam receber
 
 No ecossistema `hml`, isso é obrigatório para:
 
+- `autenticacao-api-hml`
 - `auth-hml`
 - `identidade-hml`
 - `thimisu-backend-hml`
@@ -174,7 +175,38 @@ O mecanismo padrão é:
 1. `EventBridge` observa `RotationSucceeded` do `Secrets Manager`.
 2. A regra aciona a Lambda `eickrono-hml-rds-rotation-ecs-redeploy`.
 3. A Lambda confirma que o segredo do evento é o segredo RDS monitorado.
-4. A Lambda executa `ecs update-service --force-new-deployment` para os três serviços.
+4. A Lambda executa `ecs update-service --force-new-deployment` para os quatro serviços, um por vez.
+5. Depois de cada serviço, a Lambda aguarda `services_stable` antes de iniciar o próximo.
+
+Essa espera sequencial é obrigatória. Em HML, redeploy paralelo dos quatro
+serviços gerou pico de tasks e erro de limite de conexões no RDS.
+
+### Fallback por erro de senha antiga
+
+Arquivo operacional:
+
+- [configure_hml_rds_password_auth_failure_fallback.sh](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/prod/ecs/configure_hml_rds_password_auth_failure_fallback.sh)
+
+Artefato de runtime:
+
+- [handler.py](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/prod/ecs/lambda/rds_password_auth_failure_fallback/handler.py)
+
+O fallback observa os log groups dos serviços. Quando encontra
+`password authentication failed for user "eickrono_admin"`, ele:
+
+1. verifica cooldown no Parameter Store;
+2. executa uma task Fargate de validação com `psql`;
+3. confirma que o segredo atual conecta no RDS;
+4. se conectar, executa `forceNewDeployment` nos serviços configurados;
+5. aguarda `services_stable` de cada serviço antes de redeployar o próximo;
+6. se não conectar, não faz redeploy e registra erro operacional.
+
+Instalação/atualização em `hml`:
+
+```bash
+bash ./infraestrutura/prod/ecs/configure_hml_rds_password_auth_failure_fallback.sh \
+  --profile Codex-cli_aws
+```
 
 ### Padrão de evento adotado
 
@@ -245,7 +277,9 @@ Campos obrigatórios:
 
 - `TARGET_SECRET_ARN`
 - `ECS_CLUSTER=eickrono-hml`
-- `ECS_SERVICES=auth-hml,identidade-hml,thimisu-backend-hml`
+- `ECS_SERVICES=autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml`
+- `SERVICE_STABLE_WAITER_DELAY_SECONDS=15`
+- `SERVICE_STABLE_WAITER_MAX_ATTEMPTS=40`
 
 #### 5. Validar permissão IAM da Lambda
 
@@ -263,6 +297,7 @@ Após uma rotação real do segredo RDS, confirmar:
 - evento `RotationSucceeded` no CloudTrail/EventBridge;
 - invocação da Lambda;
 - novos deployments em:
+  - `autenticacao-api-hml`
   - `auth-hml`
   - `identidade-hml`
   - `thimisu-backend-hml`
@@ -272,7 +307,7 @@ Comandos úteis:
 ```bash
 aws ecs describe-services \
   --cluster eickrono-hml \
-  --services auth-hml identidade-hml thimisu-backend-hml \
+  --services autenticacao-api-hml auth-hml identidade-hml thimisu-backend-hml \
   --profile Codex-cli_aws \
   --region sa-east-1
 ```

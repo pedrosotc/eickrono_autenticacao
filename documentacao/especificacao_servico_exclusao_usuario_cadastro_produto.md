@@ -12,8 +12,8 @@ usuario para permitir:
 - preservar a pessoa canonica do servidor de identidade, salvo em servico
   especifico futuro de exclusao de pessoa.
 
-Este documento nao implementa a exclusao. Ele define o comportamento alvo, os
-limites do escopo e a matriz de dados para evitar remocoes indevidas.
+Este documento define o comportamento alvo, os limites do escopo, a matriz de
+dados e o estado de implementacao do servico para evitar remocoes indevidas.
 
 ## Fontes usadas para esta especificacao
 
@@ -122,6 +122,7 @@ usuario de acesso.
 | Execucao real | Operacao com `dryRun=false`, depois que o resultado do `dryRun` foi revisado/aprovado conforme permissao aplicavel. | Pode alterar dados; deve gerar auditoria e validacao pos-condicao. |
 | Alvo de acesso | Usuario de autenticacao/acesso, formas de acesso, sessoes, dispositivos, credenciais e vinculos sociais que permitem entrar no sistema. | Pode ser removido/desassociado quando pertence ao usuario/produto resolvido. |
 | Alvo de produto | Perfil pessoal no backend do produto especifico informado na solicitacao. | Deve ser resolvido por `produto + usuarioPublicoProduto` ou identificador equivalente do produto. |
+| Vínculo usuário/produto | Registro que liga o usuário de autenticação ao produto Eickrono, como `autenticacao.usuarios_clientes_ecossistema`. | Deve carregar o mesmo identificador público usado pelo produto alvo; se esse identificador estiver ausente ou divergente, a execução real deve bloquear. |
 | Pessoa canonica | Registro central da pessoa no servidor de identidade. | Preservada por este servico; exclusao de pessoa e outro servico. |
 | Compatibilidade historica | Estruturas antigas de pessoa/perfil ainda existentes durante a migracao `Long`/`UUID`, mas que nao fazem parte do legado social removido. | Podem bloquear a execucao se impedirem resolver o alvo com seguranca; nao aparecem como categoria funcional propria. |
 | Pendencia de remocao de avatar | Registro imutavel com `bucket`, `storageKey`, origem, produto e dono resolvido antes de apagar/desassociar avatar. | Garante que a remocao fisica do arquivo continue possivel mesmo depois da limpeza logica. |
@@ -169,6 +170,14 @@ Restricoes:
 - nao deve prometer reversao de dados fisicamente apagados;
 - deve preservar somente o que a lei, auditoria, financeiro, seguranca ou dados
   compartilhados exigirem.
+- deve exigir consistência entre o backend do produto e o vínculo de
+  autenticação: o perfil do produto e `autenticacao.usuarios_clientes_ecossistema`
+  precisam apontar para o mesmo usuário/produto por `sub`, produto e
+  identificador público do produto.
+- se o produto possuir `identificador_publico_sistema`, mas a autenticação
+  estiver com `identificador_publico_cliente` vazio ou divergente, o serviço deve
+  bloquear a execução real e reportar inconsistência. Não é permitido apagar só
+  um lado para "destravar" o cadastro.
 
 ### Solicitacoes atendidas pelo servico
 
@@ -242,8 +251,10 @@ Regras:
   sociais, Keycloak e avatar a partir do alvo de produto identificado e das
   chaves auxiliares informadas;
 - `dryRun=true` deve ser o primeiro passo operacional;
-- `dryRun=false` so deve executar depois de retornar uma pre-visualizacao
-  consistente;
+- `dryRun=false` deve informar o `correlacaoId` retornado pelo `dryRun=true`;
+- antes de qualquer efeito destrutivo, a execucao deve carregar o `dryRun`
+  registrado, confirmar que ele esta `PLANEJADA`, recalcular o plano atual e
+  bloquear a operacao se alvo, acoes, preservacoes ou bloqueios divergirem;
 - o servico deve retornar tudo que encontrou e tudo que pretende apagar,
   anonimizar, preservar ou ignorar.
 
@@ -320,6 +331,30 @@ Regra de exposicao de dados na resposta:
 
 Resposta de execucao real:
 
+Request minimo de execucao real:
+
+```json
+{
+  "produto": "THIMISU",
+  "usuarioPublicoProduto": "usuario_publico",
+  "perfilProdutoId": null,
+  "dryRun": false,
+  "motivo": "Solicitacao de exclusao de cadastro/produto",
+  "correlacaoId": "uuid-retornado-pelo-dry-run"
+}
+```
+
+Regras especificas:
+
+- `correlacaoId` e obrigatorio para `dryRun=false`;
+- o `correlacaoId` deve apontar para um `dryRun=true` previamente registrado
+  com status `PLANEJADA`;
+- se o plano recalculado divergir do plano aprovado, a execucao deve falhar e
+  o operador deve executar um novo `dryRun`;
+- a execucao usa a mesma correlacao aprovada, mudando a operacao auditada de
+  `PLANEJADA` para `EM_EXECUCAO`, depois `CONCLUIDA` ou `FALHOU`;
+- um `dryRun` com bloqueios nao pode ser executado.
+
 ```json
 {
   "correlacaoId": "uuid",
@@ -378,6 +413,9 @@ Codigos padrao de bloqueio/erro:
 | --- | --- | --- |
 | `ALVO_NAO_RESOLVIDO` | Nenhum perfil/acesso foi encontrado para as chaves informadas. | Bloqueia execucao real. |
 | `CONFLITO_IDENTIFICADORES` | `produto`, `usuarioPublicoProduto`, `email`, `sub` ou rede social apontam para alvos diferentes. | Bloqueia execucao real. |
+| `VINCULO_PRODUTO_INCONSISTENTE` | O produto encontrou o perfil, mas `autenticacao.usuarios_clientes_ecossistema` nao possui o mesmo identificador publico do produto, ou possui identificador vazio/divergente. | Bloqueia execucao real; exige correcao do cadastro/provisionamento ou rotina controlada de reconciliacao antes da exclusao. |
+| `USUARIO_CENTRAL_COMPARTILHADO` | O plano tentaria apagar usuario central, formas de acesso ou Keycloak enquanto o usuario de autenticacao ainda possui vinculo ativo com outro produto. | Bloqueia somente a acao central indevida; a exclusao do perfil do produto alvo pode continuar preservando o usuario central. |
+| `HISTORICO_PRODUTO_DEPENDENTE_DO_ALVO` | O backend do produto ainda possui historico ligado por FK ao perfil/pessoa alvo. | Bloqueia execucao destrutiva ate anonimizar/minimizar historico ou ajustar schema para preservar auditoria sem PII. |
 | `RECURSO_PROTEGIDO` | A resolucao encontrou admin master, service account, client, provider global, secret, migration ou catalogo. | Bloqueia se o plano tentaria tocar nesse recurso. |
 | `PESSOA_CANONICA_FORA_ESCOPO` | A acao exigiria apagar dados canonicos da pessoa no servidor de identidade. | Bloqueia e orienta usar servico futuro especifico. |
 | `DADO_COMPARTILHADO_PRESERVADO` | Dado do produto nao pode ser apagado por regra financeira, auditoria, seguranca ou compartilhamento. | Nao bloqueia se puder anonimizar/preservar corretamente. |
@@ -386,6 +424,54 @@ Codigos padrao de bloqueio/erro:
 | `POS_CONDICAO_FALHOU` | Apos execucao, e-mail, usuario, rede social ou sessao ainda bloqueiam novo cadastro. | Retorna falha operacional e deve registrar ocorrencia de correcao. |
 
 ## Matriz de tratamento por sistema
+
+## Achado operacional - inconsistência entre Thimisu e autenticação
+
+Data de referência: `2026-06-02`.
+
+Durante a validação do cenário de QA `C01`, o serviço administrativo foi
+executado somente em `dryRun=true`. Nenhum dado foi apagado porque o próprio
+serviço retornou bloqueio.
+
+Dados encontrados:
+
+| Sistema | Tabela/campo | Valor |
+| --- | --- | --- |
+| Thimisu | `thimisu_hml.perfis_sistema.identificador_publico_sistema` | `cenario01` |
+| Thimisu | `thimisu_hml.pessoas_produto_local.sub` | `4771695b-6bed-4f82-b58d-737b2d5fbf3e` |
+| Autenticação | `autenticacao.usuarios.sub_remoto` | `4771695b-6bed-4f82-b58d-737b2d5fbf3e` |
+| Autenticação | `autenticacao.usuarios_clientes_ecossistema.identificador_publico_cliente` | vazio |
+
+Resultado dos `dryRun`:
+
+| Entrada | Resultado |
+| --- | --- |
+| `produto=THIMISU`, `usuarioPublicoProduto=cenario01` | Thimisu resolve o perfil, mas autenticação resolve `usuarios=0` e `vinculos=0`; bloqueado. |
+| `produto=THIMISU`, `perfilProdutoId=<id do perfil Thimisu>` | Thimisu resolve o perfil, mas autenticação resolve `usuarios=0` e `vinculos=0`; bloqueado. |
+| `produto=THIMISU`, `perfilProdutoId=<id do vínculo de autenticação>` | Autenticação resolve `usuarios=1` e `vinculos=1`, mas Thimisu não encontra perfil com esse ID; bloqueado. |
+
+Interpretação:
+
+- o serviço de exclusão agiu corretamente ao bloquear a execução real;
+- a inconsistência nasceu antes, no cadastro/provisionamento, porque o vínculo
+  da autenticação com o produto foi gravado sem o identificador público do
+  produto;
+- não é seguro executar exclusão real enquanto o produto e a autenticação não
+  conseguirem provar que apontam para o mesmo alvo;
+- a correção funcional deve garantir que todo cadastro/provisionamento grave
+  `autenticacao.usuarios_clientes_ecossistema.identificador_publico_cliente`
+  com o mesmo valor do identificador público usado no backend do produto, ou
+  criar uma rotina controlada de reconciliação antes da exclusão.
+
+Teste obrigatório derivado:
+
+- criar cadastro real pelo app;
+- validar no banco que `thimisu_hml.perfis_sistema.identificador_publico_sistema`
+  e `autenticacao.usuarios_clientes_ecossistema.identificador_publico_cliente`
+  possuem o mesmo valor;
+- executar `dryRun=true` e exigir `usuariosAutenticacaoIds` e
+  `vinculosProdutoIds` não vazios;
+- somente depois executar `dryRun=false`.
 
 ### Keycloak
 
@@ -1921,13 +2007,25 @@ Status atual:
 
 - contrato inicial implementado em
   `POST /api/interna/usuarios/exclusoes`;
-- primeira versao aceita apenas `dryRun=true`;
+- contrato aceita `dryRun=true` para simulacao e `dryRun=false` para execucao
+  real controlada;
+- `dryRun=false` exige `correlacaoId` retornado por um `dryRun=true`
+  `PLANEJADA`, e o plano atual deve continuar consistente com o plano aprovado;
 - permissao administrativa exigida por `SCOPE_admin:exclusoes` ou `ROLE_admin`;
 - o orquestrador ja resolve `catalogo.clientes_ecossistema` e
   `autenticacao.usuarios_clientes_ecossistema`;
 - o plano ja lista recursos da autenticacao, preservacoes canonicas basicas e
   bloqueios para partes ainda nao resolvidas;
-- nao existe execucao real nesta etapa.
+- a execucao real materializa pendencia de avatar fisico na identidade antes da
+  limpeza logica local;
+- a execucao real chama o produto alvo para apagar/desassociar o perfil do
+  produto;
+- quando o usuario de autenticacao nao possui outros vinculos de produto, a
+  execucao remove o usuario Keycloak por cliente interno e limpa o usuario
+  central da autenticacao depois de anonimizar auditorias e soltar FKs
+  operacionais;
+- quando o usuario de autenticacao possui vinculos com outros produtos, a
+  execucao preserva usuario central, formas de acesso, dispositivos e Keycloak.
 
 Escopo:
 
@@ -1968,9 +2066,8 @@ Status atual:
 - o endpoint interno usa o mesmo padrao ja existente de chamada interna:
   JWT backchannel, `X-Eickrono-Internal-Secret` e validacao de cliente chamador;
 - o dryRun do Thimisu lista apenas recursos do produto:
-  `thimisu_hml.perfis_sistema`, `thimisu_hml.pessoas_produto_local`,
-  `thimisu_hml.perfis_sistema_historico` e
-  `thimisu_hml.pessoas_produto_local_historico`;
+  `perfis_sistema`, `pessoas_produto_local`,
+  `perfis_sistema_historico` e `pessoas_produto_local_historico`;
 - o orquestrador da autenticacao chama esse dryRun por interface de resolvedor;
 - o dryRun do Keycloak ja e materializado a partir de
   `autenticacao.usuarios.sub_remoto`, sem chamar Admin API e sem tocar em
@@ -2039,7 +2136,47 @@ Status atual:
   por sistema/recurso, ordem, quantidade planejada, status, tentativas e erro;
 - o endpoint administrativo com `dryRun=true` ja grava a simulacao na tabela
   principal e materializa as etapas planejadas, preservadas e bloqueadas;
-- ainda nao existe endpoint de execucao real nem chamada destrutiva.
+- o `dryRun` preserva `autenticacao.usuarios`, formas de acesso, dispositivos,
+  historico central e usuario Keycloak quando o usuario de autenticacao tem
+  vinculo ativo com outro produto; isso nao bloqueia apagar/desassociar o perfil
+  do produto alvo;
+- o `dryRun` da autenticacao ja inclui a etapa de preservacao/minimizacao dos
+  historicos `auditoria.usuarios_clientes_ecossistema_historico` e
+  `auditoria.usuarios_historico`;
+- a migration `V34__preparar_auditoria_exclusao_cadastro_produto.sql` prepara
+  esses historicos para preservar auditoria sem manter FK obrigatoria para
+  usuario/vinculo removido, adicionando `anonimizado_em` e
+  `correlacao_exclusao_cadastro_produto`;
+- o dryRun interno do Thimisu planeja `ANONIMIZAR` para
+  `perfis_sistema_historico` e `pessoas_produto_local_historico` quando esses
+  historicos ainda dependem do perfil/pessoa alvo por FK;
+- o `eickrono-thimisu-backend` ja possui preparacao tecnica para historico
+  anonimizado: migration `V14__preparar_historico_exclusao_cadastro_produto.sql`
+  torna as FKs de historico nullable, adiciona `anonimizado_em` e
+  `correlacao_exclusao_cadastro_produto`, e o servico
+  `AnonimizacaoHistoricoExclusaoCadastroProdutoServico` remove a dependencia por
+  FK e substitui PII direta por marcadores `anonimizado:<id>`;
+- o `eickrono-thimisu-backend` ja possui endpoint interno isolado
+  `POST /api/interna/perfis-sistema/exclusoes-cadastro-produto/execucoes`,
+  que exige `correlacaoId`, anonimiza historico dependente, apaga
+  `perfis_sistema` e apaga `pessoas_produto_local` somente quando a pessoa local
+  nao possui outro perfil no produto;
+- o endpoint destrutivo do produto ja e chamado pelo orquestrador do
+  `eickrono-autenticacao-servidor` quando o plano nao possui bloqueios;
+- planos com avatar controlado por `storage_key` materializam pendencia na
+  identidade antes da limpeza logica local;
+- quando o usuario central e exclusivo do produto alvo, a execucao remove o
+  usuario no Keycloak por cliente interno, anonimiza historicos centrais,
+  remove referencias operacionais de seguranca/auditoria, limpa dispositivos,
+  recuperacoes de senha, cadastros, formas de acesso, vinculos de produto,
+  avatares locais e por fim remove `autenticacao.usuarios`;
+- quando o usuario central tem outro vinculo de produto ativo, a execucao apaga
+  apenas o vinculo do produto alvo e preserva usuario central, formas de acesso,
+  dispositivos e Keycloak;
+- a execucao valida pos-condicoes locais na autenticacao: se ainda existir
+  vinculo de produto, avatar local do vinculo, usuario central, forma de acesso
+  ou cadastro que o plano exigia apagar, a operacao e marcada como `FALHOU`
+  e retorna erro operacional em vez de registrar sucesso falso.
 
 Escopo:
 
@@ -2199,6 +2336,9 @@ Testes minimos:
   chaves auxiliares depois que o alvo de produto foi identificado;
 - retorna `BLOQUEAR` quando chaves auxiliares apontam para mais de um alvo de
   produto/acesso;
+- retorna `BLOQUEAR` quando o produto resolve o perfil por
+  `usuarioPublicoProduto`, mas `autenticacao.usuarios_clientes_ecossistema` esta
+  sem `identificador_publico_cliente` ou com valor diferente;
 - permite o mesmo `usuarioPublicoProduto` em produtos diferentes sem tratar o
   identificador como global;
 - bloqueia exclusao do admin do realm `master`;
@@ -2213,6 +2353,12 @@ Testes minimos:
 ### Integracao
 
 - cria usuario completo e executa o servico para exclusao de cadastro/produto;
+- apos criar usuario completo pelo fluxo real do app, valida que
+  `autenticacao.usuarios_clientes_ecossistema.identificador_publico_cliente`
+  foi preenchido com o mesmo valor de
+  `thimisu_hml.perfis_sistema.identificador_publico_sistema`;
+- valida que o `dryRun=true` do usuario recem-cadastrado resolve
+  `usuariosAutenticacaoIds` e `vinculosProdutoIds` antes da execucao real;
 - valida que a execucao usa o perfil do produto alvo como fonte principal;
 - valida novo cadastro com mesmo e-mail;
 - valida novo cadastro com mesmo usuario;
@@ -2223,8 +2369,8 @@ Testes minimos:
 - valida que perfil do produto foi apagado/anonimizado;
 - valida que `vinculos_sociais` e `contextos_sociais_pendentes` nao sao
   consultados;
-- valida que conflito entre modelo atual e estrutura historica retorna bloqueio
-  ou alerta explicito, sem consolidar automaticamente;
+- valida que historicos do produto sao anonimizados antes da remocao do perfil
+  e da pessoa local, sem preservar PII direta;
 - valida que configuracoes Keycloak de Google/Apple continuam intactas;
 - valida que admin master continua autenticando.
 

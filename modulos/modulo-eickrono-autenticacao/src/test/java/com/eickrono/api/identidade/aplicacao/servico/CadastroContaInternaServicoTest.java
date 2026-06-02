@@ -517,6 +517,7 @@ class CadastroContaInternaServicoTest {
                 eq(99L),
                 eq(salvo.get().getCriadoEm()),
                 any(),
+                eq("ana.souza"),
                 any()
         );
         verify(avatarSocialProjetoJdbc).definirAvatarSocial(

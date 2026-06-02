@@ -14,6 +14,10 @@ public interface ClienteAdministracaoCadastroKeycloak {
 
     void removerUsuarioPendente(String subjectRemoto);
 
+    default void removerUsuario(final String subjectRemoto) {
+        removerUsuarioPendente(subjectRemoto);
+    }
+
     Optional<UsuarioCadastroKeycloakExistente> buscarUsuarioPorEmail(String emailPrincipal);
 
     void vincularIdentidadeFederada(String subjectRemoto, IdentidadeFederadaKeycloak identidadeFederada);

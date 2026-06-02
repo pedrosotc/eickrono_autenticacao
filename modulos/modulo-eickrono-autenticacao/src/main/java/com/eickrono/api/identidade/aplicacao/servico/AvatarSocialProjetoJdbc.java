@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -48,13 +49,36 @@ public class AvatarSocialProjetoJdbc {
                             final OffsetDateTime criadoEm,
                             final OffsetDateTime atualizadoEm,
                             final List<IdentidadeFederadaKeycloak> identidadesFederadas) {
+        sincronizar(
+                subRemoto,
+                emailPrincipal,
+                clienteEcossistemaId,
+                criadoEm,
+                atualizadoEm,
+                null,
+                identidadesFederadas);
+    }
+
+    @Transactional
+    public void sincronizar(final String subRemoto,
+                            final String emailPrincipal,
+                            final Long clienteEcossistemaId,
+                            final OffsetDateTime criadoEm,
+                            final OffsetDateTime atualizadoEm,
+                            final String identificadorPublicoCliente,
+                            final List<IdentidadeFederadaKeycloak> identidadesFederadas) {
         if (subRemoto == null || subRemoto.isBlank() || clienteEcossistemaId == null) {
             return;
         }
         OffsetDateTime criado = Objects.requireNonNull(criadoEm, "criadoEm é obrigatório");
         OffsetDateTime atualizado = Objects.requireNonNull(atualizadoEm, "atualizadoEm é obrigatório");
-        UUID usuarioId = assegurarUsuarioAtivo(subRemoto, emailPrincipal, clienteEcossistemaId, criado, atualizado);
-        UUID usuarioClienteId = localizarUsuarioClienteIdObrigatorio(usuarioId, clienteEcossistemaId);
+        UUID usuarioId = assegurarUsuarioAtivo(subRemoto, emailPrincipal, criado, atualizado);
+        UUID usuarioClienteId = assegurarOuLocalizarVinculoProjeto(
+                usuarioId,
+                subRemoto,
+                clienteEcossistemaId,
+                atualizado,
+                identificadorPublicoCliente);
         Set<String> provedoresAtivos = new HashSet<>();
         for (IdentidadeFederadaKeycloak identidade : Objects.requireNonNull(
                 identidadesFederadas, "identidadesFederadas são obrigatórias")) {
@@ -128,13 +152,15 @@ public class AvatarSocialProjetoJdbc {
                             ELSE EXCLUDED.avatar_externo_atualizado_em
                         END
                     """, params);
-            sincronizarAvatarSocial(
-                    usuarioClienteId,
-                    formaAcessoId,
-                    provedor,
-                    identidade.nomeExibicaoExterno(),
-                    identidade.urlAvatarExterno(),
-                    atualizado);
+            if (usuarioClienteId != null) {
+                sincronizarAvatarSocial(
+                        usuarioClienteId,
+                        formaAcessoId,
+                        provedor,
+                        identidade.nomeExibicaoExterno(),
+                        identidade.urlAvatarExterno(),
+                        atualizado);
+            }
         }
 
         MapSqlParameterSource paramsRemocao = new MapSqlParameterSource()
@@ -160,7 +186,9 @@ public class AvatarSocialProjetoJdbc {
                       AND provedor NOT IN (:provedoresAtivos)
                     """, paramsRemocao);
         }
-        limparAvatarSocialInvalido(usuarioId, clienteEcossistemaId, atualizado);
+        if (usuarioClienteId != null) {
+            limparAvatarSocialInvalido(usuarioId, clienteEcossistemaId, atualizado);
+        }
     }
 
     public PreferenciaAvatarProjeto buscarPreferencia(final String subRemoto,
@@ -288,13 +316,7 @@ public class AvatarSocialProjetoJdbc {
                     Map.of("provedor", provedor.getAliasApi())
             );
         }
-        assegurarVinculoProjeto(
-                usuarioId,
-                Objects.requireNonNull(subRemoto, "subRemoto é obrigatório"),
-                Objects.requireNonNull(clienteEcossistemaId, "clienteEcossistemaId é obrigatório"),
-                Objects.requireNonNull(atualizadoEm, "atualizadoEm é obrigatório")
-        );
-        UUID usuarioClienteId = localizarUsuarioClienteIdObrigatorio(usuarioId, clienteEcossistemaId);
+        UUID usuarioClienteId = localizarUsuarioClienteIdComIdentificadorObrigatorio(usuarioId, clienteEcossistemaId);
         UUID avatarId = sincronizarAvatarSocial(
                 usuarioClienteId,
                 formaAcessoId,
@@ -323,13 +345,7 @@ public class AvatarSocialProjetoJdbc {
                                  final String url,
                                  final OffsetDateTime atualizadoEm) {
         UUID usuarioId = localizarUsuarioIdObrigatorio(subRemoto);
-        assegurarVinculoProjeto(
-                usuarioId,
-                Objects.requireNonNull(subRemoto, "subRemoto é obrigatório"),
-                Objects.requireNonNull(clienteEcossistemaId, "clienteEcossistemaId é obrigatório"),
-                Objects.requireNonNull(atualizadoEm, "atualizadoEm é obrigatório")
-        );
-        UUID usuarioClienteId = localizarUsuarioClienteIdObrigatorio(usuarioId, clienteEcossistemaId);
+        UUID usuarioClienteId = localizarUsuarioClienteIdComIdentificadorObrigatorio(usuarioId, clienteEcossistemaId);
         UUID avatarId = sincronizarAvatarUrl(usuarioClienteId, url, atualizadoEm);
         limparPreferenciasAvatar(usuarioClienteId, atualizadoEm);
         jdbcTemplate.update("""
@@ -351,19 +367,12 @@ public class AvatarSocialProjetoJdbc {
                                       final Long clienteEcossistemaId,
                                       final OffsetDateTime atualizadoEm) {
         UUID usuarioId = localizarUsuarioIdObrigatorio(subRemoto);
-        assegurarVinculoProjeto(
-                usuarioId,
-                Objects.requireNonNull(subRemoto, "subRemoto é obrigatório"),
-                Objects.requireNonNull(clienteEcossistemaId, "clienteEcossistemaId é obrigatório"),
-                Objects.requireNonNull(atualizadoEm, "atualizadoEm é obrigatório")
-        );
-        UUID usuarioClienteId = localizarUsuarioClienteIdObrigatorio(usuarioId, clienteEcossistemaId);
+        UUID usuarioClienteId = localizarUsuarioClienteIdComIdentificadorObrigatorio(usuarioId, clienteEcossistemaId);
         limparPreferenciasAvatar(usuarioClienteId, atualizadoEm);
     }
 
     private UUID assegurarUsuarioAtivo(final String subRemoto,
                                        final String emailPrincipal,
-                                       final Long clienteEcossistemaId,
                                        final OffsetDateTime criadoEm,
                                        final OffsetDateTime atualizadoEm) {
         UUID usuarioId = gerarUsuarioId(subRemoto);
@@ -402,7 +411,6 @@ public class AvatarSocialProjetoJdbc {
                         .addValue("statusGlobal", STATUS_USUARIO_ATIVO)
                         .addValue("criadoEm", criadoEm)
                         .addValue("atualizadoEm", atualizadoEm));
-        assegurarVinculoProjeto(usuarioId, subRemoto, clienteEcossistemaId, atualizadoEm);
         if (emailPrincipal != null && !emailPrincipal.isBlank()) {
             String emailNormalizado = emailPrincipal.trim().toLowerCase(Locale.ROOT);
             jdbcTemplate.update("""
@@ -454,16 +462,39 @@ public class AvatarSocialProjetoJdbc {
         return usuarioId;
     }
 
+    private UUID assegurarOuLocalizarVinculoProjeto(final UUID usuarioId,
+                                                    final String subRemoto,
+                                                    final Long clienteEcossistemaId,
+                                                    final OffsetDateTime atualizadoEm,
+                                                    final String identificadorPublicoCliente) {
+        String identificadorNormalizado = normalizarOpcional(identificadorPublicoCliente);
+        if (identificadorNormalizado != null) {
+            assegurarVinculoProjeto(
+                    usuarioId,
+                    subRemoto,
+                    clienteEcossistemaId,
+                    atualizadoEm,
+                    identificadorNormalizado);
+        }
+        return localizarUsuarioClienteIdComIdentificadorOpcional(usuarioId, clienteEcossistemaId)
+                .orElse(null);
+    }
+
     private void assegurarVinculoProjeto(final UUID usuarioId,
                                          final String subRemoto,
                                          final Long clienteEcossistemaId,
-                                         final OffsetDateTime atualizadoEm) {
+                                         final OffsetDateTime atualizadoEm,
+                                         final String identificadorPublicoCliente) {
+        String identificadorNormalizado = normalizarObrigatorio(
+                identificadorPublicoCliente,
+                "identificadorPublicoCliente");
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("id", gerarUuidDeterministico(
                         "autenticacao.vinculo_cliente:" + subRemoto + ":" + clienteEcossistemaId))
                 .addValue("usuarioId", usuarioId)
                 .addValue("clienteEcossistemaId", clienteEcossistemaId)
                 .addValue("statusVinculo", STATUS_VINCULO_ATIVO)
+                .addValue("identificadorPublicoCliente", identificadorNormalizado)
                 .addValue("vinculadoEm", atualizadoEm)
                 .addValue("atualizadoEm", atualizadoEm);
         jdbcTemplate.update("""
@@ -484,7 +515,7 @@ public class AvatarSocialProjetoJdbc {
                     :usuarioId,
                     :clienteEcossistemaId,
                     :statusVinculo,
-                    NULL,
+                    :identificadorPublicoCliente,
                     NULL,
                     :vinculadoEm,
                     :atualizadoEm,
@@ -493,6 +524,7 @@ public class AvatarSocialProjetoJdbc {
                 )
                 ON CONFLICT (usuario_id, cliente_ecossistema_id) DO UPDATE
                 SET status_vinculo = EXCLUDED.status_vinculo,
+                    identificador_publico_cliente = EXCLUDED.identificador_publico_cliente,
                     atualizado_em = EXCLUDED.atualizado_em,
                     revogado_em = NULL,
                     motivo_revogacao = NULL
@@ -716,6 +748,34 @@ public class AvatarSocialProjetoJdbc {
                         HttpStatus.CONFLICT,
                         "O usuario autenticado ainda nao possui vinculo ativo com o projeto."
                 ));
+    }
+
+    private UUID localizarUsuarioClienteIdComIdentificadorObrigatorio(final UUID usuarioId,
+                                                                      final Long clienteEcossistemaId) {
+        return localizarUsuarioClienteIdComIdentificadorOpcional(usuarioId, clienteEcossistemaId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "O usuario autenticado ainda nao possui vinculo ativo com identificador publico do projeto."
+                ));
+    }
+
+    private Optional<UUID> localizarUsuarioClienteIdComIdentificadorOpcional(final UUID usuarioId,
+                                                                             final Long clienteEcossistemaId) {
+        return jdbcTemplate.query("""
+                SELECT id
+                FROM autenticacao.usuarios_clientes_ecossistema
+                WHERE usuario_id = :usuarioId
+                  AND cliente_ecossistema_id = :clienteEcossistemaId
+                  AND identificador_publico_cliente IS NOT NULL
+                  AND btrim(identificador_publico_cliente) <> ''
+                  AND revogado_em IS NULL
+                """,
+                new MapSqlParameterSource()
+                        .addValue("usuarioId", usuarioId)
+                        .addValue("clienteEcossistemaId", clienteEcossistemaId),
+                (rs, rowNum) -> UUID.fromString(rs.getString("id")))
+                .stream()
+                .findFirst();
     }
 
     private boolean existeVinculoProjeto(final UUID usuarioId,

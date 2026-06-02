@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.eickrono.api.identidade.aplicacao.servico.ExclusaoCadastroProdutoDryRunService;
+import com.eickrono.api.identidade.aplicacao.servico.ExclusaoCadastroProdutoExecucaoService;
 import com.eickrono.api.identidade.apresentacao.dto.admin.AlvosExclusaoCadastroProdutoApiResposta;
 import com.eickrono.api.identidade.apresentacao.dto.admin.ExclusaoCadastroProdutoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.admin.ExclusaoCadastroProdutoApiResposta;
@@ -21,11 +22,14 @@ class ExclusaoCadastroProdutoControllerTest {
     @Mock
     private ExclusaoCadastroProdutoDryRunService dryRunService;
 
+    @Mock
+    private ExclusaoCadastroProdutoExecucaoService execucaoService;
+
     private ExclusaoCadastroProdutoController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new ExclusaoCadastroProdutoController(dryRunService);
+        controller = new ExclusaoCadastroProdutoController(dryRunService, execucaoService);
     }
 
     @Test
@@ -35,7 +39,8 @@ class ExclusaoCadastroProdutoControllerTest {
                 "pedrosotc",
                 null,
                 true,
-                "QA"
+                "QA",
+                null
         );
         ExclusaoCadastroProdutoApiResposta respostaEsperada = new ExclusaoCadastroProdutoApiResposta(
                 "correlacao",
@@ -53,10 +58,43 @@ class ExclusaoCadastroProdutoControllerTest {
         );
         when(dryRunService.simular(request)).thenReturn(respostaEsperada);
 
-        var resposta = controller.simular(request);
+        var resposta = controller.excluirCadastroProduto(request);
 
         assertThat(resposta.getStatusCode().value()).isEqualTo(200);
         assertThat(resposta.getBody()).isEqualTo(respostaEsperada);
         verify(dryRunService).simular(request);
+    }
+
+    @Test
+    void deveDelegarExecucaoParaServicoQuandoDryRunForFalso() {
+        ExclusaoCadastroProdutoApiRequest request = new ExclusaoCadastroProdutoApiRequest(
+                "THIMISU",
+                "pedrosotc",
+                null,
+                false,
+                "QA",
+                "00000000-0000-0000-0000-000000000001"
+        );
+        ExclusaoCadastroProdutoApiResposta respostaEsperada = new ExclusaoCadastroProdutoApiResposta(
+                "correlacao",
+                false,
+                new AlvosExclusaoCadastroProdutoApiResposta(
+                        "THIMISU",
+                        "pedrosotc",
+                        null,
+                        List.of(),
+                        List.of()
+                ),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+        when(execucaoService.executar(request)).thenReturn(respostaEsperada);
+
+        var resposta = controller.excluirCadastroProduto(request);
+
+        assertThat(resposta.getStatusCode().value()).isEqualTo(200);
+        assertThat(resposta.getBody()).isEqualTo(respostaEsperada);
+        verify(execucaoService).executar(request);
     }
 }

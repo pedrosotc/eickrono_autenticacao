@@ -30,7 +30,7 @@ test_dry_run_prints_expected_plan() {
   local output
   output="$("$SCRIPT_UNDER_TEST" \
     --cluster eickrono-hml \
-    --services auth-hml,identidade-hml,thimisu-backend-hml \
+    --services autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml \
     --secret-arn arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc \
     --function-name eickrono-hml-rds-rotation-ecs-redeploy \
     --rule-name eickrono-hml-rds-rotation-succeeded \
@@ -39,11 +39,14 @@ test_dry_run_prints_expected_plan() {
     --dry-run)"
 
   assert_contains "$output" "CLUSTER=eickrono-hml"
-  assert_contains "$output" "SERVICES=auth-hml,identidade-hml,thimisu-backend-hml"
+  assert_contains "$output" "SERVICES=autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml"
   assert_contains "$output" "SECRET_ARN=arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc"
   assert_contains "$output" "FUNCTION_NAME=eickrono-hml-rds-rotation-ecs-redeploy"
   assert_contains "$output" "RULE_NAME=eickrono-hml-rds-rotation-succeeded"
   assert_contains "$output" "ROLE_NAME=eickrono-hml-rds-rotation-ecs-redeploy-role"
+  assert_contains "$output" "TIMEOUT=900"
+  assert_contains "$output" "WAITER_DELAY_SECONDS=15"
+  assert_contains "$output" "WAITER_MAX_ATTEMPTS=40"
   assert_contains "$output" "aws iam create-role"
   assert_contains "$output" "aws lambda create-function|update-function-code"
   assert_contains "$output" "aws events put-rule"

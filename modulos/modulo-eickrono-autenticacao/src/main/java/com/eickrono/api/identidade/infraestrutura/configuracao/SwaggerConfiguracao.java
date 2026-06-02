@@ -19,4 +19,12 @@ public class SwaggerConfiguracao {
                 .pathsToMatch("/identidade/**", "/api/conta/**")
                 .build();
     }
+
+    @Bean
+    public GroupedOpenApi agrupamentoOperacoesInternas() {
+        return GroupedOpenApi.builder()
+                .group("operacoes-internas")
+                .pathsToMatch("/api/interna/**")
+                .build();
+    }
 }

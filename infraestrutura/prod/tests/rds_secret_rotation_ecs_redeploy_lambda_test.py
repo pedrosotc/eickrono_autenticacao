@@ -22,6 +22,7 @@ SPEC.loader.exec_module(handler)
 class EcsClientFake:
     def __init__(self) -> None:
         self.calls = []
+        self.operations = []
 
     def update_service(self, *, cluster, service, forceNewDeployment):
         self.calls.append(
@@ -30,6 +31,28 @@ class EcsClientFake:
                 "service": service,
                 "forceNewDeployment": forceNewDeployment,
             }
+        )
+        self.operations.append(("update", service))
+
+    def get_waiter(self, name):
+        if name != "services_stable":
+            raise AssertionError(name)
+        return ServicesStableWaiterFake(self)
+
+
+class ServicesStableWaiterFake:
+    def __init__(self, ecs_client) -> None:
+        self.ecs_client = ecs_client
+
+    def wait(self, *, cluster, services, WaiterConfig):
+        self.ecs_client.operations.append(
+            (
+                "wait",
+                cluster,
+                tuple(services),
+                WaiterConfig["Delay"],
+                WaiterConfig["MaxAttempts"],
+            )
         )
 
 
@@ -83,6 +106,17 @@ class RotationRedeployLambdaTest(unittest.TestCase):
             ],
             ecs_client.calls,
         )
+        self.assertEqual(
+            [
+                ("update", "auth-hml"),
+                ("wait", "eickrono-hml", ("auth-hml",), 15, 40),
+                ("update", "identidade-hml"),
+                ("wait", "eickrono-hml", ("identidade-hml",), 15, 40),
+                ("update", "thimisu-backend-hml"),
+                ("wait", "eickrono-hml", ("thimisu-backend-hml",), 15, 40),
+            ],
+            ecs_client.operations,
+        )
 
     def test_redeploys_when_rds_rotation_reports_secret_in_additional_event_data(self):
         ecs_client = EcsClientFake()
@@ -135,6 +169,17 @@ class RotationRedeployLambdaTest(unittest.TestCase):
             ],
             ecs_client.calls,
         )
+        self.assertEqual(
+            [
+                ("update", "auth-hml"),
+                ("wait", "eickrono-hml", ("auth-hml",), 15, 40),
+                ("update", "identidade-hml"),
+                ("wait", "eickrono-hml", ("identidade-hml",), 15, 40),
+                ("update", "thimisu-backend-hml"),
+                ("wait", "eickrono-hml", ("thimisu-backend-hml",), 15, 40),
+            ],
+            ecs_client.operations,
+        )
 
     def test_ignores_event_for_other_secret(self):
         ecs_client = EcsClientFake()
@@ -163,12 +208,16 @@ class RotationRedeployLambdaTest(unittest.TestCase):
         previous_secret = os.environ.get("TARGET_SECRET_ARN")
         previous_cluster = os.environ.get("ECS_CLUSTER")
         previous_services = os.environ.get("ECS_SERVICES")
+        previous_waiter_delay = os.environ.get("SERVICE_STABLE_WAITER_DELAY_SECONDS")
+        previous_waiter_attempts = os.environ.get("SERVICE_STABLE_WAITER_MAX_ATTEMPTS")
         try:
             os.environ["TARGET_SECRET_ARN"] = (
                 "arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc"
             )
             os.environ["ECS_CLUSTER"] = "eickrono-hml"
             os.environ["ECS_SERVICES"] = "auth-hml,identidade-hml"
+            os.environ["SERVICE_STABLE_WAITER_DELAY_SECONDS"] = "3"
+            os.environ["SERVICE_STABLE_WAITER_MAX_ATTEMPTS"] = "4"
 
             class Boto3Fake:
                 def __init__(self):
@@ -210,6 +259,15 @@ class RotationRedeployLambdaTest(unittest.TestCase):
                 ["auth-hml", "identidade-hml"],
                 result["servicesRedeployed"],
             )
+            self.assertEqual(
+                [
+                    ("update", "auth-hml"),
+                    ("wait", "eickrono-hml", ("auth-hml",), 3, 4),
+                    ("update", "identidade-hml"),
+                    ("wait", "eickrono-hml", ("identidade-hml",), 3, 4),
+                ],
+                boto3_fake.ecs.operations,
+            )
         finally:
             if previous_secret is None:
                 os.environ.pop("TARGET_SECRET_ARN", None)
@@ -223,6 +281,14 @@ class RotationRedeployLambdaTest(unittest.TestCase):
                 os.environ.pop("ECS_SERVICES", None)
             else:
                 os.environ["ECS_SERVICES"] = previous_services
+            if previous_waiter_delay is None:
+                os.environ.pop("SERVICE_STABLE_WAITER_DELAY_SECONDS", None)
+            else:
+                os.environ["SERVICE_STABLE_WAITER_DELAY_SECONDS"] = previous_waiter_delay
+            if previous_waiter_attempts is None:
+                os.environ.pop("SERVICE_STABLE_WAITER_MAX_ATTEMPTS", None)
+            else:
+                os.environ["SERVICE_STABLE_WAITER_MAX_ATTEMPTS"] = previous_waiter_attempts
 
 
 if __name__ == "__main__":

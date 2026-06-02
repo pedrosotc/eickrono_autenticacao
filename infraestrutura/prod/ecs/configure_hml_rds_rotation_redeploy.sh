@@ -25,6 +25,8 @@ Opcoes:
   --account-id <id>               Account ID AWS. Se omitido, resolve via STS.
   --memory-size <mb>              Memoria da Lambda.
   --timeout <segundos>            Timeout da Lambda.
+  --waiter-delay <segundos>       Intervalo entre checagens de estabilidade ECS.
+  --waiter-max-attempts <numero>  Maximo de checagens por servico ECS.
   --dry-run                       Apenas imprime os comandos planejados.
   -h, --help                      Mostra esta ajuda.
 EOF
@@ -66,7 +68,7 @@ PY
 }
 
 CLUSTER="eickrono-hml"
-SERVICES_CSV="auth-hml,identidade-hml,thimisu-backend-hml"
+SERVICES_CSV="autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml"
 SECRET_ARN="arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-7df15f56-c831-40b7-be42-ebd935108b06-22Dwvf"
 FUNCTION_NAME="eickrono-hml-rds-rotation-ecs-redeploy"
 RULE_NAME="eickrono-hml-rds-rotation-succeeded"
@@ -75,7 +77,9 @@ REGION="sa-east-1"
 PROFILE=""
 ACCOUNT_ID=""
 MEMORY_SIZE="256"
-TIMEOUT="60"
+TIMEOUT="900"
+WAITER_DELAY_SECONDS="15"
+WAITER_MAX_ATTEMPTS="40"
 DRY_RUN="false"
 
 while [ "$#" -gt 0 ]; do
@@ -122,6 +126,14 @@ while [ "$#" -gt 0 ]; do
       ;;
     --timeout)
       TIMEOUT="$2"
+      shift 2
+      ;;
+    --waiter-delay)
+      WAITER_DELAY_SECONDS="$2"
+      shift 2
+      ;;
+    --waiter-max-attempts)
+      WAITER_MAX_ATTEMPTS="$2"
       shift 2
       ;;
     --dry-run)
@@ -232,7 +244,12 @@ cat >"$EVENT_PATTERN_FILE" <<'EOF'
 }
 EOF
 
-python3 - "$SECRET_ARN" "$CLUSTER" "$SERVICES_ENV" >"$LAMBDA_ENV_FILE" <<'PY'
+python3 - \
+  "$SECRET_ARN" \
+  "$CLUSTER" \
+  "$SERVICES_ENV" \
+  "$WAITER_DELAY_SECONDS" \
+  "$WAITER_MAX_ATTEMPTS" >"$LAMBDA_ENV_FILE" <<'PY'
 import json
 import sys
 
@@ -241,6 +258,8 @@ payload = {
         "TARGET_SECRET_ARN": sys.argv[1],
         "ECS_CLUSTER": sys.argv[2],
         "ECS_SERVICES": sys.argv[3],
+        "SERVICE_STABLE_WAITER_DELAY_SECONDS": sys.argv[4],
+        "SERVICE_STABLE_WAITER_MAX_ATTEMPTS": sys.argv[5],
     }
 }
 
@@ -308,6 +327,8 @@ REGION=${REGION}
 ACCOUNT_ID=${ACCOUNT_ID}
 MEMORY_SIZE=${MEMORY_SIZE}
 TIMEOUT=${TIMEOUT}
+WAITER_DELAY_SECONDS=${WAITER_DELAY_SECONDS}
+WAITER_MAX_ATTEMPTS=${WAITER_MAX_ATTEMPTS}
 LAMBDA_SOURCE=${LAMBDA_SOURCE_FILE}
 LAMBDA_ROLE_ARN=${LAMBDA_ROLE_ARN}
 RULE_ARN=${RULE_ARN}

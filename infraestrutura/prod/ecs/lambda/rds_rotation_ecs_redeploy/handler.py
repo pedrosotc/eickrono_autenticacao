@@ -58,6 +58,44 @@ def _evento_de_rotacao_bem_sucedida(evento: dict[str, Any], secret_arn: str) -> 
     return secret_arn in _extrair_arns_segredo(evento)
 
 
+def _redeploy_services(
+    *,
+    ecs_client: Any,
+    cluster: str,
+    services: list[str],
+    waiter_delay_seconds: int,
+    waiter_max_attempts: int,
+) -> list[str]:
+    redeployados: list[str] = []
+    waiter = ecs_client.get_waiter("services_stable")
+    for service in services:
+        LOGGER.info(
+            "rds_rotation_ecs_redeploy_servico_iniciado cluster=%s service=%s",
+            cluster,
+            service,
+        )
+        ecs_client.update_service(
+            cluster=cluster,
+            service=service,
+            forceNewDeployment=True,
+        )
+        waiter.wait(
+            cluster=cluster,
+            services=[service],
+            WaiterConfig={
+                "Delay": waiter_delay_seconds,
+                "MaxAttempts": waiter_max_attempts,
+            },
+        )
+        LOGGER.info(
+            "rds_rotation_ecs_redeploy_servico_estavel cluster=%s service=%s",
+            cluster,
+            service,
+        )
+        redeployados.append(service)
+    return redeployados
+
+
 def processar_evento(
     evento: dict[str, Any],
     *,
@@ -65,6 +103,8 @@ def processar_evento(
     secret_arn: str,
     cluster: str,
     services: list[str],
+    waiter_delay_seconds: int = 15,
+    waiter_max_attempts: int = 40,
 ) -> dict[str, Any]:
     if not _evento_de_rotacao_bem_sucedida(evento, secret_arn):
         return {
@@ -74,14 +114,13 @@ def processar_evento(
             "secretArn": secret_arn,
         }
 
-    redeployados: list[str] = []
-    for service in services:
-        ecs_client.update_service(
-            cluster=cluster,
-            service=service,
-            forceNewDeployment=True,
-        )
-        redeployados.append(service)
+    redeployados = _redeploy_services(
+        ecs_client=ecs_client,
+        cluster=cluster,
+        services=services,
+        waiter_delay_seconds=waiter_delay_seconds,
+        waiter_max_attempts=waiter_max_attempts,
+    )
 
     LOGGER.info(
         "rds_rotation_ecs_redeploy_concluido secretArn=%s cluster=%s services=%s",
@@ -112,4 +151,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         secret_arn=secret_arn,
         cluster=cluster,
         services=services,
+        waiter_delay_seconds=int(
+            os.environ.get("SERVICE_STABLE_WAITER_DELAY_SECONDS", "15")
+        ),
+        waiter_max_attempts=int(
+            os.environ.get("SERVICE_STABLE_WAITER_MAX_ATTEMPTS", "40")
+        ),
     )

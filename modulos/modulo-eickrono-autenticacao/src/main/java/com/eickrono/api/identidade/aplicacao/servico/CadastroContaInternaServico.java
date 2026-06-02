@@ -1001,6 +1001,7 @@ public class CadastroContaInternaServico {
                 projeto.clienteEcossistemaId(),
                 cadastroConta.getCriadoEm(),
                 agora,
+                cadastroConta.getUsuario(),
                 identidadesFederadas
         );
         vinculos.stream()

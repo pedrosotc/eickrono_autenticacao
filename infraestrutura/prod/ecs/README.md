@@ -32,6 +32,14 @@ Regras:
 - o historico ampliado continua em `../guia_subida_hml_aws.md`
 - o caminho operacional preferencial de rollout agora e `rollout_hml_service.sh`
 
+Nota operacional:
+
+- as licoes da validacao HML de `2026-05-31` para
+  `autenticacao-api-hml`, `thimisu-backend-hml`, `Cloud Map`, `RDS`,
+  `Keycloak`, `Flyway`, plataforma `arm64` e erros reais de deploy estao em
+  `../runbook_hml_aws_operacional.md`, na secao
+  `Licoes aprendidas - validacao HML exclusao cadastro produto`.
+
 ## Regra canônica para namespaces de segredos
 
 Para leitura humana e para novos segredos no `Secrets Manager`, a convenção
@@ -130,9 +138,9 @@ Arquivo:
 
 ### Problema que esta automacao resolve
 
-Os servicos `auth-hml`, `identidade-hml` e `thimisu-backend-hml` consomem a
-senha do PostgreSQL via `Secrets Manager`, injetada como variavel de ambiente
-na task ECS no momento do start.
+Os servicos `autenticacao-api-hml`, `auth-hml`, `identidade-hml` e
+`thimisu-backend-hml` consomem a senha do PostgreSQL via `Secrets Manager`,
+injetada como variavel de ambiente na task ECS no momento do start.
 
 Quando o segredo gerenciado do RDS rotaciona:
 
@@ -143,9 +151,10 @@ Quando o segredo gerenciado do RDS rotaciona:
   `password authentication failed`.
 
 Por isso, neste ambiente, a rotacao do segredo do banco exige
-**redeploy forcado obrigatorio** dos tres servicos consumidores:
+**redeploy forcado obrigatorio** dos quatro servicos consumidores:
 
 - `auth-hml`
+- `autenticacao-api-hml`
 - `identidade-hml`
 - `thimisu-backend-hml`
 
@@ -161,10 +170,15 @@ Comportamento:
 2. cria ou atualiza uma regra EventBridge;
 3. escuta o evento `RotationSucceeded` do `Secrets Manager`;
 4. valida se o segredo do evento e o segredo RDS monitorado;
-5. executa `ecs update-service --force-new-deployment` para:
+5. executa `ecs update-service --force-new-deployment` sequencialmente para:
+   - `autenticacao-api-hml`
    - `auth-hml`
    - `identidade-hml`
    - `thimisu-backend-hml`
+6. aguarda `services_stable` de cada servico antes de iniciar o proximo.
+
+A espera sequencial evita que todos os servicos dupliquem tasks ao mesmo tempo
+e estourem o limite de conexoes do RDS durante a recuperacao.
 
 Codigo da Lambda:
 
@@ -217,11 +231,14 @@ bash ./infraestrutura/prod/ecs/configure_hml_rds_rotation_redeploy.sh \
 Defaults canonicos embutidos no script:
 
 - `cluster = eickrono-hml`
-- `services = auth-hml,identidade-hml,thimisu-backend-hml`
+- `services = autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml`
 - `secret-arn = arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-7df15f56-c831-40b7-be42-ebd935108b06-22Dwvf`
 - `function-name = eickrono-hml-rds-rotation-ecs-redeploy`
 - `rule-name = eickrono-hml-rds-rotation-succeeded`
 - `role-name = eickrono-hml-rds-rotation-ecs-redeploy-role`
+- `timeout = 900`
+- `service-stable-waiter-delay-seconds = 15`
+- `service-stable-waiter-max-attempts = 40`
 
 ### O que validar depois da instalacao
 
@@ -256,7 +273,7 @@ Validar:
 
 - `TARGET_SECRET_ARN` = segredo gerenciado do RDS de `hml`
 - `ECS_CLUSTER` = `eickrono-hml`
-- `ECS_SERVICES` = `auth-hml,identidade-hml,thimisu-backend-hml`
+- `ECS_SERVICES` = `autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml`
 
 4. Permissao da Lambda para chamar ECS:
 
@@ -281,6 +298,85 @@ Execucao:
 bash infraestrutura/prod/tests/configure_hml_rds_rotation_redeploy_test.sh
 PYTHONPATH=infraestrutura/prod python3 -m unittest \
   infraestrutura/prod/tests/rds_secret_rotation_ecs_redeploy_lambda_test.py
+```
+
+## Fallback por erro de senha antiga do RDS
+
+### Problema que o fallback cobre
+
+A automacao principal depende do evento `RotationSucceeded`. Se esse evento nao
+for processado, ou se existir task antiga/orfa ainda rodando com senha anterior,
+os logs podem registrar:
+
+```text
+password authentication failed for user "eickrono_admin"
+```
+
+O fallback observa esse erro nos log groups dos servicos e so executa redeploy
+depois de validar que o segredo atual ainda conecta no RDS.
+
+### Como o fallback valida o segredo atual
+
+A Lambda nao carrega driver PostgreSQL. Ela inicia uma task Fargate de
+validacao com `psql`, usando a task definition configurada em
+`VALIDATION_TASK_DEFINITION`.
+
+Fluxo:
+
+1. CloudWatch Logs envia para a Lambda um evento que bate no filtro.
+2. Lambda verifica cooldown no Parameter Store.
+3. Lambda executa task Fargate de validacao.
+4. A task executa `SELECT 1` no banco configurado.
+5. Se a task termina com exit code `0`, a Lambda forca redeploy dos servicos.
+6. A Lambda aguarda `services_stable` de cada servico antes de redeployar o proximo.
+7. Se a task falha, a Lambda nao redeploya e registra erro operacional.
+
+### Script oficial para instalar ou atualizar o fallback em `hml`
+
+Validacao segura:
+
+```bash
+bash ./infraestrutura/prod/ecs/configure_hml_rds_password_auth_failure_fallback.sh \
+  --dry-run
+```
+
+Execucao real:
+
+```bash
+bash ./infraestrutura/prod/ecs/configure_hml_rds_password_auth_failure_fallback.sh \
+  --profile Codex-cli_aws
+```
+
+Defaults canonicos embutidos no script:
+
+- `cluster = eickrono-hml`
+- `services = autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml`
+- `log-groups = /ecs/hml/autenticacao,/ecs/hml/auth,/ecs/hml/identidade,/ecs/hml/thimisu-backend`
+- `function-name = eickrono-hml-rds-password-auth-failure-fallback`
+- `role-name = eickrono-hml-rds-password-auth-failure-fallback-role`
+- `filter-name = eickrono-hml-rds-password-auth-failure-fallback`
+- `validation-task-definition = eickrono-hml-db-query-codex:1`
+- `validation-container-name = psql`
+- `validation-database = eickrono_identidade_hml`
+- `cooldown-parameter-name = /eickrono/hml/rds-password-auth-failure-fallback/last-run`
+- `cooldown-seconds = 900`
+- `timeout = 900`
+- `service-stable-waiter-delay-seconds = 15`
+- `service-stable-waiter-max-attempts = 40`
+
+### Testes locais do fallback
+
+Arquivos:
+
+- `../tests/configure_hml_rds_password_auth_failure_fallback_test.sh`
+- `../tests/rds_password_auth_failure_fallback_lambda_test.py`
+
+Execucao:
+
+```bash
+bash infraestrutura/prod/tests/configure_hml_rds_password_auth_failure_fallback_test.sh
+PYTHONPATH=infraestrutura/prod python3 -m unittest \
+  infraestrutura/prod/tests/rds_password_auth_failure_fallback_lambda_test.py
 ```
 
 ### Build e push da imagem
