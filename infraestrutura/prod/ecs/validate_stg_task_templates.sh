@@ -3,11 +3,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROLLOUT_SCRIPT="${SCRIPT_DIR}/rollout_hml_service.sh"
+ROLLOUT_SCRIPT="${SCRIPT_DIR}/rollout_stg_service.sh"
 
 usage() {
   cat <<'EOF'
-uso: validate_hml_task_templates.sh [opcoes]
+uso: validate_stg_task_templates.sh [opcoes]
 
 opcoes:
   --db-overrides-file <arq>    carrega overrides de banco para a validacao
@@ -85,6 +85,33 @@ assert_no_placeholder() {
   fi
 }
 
+env_value() {
+  local file="$1"
+  local name="$2"
+  jq -r --arg name "$name" '.containerDefinitions[0].environment[]? | select(.name == $name) | .value' "$file"
+}
+
+assert_env_equals() {
+  local file="$1"
+  local name="$2"
+  local expected="$3"
+  local actual
+  actual="$(env_value "$file" "$name")"
+  if [ "$actual" != "$expected" ]; then
+    echo "valor invalido para ${name} em ${file}: esperado '${expected}', obtido '${actual}'" >&2
+    exit 1
+  fi
+}
+
+assert_no_bare_cloudmap_hosts() {
+  local file="$1"
+  if rg -n 'https?://(auth-stg-interno|id-stg-interno|thimisu-backend-stg-interno)(:|/)' "$file" >/dev/null; then
+    echo "use o FQDN completo do Cloud Map em ${file}" >&2
+    rg -n 'https?://(auth-stg-interno|id-stg-interno|thimisu-backend-stg-interno)(:|/)' "$file" >&2
+    exit 1
+  fi
+}
+
 render_service "auth" "${account_id}.dkr.ecr.${region}.amazonaws.com/eickrono-autenticacao-servidor:validate-auth" "${tmpdir}/auth.json"
 render_service "identidade" "${account_id}.dkr.ecr.${region}.amazonaws.com/eickrono-identidade-servidor:validate-identidade" "${tmpdir}/identidade.json"
 render_service "thimisu-backend" "${account_id}.dkr.ecr.${region}.amazonaws.com/eickrono-thimisu-backend:validate-thimisu" "${tmpdir}/thimisu.json"
@@ -92,5 +119,14 @@ render_service "thimisu-backend" "${account_id}.dkr.ecr.${region}.amazonaws.com/
 assert_no_placeholder "${tmpdir}/auth.json"
 assert_no_placeholder "${tmpdir}/identidade.json"
 assert_no_placeholder "${tmpdir}/thimisu.json"
+
+assert_no_bare_cloudmap_hosts "${tmpdir}/auth.json"
+assert_no_bare_cloudmap_hosts "${tmpdir}/identidade.json"
+assert_no_bare_cloudmap_hosts "${tmpdir}/thimisu.json"
+
+assert_env_equals "${tmpdir}/identidade.json" "INTEGRACAO_PERFIL_DISPONIBILIDADE_URL_BASE" "http://auth-stg-interno.stg.eickrono.internal:8080"
+assert_env_equals "${tmpdir}/identidade.json" "INTEGRACAO_PERFIL_JWT_INTERNO_URL_BASE" "http://auth-stg-interno.stg.eickrono.internal:8080"
+assert_env_equals "${tmpdir}/identidade.json" "INTEGRACAO_PERFIL_URL_BASE" "https://thimisu-backend-stg-interno.stg.eickrono.internal:8443"
+assert_env_equals "${tmpdir}/thimisu.json" "INTEGRACAO_AUTENTICACAO_JWT_INTERNO_URL_BASE" "http://auth-stg-interno.stg.eickrono.internal:8080"
 
 echo "ok"

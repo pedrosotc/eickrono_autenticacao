@@ -40,7 +40,7 @@ Cadeia observada:
 7. esse erro interno sobe como falha do `eickrono-identidade-servidor` e aparece
    no app como `500` em `/identidade/dispositivos/registro/silencioso`.
 
-O erro imediato visto em HML foi:
+O erro imediato visto em STG foi:
 
 ```text
 GET /api/interna/perfis-sistema/contexto
@@ -273,7 +273,7 @@ Como corrigir definitivamente em uma etapa futura:
    - so depois de nenhum consumidor real depender dele;
    - atualizar documentacao;
    - remover testes de compatibilidade antiga;
-   - confirmar em HML que os logs nao registram chamadas ao endpoint antigo.
+   - confirmar em STG que os logs nao registram chamadas ao endpoint antigo.
 
 Critério para iniciar essa etapa futura:
 
@@ -350,36 +350,36 @@ Validacao de integracao do `eickrono-identidade-servidor`:
 - essa validacao cobre os fluxos de integracao do
   `eickrono-identidade-servidor` que dependiam de PostgreSQL.
 
-Publicacao em HML:
+Publicacao em STG:
 
 - publicado `eickrono-identidade-servidor` na imagem
-  `531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-identidade-servidor:hml-20260515-sem-produto-login-01`;
-- atualizado o ECS service `identidade-hml`;
-- task definition ativa apos o rollout: `identidade-hml:40`;
+  `531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-identidade-servidor:stg-20260515-sem-produto-login-01`;
+- atualizado o ECS service `identidade-stg`;
+- task definition ativa apos o rollout: `identidade-stg:40`;
 - estado do rollout no ECS: `COMPLETED`;
-- validado `https://id-hml.eickrono.store/api/v1/estado`;
-- validado `https://oidc-hml.eickrono.store/realms/eickrono/eickrono-runtime/estado`;
-- validado `https://thimisu-backend-hml.eickrono.store/api/v1/estado`;
-- logs recentes do `identidade-hml` mostram inicializacao concluida, Flyway sem
+- validado `https://id-stg.eickrono.store/api/v1/estado`;
+- validado `https://oidc-stg.eickrono.store/realms/eickrono/eickrono-runtime/estado`;
+- validado `https://thimisu-backend-stg.eickrono.store/api/v1/estado`;
+- logs recentes do `identidade-stg` mostram inicializacao concluida, Flyway sem
   migracao pendente e sem erro imediato apos a subida.
 
 Validacao no iPhone fisico:
 
-- gerada build iOS `profile` com `CONFIG_AMBIENTE=hml`;
+- gerada build iOS `profile` com `CONFIG_AMBIENTE=stg`;
 - instalada no iPhone fisico `Pedroso-cel`;
 - app aberto com bundle `com.eickrono.thimisu`;
-- tentativa real de login social Apple em HML concluiu autenticacao social;
+- tentativa real de login social Apple em STG concluiu autenticacao social;
 - o app chamou `/identidade/dispositivos/registro/silencioso`;
 - o registro silencioso concluiu com emissao de token de dispositivo;
 - o app navegou para `/`;
-- logs do `identidade-hml` registraram:
+- logs do `identidade-stg` registraram:
   - `login_social_publico_sessao_emitida`;
   - token de dispositivo revogado por substituicao;
   - novo token de dispositivo emitido;
-- logs do `thimisu-backend-hml` no mesmo intervalo nao registraram chamada para
+- logs do `thimisu-backend-stg` no mesmo intervalo nao registraram chamada para
   `/api/interna/perfis-sistema/contexto`;
 - portanto, o caso que antes retornava `500` em
-  `/identidade/dispositivos/registro/silencioso` foi validado em HML no iPhone
+  `/identidade/dispositivos/registro/silencioso` foi validado em STG no iPhone
   fisico.
 
 ### Etapa 1 - Congelar o erro com testes
@@ -628,7 +628,7 @@ Testes esperados depois dos servidores corrigidos:
 - conta recente local usa `usuario` como login reutilizavel;
 - biometria continua validando conta local e sessao compativel.
 
-## Validacao manual em HML
+## Validacao manual em STG
 
 Antes do deploy:
 
@@ -644,7 +644,7 @@ Deploy recomendado:
 3. `eickrono-thimisu-backend` somente se houver ajuste de provisionamento, nao
    como dependencia para login.
 
-Smoke test em HML:
+Smoke test em STG:
 
 1. autenticar com Google/Apple de conta ja vinculada;
 2. autenticar com Google/Apple sem conta local;
@@ -668,7 +668,7 @@ Smoke test em HML:
   provisionamento;
 - testes de `eickrono-autenticacao-servidor` e `eickrono-identidade-servidor`
   passam sem `thimisu-backend`;
-- logs de HML confirmam ausencia de chamada ao produto no login de
+- logs de STG confirmam ausencia de chamada ao produto no login de
   autenticacao/identidade.
 
 ## Fora do escopo desta correcao

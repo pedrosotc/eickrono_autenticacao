@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Profile;
  * Configuração do SpringDoc para ambientes não produtivos.
  */
 @Configuration
-@Profile({"dev", "hml"})
+@Profile({"dev", "stg"})
 public class SwaggerConfiguracao {
 
     @Bean

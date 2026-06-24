@@ -98,7 +98,7 @@ class EcsClientFake:
             "failures": [],
             "tasks": [
                 {
-                    "taskArn": "arn:aws:ecs:task/eickrono-hml/validacao-1",
+                    "taskArn": "arn:aws:ecs:task/eickrono-stg/validacao-1",
                 }
             ],
         }
@@ -137,7 +137,7 @@ def cloudwatch_logs_event(*messages):
     payload = {
         "messageType": "DATA_MESSAGE",
         "owner": "531708494702",
-        "logGroup": "/ecs/hml/identidade",
+        "logGroup": "/ecs/stg/identidade",
         "logStream": "ecs/identidade/task-1",
         "logEvents": [
             {
@@ -161,15 +161,15 @@ def processar(evento, ecs_client, ssm_client, agora=1000.0):
         evento,
         ecs_client=ecs_client,
         ssm_client=ssm_client,
-        cluster="eickrono-hml",
-        services=["autenticacao-api-hml", "identidade-hml"],
-        cooldown_parameter_name="/eickrono/hml/rds/fallback/last-run",
+        cluster="eickrono-stg",
+        services=["autenticacao-api-stg", "identidade-stg"],
+        cooldown_parameter_name="/eickrono/stg/rds/fallback/last-run",
         cooldown_segundos=900,
-        validation_task_definition="eickrono-hml-db-query-codex:1",
+        validation_task_definition="eickrono-stg-db-query-codex:1",
         validation_container_name="psql",
         validation_subnets=["subnet-1", "subnet-2"],
         validation_security_groups=["sg-1"],
-        validation_database="eickrono_identidade_hml",
+        validation_database="eickrono_identidade_stg",
         waiter_delay_seconds=3,
         waiter_max_attempts=4,
         agora=agora,
@@ -200,13 +200,13 @@ class RdsPasswordAuthFailureFallbackLambdaTest(unittest.TestCase):
         self.assertTrue(result["matched"])
         self.assertTrue(result["redeployed"])
         self.assertEqual(
-            ["autenticacao-api-hml", "identidade-hml"],
+            ["autenticacao-api-stg", "identidade-stg"],
             result["servicesRedeployed"],
         )
         self.assertEqual(1, len(ecs_client.run_task_calls))
         run_call = ecs_client.run_task_calls[0]
-        self.assertEqual("eickrono-hml", run_call["cluster"])
-        self.assertEqual("eickrono-hml-db-query-codex:1", run_call["taskDefinition"])
+        self.assertEqual("eickrono-stg", run_call["cluster"])
+        self.assertEqual("eickrono-stg-db-query-codex:1", run_call["taskDefinition"])
         self.assertEqual(
             ["subnet-1", "subnet-2"],
             run_call["networkConfiguration"]["awsvpcConfiguration"]["subnets"],
@@ -214,13 +214,13 @@ class RdsPasswordAuthFailureFallbackLambdaTest(unittest.TestCase):
         self.assertEqual(
             [
                 {
-                    "cluster": "eickrono-hml",
-                    "service": "autenticacao-api-hml",
+                    "cluster": "eickrono-stg",
+                    "service": "autenticacao-api-stg",
                     "forceNewDeployment": True,
                 },
                 {
-                    "cluster": "eickrono-hml",
-                    "service": "identidade-hml",
+                    "cluster": "eickrono-stg",
+                    "service": "identidade-stg",
                     "forceNewDeployment": True,
                 },
             ],
@@ -228,18 +228,18 @@ class RdsPasswordAuthFailureFallbackLambdaTest(unittest.TestCase):
         )
         self.assertEqual(
             [
-                ("wait_tasks", ("arn:aws:ecs:task/eickrono-hml/validacao-1",)),
-                ("update", "autenticacao-api-hml"),
-                ("wait_service", "eickrono-hml", ("autenticacao-api-hml",), 3, 4),
-                ("update", "identidade-hml"),
-                ("wait_service", "eickrono-hml", ("identidade-hml",), 3, 4),
+                ("wait_tasks", ("arn:aws:ecs:task/eickrono-stg/validacao-1",)),
+                ("update", "autenticacao-api-stg"),
+                ("wait_service", "eickrono-stg", ("autenticacao-api-stg",), 3, 4),
+                ("update", "identidade-stg"),
+                ("wait_service", "eickrono-stg", ("identidade-stg",), 3, 4),
             ],
             ecs_client.operations,
         )
         self.assertEqual(
             [
                 {
-                    "Name": "/eickrono/hml/rds/fallback/last-run",
+                    "Name": "/eickrono/stg/rds/fallback/last-run",
                     "Value": "1000.0",
                     "Type": "String",
                     "Overwrite": True,

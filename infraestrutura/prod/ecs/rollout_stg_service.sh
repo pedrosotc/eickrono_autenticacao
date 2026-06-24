@@ -4,10 +4,10 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-uso: rollout_hml_service.sh --service <auth|identidade|thimisu-backend> --image <ecr-image:tag> [opcoes]
+uso: rollout_stg_service.sh --service <auth|identidade|thimisu-backend> --image <ecr-image:tag> [opcoes]
 
 opcoes:
-  --cluster <nome>             cluster ECS (default: eickrono-hml)
+  --cluster <nome>             cluster ECS (default: eickrono-stg)
   --region <aws-region>        regiao AWS (default: sa-east-1)
   --ecs-service <nome>         nome do service ECS; default = family do task definition
   --db-overrides-file <arq>    carrega overrides de banco a partir de arquivo shell
@@ -22,7 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROD_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LOG_WRAPPER="${PROD_DIR}/log_comando_runbook.sh"
 
-cluster="eickrono-hml"
+cluster="eickrono-stg"
 region="sa-east-1"
 service_key=""
 image=""
@@ -98,40 +98,40 @@ if [ -n "$db_overrides_file" ]; then
   set +a
 fi
 
-hml_shared_db_host="${HML_SHARED_DB_HOST:-eickrono-hml-postgres.cdu8yi4qkl16.sa-east-1.rds.amazonaws.com}"
-hml_shared_db_port="${HML_SHARED_DB_PORT:-5432}"
-hml_shared_db_password_secret_arn="${HML_SHARED_DB_PASSWORD_SECRET_ARN:-arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-7df15f56-c831-40b7-be42-ebd935108b06-22Dwvf:password::}"
+stg_shared_db_host="${STG_SHARED_DB_HOST:-eickrono-stg-postgres.cdu8yi4qkl16.sa-east-1.rds.amazonaws.com}"
+stg_shared_db_port="${STG_SHARED_DB_PORT:-5432}"
+stg_shared_db_password_secret_arn="${STG_SHARED_DB_PASSWORD_SECRET_ARN:-arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-7df15f56-c831-40b7-be42-ebd935108b06-22Dwvf:password::}"
 
-auth_kc_db_host="${AUTH_KC_DB_HOST:-$hml_shared_db_host}"
-auth_kc_db_port="${AUTH_KC_DB_PORT:-$hml_shared_db_port}"
-auth_kc_db_name="${AUTH_KC_DB_NAME:-keycloak_hml}"
+auth_kc_db_host="${AUTH_KC_DB_HOST:-$stg_shared_db_host}"
+auth_kc_db_port="${AUTH_KC_DB_PORT:-$stg_shared_db_port}"
+auth_kc_db_name="${AUTH_KC_DB_NAME:-keycloak_stg}"
 auth_kc_db_username="${AUTH_KC_DB_USERNAME:-eickrono_admin}"
-auth_kc_db_password_secret_arn="${AUTH_KC_DB_PASSWORD_SECRET_ARN:-$hml_shared_db_password_secret_arn}"
+auth_kc_db_password_secret_arn="${AUTH_KC_DB_PASSWORD_SECRET_ARN:-$stg_shared_db_password_secret_arn}"
 
-identidade_db_host="${IDENTIDADE_DB_HOST:-$hml_shared_db_host}"
-identidade_db_port="${IDENTIDADE_DB_PORT:-$hml_shared_db_port}"
-identidade_db_name="${IDENTIDADE_DB_NAME:-eickrono_identidade_hml}"
+identidade_db_host="${IDENTIDADE_DB_HOST:-$stg_shared_db_host}"
+identidade_db_port="${IDENTIDADE_DB_PORT:-$stg_shared_db_port}"
+identidade_db_name="${IDENTIDADE_DB_NAME:-eickrono_identidade_stg}"
 identidade_db_username="${IDENTIDADE_DB_USERNAME:-eickrono_admin}"
-identidade_db_password_secret_arn="${IDENTIDADE_DB_PASSWORD_SECRET_ARN:-$hml_shared_db_password_secret_arn}"
+identidade_db_password_secret_arn="${IDENTIDADE_DB_PASSWORD_SECRET_ARN:-$stg_shared_db_password_secret_arn}"
 
-thimisu_db_host="${THIMISU_DB_HOST:-$hml_shared_db_host}"
-thimisu_db_port="${THIMISU_DB_PORT:-$hml_shared_db_port}"
-thimisu_db_name="${THIMISU_DB_NAME:-eickrono_thimisu_hml}"
+thimisu_db_host="${THIMISU_DB_HOST:-$stg_shared_db_host}"
+thimisu_db_port="${THIMISU_DB_PORT:-$stg_shared_db_port}"
+thimisu_db_name="${THIMISU_DB_NAME:-eickrono_thimisu_stg}"
 thimisu_db_username="${THIMISU_DB_USERNAME:-eickrono_admin}"
-thimisu_db_password_secret_arn="${THIMISU_DB_PASSWORD_SECRET_ARN:-$hml_shared_db_password_secret_arn}"
+thimisu_db_password_secret_arn="${THIMISU_DB_PASSWORD_SECRET_ARN:-$stg_shared_db_password_secret_arn}"
 
 identidade_db_url="jdbc:postgresql://${identidade_db_host}:${identidade_db_port}/${identidade_db_name}"
 thimisu_db_url="jdbc:postgresql://${thimisu_db_host}:${thimisu_db_port}/${thimisu_db_name}"
 
 case "$service_key" in
   auth)
-    template="${SCRIPT_DIR}/auth-task-definition.hml.json"
+    template="${SCRIPT_DIR}/auth-task-definition.stg.json"
     ;;
   identidade)
-    template="${SCRIPT_DIR}/identidade-task-definition.hml.json"
+    template="${SCRIPT_DIR}/identidade-task-definition.stg.json"
     ;;
   thimisu-backend)
-    template="${SCRIPT_DIR}/thimisu-backend-task-definition.hml.json"
+    template="${SCRIPT_DIR}/thimisu-backend-task-definition.stg.json"
     ;;
   *)
     echo "service invalido: ${service_key}" >&2
@@ -227,8 +227,8 @@ run_cmd() {
     return 0
   fi
 
-  if [ -n "${EICKRONO_HML_HISTORICO:-}" ] && [ -f "$LOG_WRAPPER" ]; then
-    "$LOG_WRAPPER" "$EICKRONO_HML_HISTORICO" "$@"
+  if [ -n "${EICKRONO_STG_HISTORICO:-}" ] && [ -f "$LOG_WRAPPER" ]; then
+    "$LOG_WRAPPER" "$EICKRONO_STG_HISTORICO" "$@"
     return $?
   fi
 

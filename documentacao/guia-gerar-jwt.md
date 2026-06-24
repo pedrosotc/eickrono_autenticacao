@@ -1,6 +1,6 @@
 # Guia: Gerar um JWT para testes
 
-Este passo a passo foi escrito para quem está gerando tokens pela primeira vez. Ele mostra como usar o Keycloak local (ambiente `dev`) e, ao final, explica as diferenças para homologação (`hml`).
+Este passo a passo foi escrito para quem está gerando tokens pela primeira vez. Ele mostra como usar o Keycloak local (ambiente `dev`) e, ao final, explica as diferenças para staging (`stg`).
 
 ### Mapa rápido dos passos
 
@@ -426,73 +426,73 @@ curl -s -o /dev/null -w '%{http_code}\n' \
   http://127.0.0.1:8081/api/conta/vinculos-organizacionais
 ```
 
-## 10. Adaptando para homologação (`hml`)
+## 10. Adaptando para staging (`stg`)
 
-1. **Suba o stack de homologação local**  
+1. **Suba o stack de staging**
    ```bash
-   cd infraestrutura/hml
+   cd infraestrutura/stg
    docker compose up --build -d
    ```
-   Esse ambiente replica os certificados e variáveis usados em homologação real.
+   Esse ambiente replica os certificados e variáveis usados em staging real.
 
-2. **Ajuste DNS/hosts para o hostname externo**  
-   - Adicione a linha `127.0.0.1  oidc-hml.eickrono.store` em `/etc/hosts` (ou configure seu proxy corporativo) para que o navegador resolva o domínio quando estiver testando localmente.
+2. **Ajuste DNS/hosts para o hostname externo**
+   - Adicione a linha `127.0.0.1  oidc-stg.eickrono.store` em `/etc/hosts` (ou configure seu proxy corporativo) para que o navegador resolva o domínio quando estiver testando localmente.
 
-3. **Acesse o admin do Keycloak de homologação**  
-   - URL: `https://oidc-hml.eickrono.store/admin/`  
-   - Realm: `eickrono`  
-   - Credenciais: utilize o usuário administrador exclusivo de `hml` (definido no cofre corporativo). Não reaproveite o admin de `dev`.
+3. **Acesse o admin do Keycloak de staging**
+   - URL: `https://oidc-stg.eickrono.store/admin/`
+   - Realm: `eickrono`
+   - Credenciais: utilize o usuário administrador exclusivo de `stg` (definido no cofre corporativo). Não reaproveite o admin de `dev`.
 
-4. **Replique o cliente com o nome do ambiente**  
-   - Siga as etapas da seção 3 escolhendo um `client_id` coerente (ex.: `app-flutter-hml`).  
-   - Garanta que os redirecionamentos (`Valid redirect URIs`) apontem para os domínios de homologação (`https://auth-hml.eickrono.store/*`, `http://localhost/*` se precisar testar localmente via tunnel).
-   - Segredo, roles e escopos são próprios desse ambiente: gere novos valores em **Credentials** e atribua as roles conforme a política de homologação.
+4. **Replique o cliente com o nome do ambiente**
+   - Siga as etapas da seção 3 escolhendo um `client_id` coerente (ex.: `app-flutter-stg`).
+   - Garanta que os redirecionamentos (`Valid redirect URIs`) apontem para os domínios de staging (`https://auth-stg.eickrono.store/*`, `http://localhost/*` se precisar testar localmente via tunnel).
+   - Segredo, roles e escopos são próprios desse ambiente: gere novos valores em **Credentials** e atribua as roles conforme a política de staging.
 
-5. **Atualize as requisições `curl`**  
+5. **Atualize as requisições `curl`**
    ```bash
-   CLIENT_SECRET='<segredo_de_hml>'
-   curl -X POST https://oidc-hml.eickrono.store/realms/eickrono/protocol/openid-connect/token \
+   CLIENT_SECRET='<segredo_de_stg>'
+   curl -X POST https://oidc-stg.eickrono.store/realms/eickrono/protocol/openid-connect/token \
      -H 'Content-Type: application/x-www-form-urlencoded' \
-     -d 'client_id=app-flutter-hml' \
+     -d 'client_id=app-flutter-stg' \
      -d "client_secret=${CLIENT_SECRET}" \
      -d 'grant_type=client_credentials' \
      -d 'scope=openid contas:ler identidade:ler'
    ```
    - Substitua `grant_type` e escopos conforme o fluxo que estiver exercitando.
 
-6. **Use credenciais e usuários específicos de homologação**  
-   - Crie usuários de teste próprios para `hml` (ex.: `teste.hml`).  
+6. **Use credenciais e usuários específicos de staging**
+   - Crie usuários de teste próprios para `stg` (ex.: `teste.stg`).
    - Configure senhas e escopos respeitando as mesmas regras de produção (sem habilitar `Temporary = On`).
 
 ## 11. Adaptando para produção (`prd`)
 
-1. **Acesso restrito**  
+1. **Acesso restrito**
    - O Keycloak de produção (realm `eickrono`) não fica exposto para uso local. Apenas administradores autorizados podem acessar via VPN corporativa e console oficial. Solicite acesso ao time de Segurança antes de qualquer alteração.
 
-2. **Criação e ajustes de clientes**  
-   - Siga o mesmo checklist do ambiente `hml`, porém utilize `client_id` com o sufixo `-prd` (ex.: `app-flutter-prd`).  
-   - `Valid redirect URIs` e `Web origins` devem apontar apenas para domínios oficiais (`https://id.eickrono.com/*`, `https://oidc.eickrono.com/*`).  
+2. **Criação e ajustes de clientes**
+   - Siga o mesmo checklist do ambiente `stg`, porém utilize `client_id` com o sufixo `-prd` (ex.: `app-flutter-prd`).
+   - `Valid redirect URIs` e `Web origins` devem apontar apenas para domínios oficiais (`https://id.eickrono.com/*`, `https://oidc.eickrono.com/*`).
    - Preserve o mínimo de capabilities: evite habilitar `Direct access grants` em produção; use principalmente `Standard flow` (para apps interativos) e `Service accounts roles` (para integrações sem usuário).
 
-3. **Segredos e guarda segura**  
-   - Gere os segredos em **Credentials** e armazene no cofre corporativo (ex.: HashiCorp Vault / AWS Secrets Manager).  
+3. **Segredos e guarda segura**
+   - Gere os segredos em **Credentials** e armazene no cofre corporativo (ex.: HashiCorp Vault / AWS Secrets Manager).
    - Nunca comite segredos de produção em repositórios.
 
-4. **Usuários e roles**  
-   - Usuários finais não são gerenciados manualmente em produção; utilize somente usuários de serviço estritamente necessários.  
+4. **Usuários e roles**
+   - Usuários finais não são gerenciados manualmente em produção; utilize somente usuários de serviço estritamente necessários.
    - As roles (ex.: `contas:ler`, `identidade:ler`) devem estar alinhadas às políticas aprovadas pelo time jurídico/segurança.
 
-5. **Requisições de token**  
-   - Os endpoints seguem o mesmo padrão, trocando o host e o realm:  
-     `https://oidc.eickrono.com/realms/eickrono/protocol/openid-connect/token`.  
+5. **Requisições de token**
+   - Os endpoints seguem o mesmo padrão, trocando o host e o realm:
+     `https://oidc.eickrono.com/realms/eickrono/protocol/openid-connect/token`.
    - Todos os chamados devem ocorrer a partir de infra autorizada (BFF, backoffice, serviços internos). Evite rodar `curl` diretamente na máquina local sem VPN/aprovação.
 
-6. **Auditoria e monitoração**  
-   - Registre cada cliente criado com justificativa e responsável. O monitoramento de produção dispara alertas se surgirem clientes novos sem ticket associado.  
+6. **Auditoria e monitoração**
+   - Registre cada cliente criado com justificativa e responsável. O monitoramento de produção dispara alertas se surgirem clientes novos sem ticket associado.
    - Se um segredo for vazado, revogue o cliente imediatamente e acione o processo de resposta a incidentes.
 
-7. **Boas práticas finais**  
-   - Repita em produção apenas o que já foi validado em `hml`.  
+7. **Boas práticas finais**
+   - Repita em produção apenas o que já foi validado em `stg`.
    - Mantenha documentação atualizada com os `client_id` ativos, responsáveis e escopos concedidos.
 
 ## 11. Dicas de validação

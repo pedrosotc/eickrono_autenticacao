@@ -1,6 +1,6 @@
 # Guia de depuração com Eclipse
 
-Este guia mostra como preparar os ambientes Docker (desenvolvimento e homologação) e configurar o Eclipse para depurar os projetos Java do ecossistema **Eickrono Autenticação**. O passo a passo assume nível júnior e cobre desde o build até o uso dos endpoints Swagger para validação manual.
+Este guia mostra como preparar os ambientes Docker (desenvolvimento e staging) e configurar o Eclipse para depurar os projetos Java do ecossistema **Eickrono Autenticação**. O passo a passo assume nível júnior e cobre desde o build até o uso dos endpoints Swagger para validação manual.
 
 ## Nota de nomenclatura operacional
 
@@ -63,12 +63,12 @@ Os artefatos serão gerados em `target/`, prontos para serem copiados ou montado
 
 Se precisar alterar as portas de depuração, edite `API_AUTENTICACAO_DEBUG_PORT` ou `API_CONTAS_DEBUG_PORT` em `.env` antes de subir os containers. Os nomes `API_IDENTIDADE_*` ainda funcionam como fallback transitório. Para pausar a JVM logo no início (`suspend=y`), ajuste a linha `JAVA_OPTS` correspondente em `docker-compose.yml`.
 
-## 4. Ambiente Docker de homologação local
+## 4. Ambiente Docker de staging
 
-O cenário `hml` replica a configuração com parâmetros de homologação (URLs, schemas, certificados).
+O cenário `stg` replica a configuração com parâmetros de staging (URLs, schemas, certificados).
 
-1. Vá para `infraestrutura/hml`.
-2. Revise o arquivo `.env` para ajustes locais do ambiente `hml`, se necessario.
+1. Vá para `infraestrutura/stg`.
+2. Revise o arquivo `.env` para ajustes locais do ambiente `stg`, se necessario.
 3. Execute:
    ```bash
    docker compose up --build -d
@@ -76,15 +76,15 @@ O cenário `hml` replica a configuração com parâmetros de homologação (URLs
 4. Acompanhe a inicialização com `docker compose logs -f`.
 5. Parar os serviços: `docker compose down -v`.
 
-### Portas expostas em homologação local
+### Portas expostas em staging
 
-- `localhost:8080`: Keycloak (hostname configurado para `https://oidc-hml.eickrono.store`).
+- `localhost:8080`: Keycloak (hostname configurado para `https://oidc-stg.eickrono.store`).
 - `localhost:18081`: API pública de autenticação (HTTP).
 - `localhost:18082`: API Contas (HTTP, opcional).
 - `localhost:5005`: depuração remota da API pública de autenticação.
 - `localhost:5006`: depuração remota da API Contas (opcional).
 
-Os containers reutilizam o mesmo par de portas de depuração. Evite subir os ambientes `dev` e `hml` ao mesmo tempo ou personalize as variáveis em `.env`.
+Os containers reutilizam o mesmo par de portas de depuração. Evite subir os ambientes `dev` e `stg` ao mesmo tempo ou personalize as variáveis em `.env`.
 
 ## 5. Configurando a depuração remota no Eclipse
 
@@ -93,7 +93,7 @@ Os containers reutilizam o mesmo par de portas de depuração. Evite subir os am
 1. Construa os artefatos atualizados nos repositórios standalone. O Dockerfile/compose usa os JARs em `target`, então eles precisam estar frescos.
 2. Suba ou reinicie o serviço no Docker para aplicar o `JAVA_OPTS` com o agente de debug:
    ```bash
-   cd infraestrutura/dev        # ou infraestrutura/hml
+   cd infraestrutura/dev        # ou infraestrutura/stg
    docker compose up --build -d eickrono-autenticacao
    ```
    Sempre que mudar variáveis ou precisar “resetar” o JDWP, use `docker compose restart <serviço>`.
@@ -106,7 +106,7 @@ Os containers reutilizam o mesmo par de portas de depuração. Evite subir os am
 
 ### Criando a configuração no Eclipse
 
-1. Certifique-se de que o Docker Compose correspondente (`dev` ou `hml`) está rodando.
+1. Certifique-se de que o Docker Compose correspondente (`dev` ou `stg`) está rodando.
 2. No Eclipse, abra `Run > Debug Configurations...`.
 3. Em `Remote Java Application`, clique em `New`.
 4. Preencha:
@@ -152,15 +152,15 @@ Os containers reutilizam o mesmo par de portas de depuração. Evite subir os am
 |----------|---------|----------------|---------|-------|
 | Dev      | API Autenticação | `http://127.0.0.1:8081/swagger-ui/index.html` | (Básico liberado) | (não requer) |
 | Dev      | API Contas       | `http://localhost:8082/swagger-ui/index.html` | (Básico liberado) | (não requer) |
-| HML      | API Autenticação | `http://localhost:18081/swagger-ui/index.html` | `swagger` | `swagger-hml` |
-| HML      | API Contas       | `http://localhost:18082/swagger-ui/index.html` | `swagger` | `swagger-hml` |
+| STG      | API Autenticação | `http://localhost:18081/swagger-ui/index.html` | `swagger` | `swagger-stg` |
+| STG      | API Contas       | `http://localhost:18082/swagger-ui/index.html` | `swagger` | `swagger-stg` |
 
 Observações:
 
 - Os endpoints OpenAPI JSON estão disponíveis em `/v3/api-docs`.
-- Em homologação (`hml`), o Swagger exige autenticação Basic: clique em “Authorize” (ícone do cadeado) e informe usuário/senha acima.
-- Para alterar usuário ou senha de homologação, edite as chaves `documentacao.swagger.usuario` e `documentacao.swagger.senha` em `../eickrono-autenticacao-servidor/modulos/modulo-eickrono-autenticacao/src/main/resources/application-hml.yml` e `../eickrono-contas-servidor/src/main/resources/application-hml.yml`, rode `mvn package` e reconstrua os containers (`docker compose build` / `up -d`).
-- Tanto em dev quanto em hml, os endpoints protegidos requerem um JWT válido: após se autenticar, clique em “Authorize”, selecione `bearer-jwt` e informe `Bearer <token>`. Você pode obter tokens via Keycloak (ex.: fluxo Authorization Code pelo app/BFF ou `curl` no `token` endpoint com cliente confidencial configurado).
+- Em staging (`stg`), o Swagger exige autenticação Basic: clique em “Authorize” (ícone do cadeado) e informe usuário/senha acima.
+- Para alterar usuário ou senha de staging, edite as chaves `documentacao.swagger.usuario` e `documentacao.swagger.senha` em `../eickrono-autenticacao-servidor/modulos/modulo-eickrono-autenticacao/src/main/resources/application-stg.yml` e `../eickrono-contas-servidor/src/main/resources/application-stg.yml`, rode `mvn package` e reconstrua os containers (`docker compose build` / `up -d`).
+- Tanto em dev quanto em stg, os endpoints protegidos requerem um JWT válido: após se autenticar, clique em “Authorize”, selecione `bearer-jwt` e informe `Bearer <token>`. Você pode obter tokens via Keycloak (ex.: fluxo Authorization Code pelo app/BFF ou `curl` no `token` endpoint com cliente confidencial configurado).
 - Para facilitar testes locais, adicione tokens recentes na aba `Authorize`. Se mudar o token durante a sessão, clique em “Logout” no modal antes de colar o novo valor.
 
 ### Sequência rápida após mudanças no código
@@ -196,12 +196,12 @@ curl -X POST http://localhost:8080/realms/eickrono/protocol/openid-connect/token
   -d 'scope=openid contas:ler identidade:ler'
 ```
 
-> Em `hml`, ajuste a URL para `https://oidc-hml.eickrono.store/realms/eickrono/...`, use as credenciais do ambiente e lembre-se de atualizar `/etc/hosts` ou o proxy corporativo caso precise resolver o hostname externo.
+> Em `stg`, ajuste a URL para `https://oidc-stg.eickrono.store/realms/eickrono/...`, use as credenciais do ambiente e lembre-se de atualizar `/etc/hosts` ou o proxy corporativo caso precise resolver o hostname externo.
 
 ## 7. Fluxo resumido para o dia a dia
 
 1. Empacote `modulo-eickrono-autenticacao` com `mvn -pl modulos/modulo-eickrono-autenticacao -am package -DskipTests`
-2. `cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev` (ou `hml`) e `docker compose up --build -d`
+2. `cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev` (ou `stg`) e `docker compose up --build -d`
 3. Criar/abrir a configuração de depuração remota no Eclipse e conectar.
 4. Usar o Swagger correspondente para exercitar as rotas e validar os breakpoints.
 5. Finalizado o debug, `docker compose down -v` e feche a sessão no Eclipse.
@@ -238,7 +238,7 @@ Seguindo estes passos, você terá o ambiente completo pronto para depurar, vali
 Use estes comandos para renovar o ambiente sem depender da GUI do Docker Desktop:
 
 ```bash
-# (executar dentro de infraestrutura/dev ou infraestrutura/hml)
+# (executar dentro de infraestrutura/dev ou infraestrutura/stg)
 
 # Atualiza os JARs
 cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/modulos/modulo-eickrono-autenticacao && mvn package -DskipTests
@@ -263,7 +263,7 @@ Após qualquer alteração relevante:
 1. **Testes automatizados Maven**  
    - `mvn verify` para garantir que unitários, integrações, Checkstyle e SpotBugs continuam passando.
 2. **Health checks**  
-  - `curl http://127.0.0.1:8081/actuator/health` (dev) ou `curl http://127.0.0.1:18081/actuator/health` (hml).
+  - `curl http://127.0.0.1:8081/actuator/health` (dev) ou `curl http://127.0.0.1:18081/actuator/health` (stg).
   - Se `api-contas-eickrono` estiver ativo, repita para `8082` / `18082`.
 3. **Fluxos via Swagger**  
    - Acesse as URLs da tabela da seção 6, faça login com as credenciais informadas e execute endpoints básicos (ex.: listar contas, registrar dispositivo).

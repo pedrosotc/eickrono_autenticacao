@@ -2,8 +2,8 @@
 set -euo pipefail
 
 DIAS_VALIDOS=${1:-825}
-SENHA_KEYSTORE=${MTLS_KEYSTORE_SENHA:-senhaBackchannelHml}
-SENHA_TRUSTSTORE=${MTLS_TRUSTSTORE_SENHA:-senhaBackchannelHml}
+SENHA_KEYSTORE=${MTLS_KEYSTORE_SENHA:-senhaBackchannelStg}
+SENHA_TRUSTSTORE=${MTLS_TRUSTSTORE_SENHA:-senhaBackchannelStg}
 
 DIR_ATUAL=$(cd "$(dirname "$0")" && pwd)
 cd "${DIR_ATUAL}"
@@ -39,7 +39,7 @@ openssl req -x509 -newkey rsa:4096 \
   -days "${DIAS_VALIDOS}" \
   -nodes \
   -sha256 \
-  -subj "/CN=eickrono-backchannel-hml-ca/O=Eickrono/OU=Homologacao"
+  -subj "/CN=eickrono-backchannel-stg-ca/O=Eickrono/OU=Staging"
 
 gerar_certificado() {
   local nome="$1"
@@ -58,7 +58,7 @@ prompt = no
 [req_distinguished_name]
 CN = ${common_name}
 O = Eickrono
-OU = Homologacao
+OU = Staging
 
 [v3_req]
 subjectAltName = ${san}
@@ -98,25 +98,25 @@ EOF
 gerar_certificado \
   "eickrono-autenticacao" \
   "eickrono-autenticacao" \
-  "DNS:eickrono-autenticacao,DNS:auth-hml-interno,DNS:auth-hml-interno.hml.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
+  "DNS:eickrono-autenticacao,DNS:auth-stg-interno,DNS:auth-stg-interno.stg.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
   "serverAuth,clientAuth"
 
 gerar_certificado \
   "api-identidade-eickrono" \
   "api-identidade-eickrono" \
-  "DNS:api-identidade-eickrono,DNS:id-hml-interno,DNS:id-hml-interno.hml.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
+  "DNS:api-identidade-eickrono,DNS:id-stg-interno,DNS:id-stg-interno.stg.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
   "serverAuth,clientAuth"
 
 gerar_certificado \
   "thimisu-backend" \
   "thimisu-backend" \
-  "DNS:thimisu-backend,DNS:thimisu-backend-hml-interno,DNS:thimisu-backend-hml-interno.hml.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
+  "DNS:thimisu-backend,DNS:thimisu-backend-stg-interno,DNS:thimisu-backend-stg-interno.stg.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
   "serverAuth,clientAuth"
 
 gerar_certificado \
   "eickrono-keycloak" \
   "eickrono-keycloak" \
-  "DNS:eickrono-keycloak,DNS:auth-hml-interno,DNS:auth-hml-interno.hml.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
+  "DNS:eickrono-keycloak,DNS:auth-stg-interno,DNS:auth-stg-interno.stg.eickrono.internal,DNS:host.docker.internal,DNS:localhost,IP:127.0.0.1" \
   "clientAuth"
 
 keytool -importcert -noprompt \
@@ -129,5 +129,5 @@ keytool -importcert -noprompt \
 echo "Certificados e truststore do backchannel gerados em ${DIR_ATUAL}"
 echo "Se a stack local ja estiver em execucao, recrie os containers que usam mTLS para recarregar keystore/truststore."
 echo "Exemplos:"
-echo "  cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml && docker compose up -d --force-recreate eickrono-autenticacao identidade-servidor eickrono-keycloak"
-echo "  cd /Users/thiago/Desenvolvedor/flutter/eickrono-thimisu-backend/infraestrutura/hml && docker compose up -d --force-recreate thimisu-backend"
+echo "  cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/stg && docker compose up -d --force-recreate eickrono-autenticacao identidade-servidor eickrono-keycloak"
+echo "  cd /Users/thiago/Desenvolvedor/flutter/eickrono-thimisu-backend/infraestrutura/stg && docker compose up -d --force-recreate thimisu-backend"

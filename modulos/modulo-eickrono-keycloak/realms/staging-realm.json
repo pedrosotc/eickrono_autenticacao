@@ -1,7 +1,7 @@
 {
   "realm": "eickrono",
   "enabled": true,
-  "displayName": "Realm Homologação Eickrono",
+  "displayName": "Realm Staging Eickrono",
   "passwordPolicy": "hashAlgorithm(argon2)",
   "loginWithEmailAllowed": true,
   "registrationAllowed": true,
@@ -710,9 +710,9 @@
       "secret": "${KEYCLOAK_CLIENT_EICKRONO_KEYCLOAK_SECRET}"
     },
     {
-      "clientId": "app-flutter-hml",
-      "name": "App Flutter (hml)",
-      "description": "Aplicativo Flutter homologação consumindo APIs Identidade/Contas",
+      "clientId": "app-flutter-stg",
+      "name": "App Flutter (stg)",
+      "description": "Aplicativo Flutter staging consumindo APIs Identidade/Contas",
       "enabled": true,
       "publicClient": true,
       "bearerOnly": false,
@@ -750,8 +750,8 @@
       "redirectUris": [
         "com.eickrono.thimisu:/oauth2redirect",
         "com.eickrono.thimisu:/logout",
-        "com.eickrono.thimisu.hml:/oauth2redirect",
-        "com.eickrono.thimisu.hml:/logout"
+        "com.eickrono.thimisu.stg:/oauth2redirect",
+        "com.eickrono.thimisu.stg:/logout"
       ],
       "webOrigins": [],
       "optionalClientScopes": [

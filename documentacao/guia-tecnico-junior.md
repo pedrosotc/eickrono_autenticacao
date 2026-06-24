@@ -14,7 +14,7 @@ Este documento introduz a arquitetura e o funcionamento da plataforma de autenti
   - `autorizacao/`: artefatos de runtime do Keycloak (realms, tema, políticas e scripts).
   - `../eickrono-identidade-servidor`: serviço de identidade e contexto canônico, ainda usado em partes do runtime atual e da migração.
   - `../eickrono-contas-servidor`: domínio separado de contas e transações, sem fazer parte da fronteira interna da autenticação.
-  - `infraestrutura/`: scripts para ambientes locais (dev/hml) e pastas guia para produção (AWS + Cloudflare).
+  - `infraestrutura/`: scripts para execução via Docker de `dev` e `stg`, além de pastas guia para produção (AWS + Cloudflare).
 - **Documentação**: guias de arquitetura, desenvolvimento, operação e checklist FAPI em `documentacao/`.
 
 ## Como o sistema funciona
@@ -101,7 +101,7 @@ O desenho canônico atual não usa uma tela dedicada de registro de dispositivo 
 - **Authorization Code + PKCE**: fluxo OAuth 2.1 onde o cliente gera `code_verifier`/`code_challenge` para evitar interceptação do código de autorização.
 - **Auditoria**: registro de eventos de segurança (quem acessou, o que fez, quando). Implementada nas APIs e no Keycloak.
 - **BFF (Backend for Frontend)**: backend dedicado ao front web que age como cliente confidencial da plataforma.
-- **CFSSL/Certificados**: scripts locais geram certificados autoassinados para desenvolvimento/homologação.
+- **CFSSL/Certificados**: scripts locais geram certificados autoassinados para desenvolvimento/staging.
 - **Cloudflare**: serviço de borda que aplica WAF, rate limit, proteção DDoS e mTLS Origin Pull antes do tráfego chegar à AWS.
 - **code_challenge / code_verifier**: par de valores usado no PKCE. O `code_challenge` é enviado na autorização e o `code_verifier` é usado depois para provar a posse do código.
 - **DPoP (Demonstration of Proof of Possession)**: mecanismo opcional para vincular o token a uma chave pública do cliente.

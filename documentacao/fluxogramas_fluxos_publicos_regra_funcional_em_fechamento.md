@@ -471,9 +471,9 @@ para ambientes compartilhados:
   - o armazenamento local continua centrado em `cadastroId`;
   - limpeza, retomada e reconciliacao fora da mesma jornada continuam mais
     frageis do que o ideal;
-- o rollout para `hml` deve continuar bloqueado ate:
+- o rollout para `stg` deve continuar bloqueado ate:
   - a documentacao do app refletir o runtime atual sem contradicoes;
-  - o catalogo de projetos local e de homologacao estar preenchido;
+  - o catalogo de projetos local e de staging estar preenchido;
   - os contratos e seeds necessarios por projeto estarem estabilizados.
 
 ## Uso recomendado deste documento

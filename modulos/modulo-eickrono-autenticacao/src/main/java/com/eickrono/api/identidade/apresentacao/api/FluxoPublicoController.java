@@ -14,6 +14,7 @@ import com.eickrono.api.identidade.aplicacao.modelo.PerfilSistemaProjetoPorEmail
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.RecuperacaoSenhaIniciada;
 import com.eickrono.api.identidade.aplicacao.modelo.SessaoInternaAutenticada;
+import com.eickrono.api.identidade.aplicacao.modelo.StatusCadastroPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.aplicacao.servico.AtestacaoAppServico;
 import com.eickrono.api.identidade.aplicacao.servico.AvaliacaoSegurancaAplicativoService;
@@ -46,6 +47,7 @@ import com.eickrono.api.identidade.apresentacao.dto.fluxo.RecuperacaoSenhaApiRes
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.RenovarSessaoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.RedefinirSenhaRecuperacaoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.SessaoApiResposta;
+import com.eickrono.api.identidade.apresentacao.dto.fluxo.StatusCadastroPublicoApiResposta;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.VinculoSocialConfirmadoApiRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -234,6 +236,23 @@ public class FluxoPublicoController {
                                 usuarioNormalizado,
                                 aplicacaoId
                         )
+        );
+    }
+
+    @GetMapping("/cadastros/{cadastroId}/status")
+    public StatusCadastroPublicoApiResposta consultarStatusCadastro(@PathVariable final String cadastroId) {
+        StatusCadastroPublicoResolvido status = cadastroContaInternaServico.consultarStatusCadastroPublico(
+                parseCadastroId(cadastroId)
+        );
+        return new StatusCadastroPublicoApiResposta(
+                status.cadastroId().toString(),
+                status.emailPrincipal(),
+                status.telefonePrincipal(),
+                status.emailConfirmado(),
+                status.telefoneConfirmado(),
+                status.telefoneObrigatorio(),
+                status.liberadoParaLogin(),
+                status.proximoPasso()
         );
     }
 
@@ -631,6 +650,7 @@ public class FluxoPublicoController {
                     null,
                     statusPerfilSistema,
                     contexto.emailPrincipal(),
+                    contexto.sub(),
                     contexto.usuario(),
                     avatar.url(),
                     avatar.origem(),
@@ -682,6 +702,7 @@ public class FluxoPublicoController {
                 null,
                 statusPerfilSistema,
                 contexto.emailPrincipal(),
+                contexto.sub(),
                 contexto.usuario(),
                 avatar.url(),
                 avatar.origem(),
@@ -765,6 +786,7 @@ public class FluxoPublicoController {
                     null,
                     statusPerfilSistema,
                     contexto.emailPrincipal(),
+                    contexto.sub(),
                     contexto.usuario(),
                     avatar.url(),
                     avatar.origem(),
@@ -806,6 +828,7 @@ public class FluxoPublicoController {
                     registroInterativo.canaisConfirmacao(),
                     statusPerfilSistema,
                     contexto.emailPrincipal(),
+                    contexto.sub(),
                     contexto.usuario(),
                     avatar.url(),
                     avatar.origem(),

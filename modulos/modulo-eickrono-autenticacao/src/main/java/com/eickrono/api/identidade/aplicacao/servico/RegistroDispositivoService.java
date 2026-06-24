@@ -9,7 +9,6 @@ import com.eickrono.api.identidade.dominio.modelo.MotivoRevogacaoToken;
 import com.eickrono.api.identidade.dominio.modelo.RegistroDispositivo;
 import com.eickrono.api.identidade.dominio.modelo.StatusCodigoVerificacao;
 import com.eickrono.api.identidade.dominio.modelo.StatusRegistroDispositivo;
-import com.eickrono.api.identidade.dominio.modelo.Pessoa;
 import com.eickrono.api.identidade.dominio.modelo.TokenDispositivo;
 import com.eickrono.api.identidade.dominio.repositorio.CodigoVerificacaoRepositorio;
 import com.eickrono.api.identidade.dominio.repositorio.RegistroDispositivoRepositorio;
@@ -94,17 +93,17 @@ public class RegistroDispositivoService {
         );
     }
 
-    private RegistroDispositivoService(final RegistroDispositivoRepositorio registroRepositorio,
-                                       final CodigoVerificacaoRepositorio codigoRepositorio,
-                                       final TokenDispositivoService tokenDispositivoService,
-                                       final ResolvedorContextoAutenticacaoService resolvedorContextoAutenticacaoService,
-                                       final ClienteContextoPessoaPerfilSistema clienteContextoPessoaPerfilSistema,
-                                       final DispositivoIdentidadeService dispositivoIdentidadeService,
-                                       final DispositivoProperties propriedades,
-                                       final AuditoriaService auditoriaService,
-                                       final List<CanalEnvioCodigo> canaisEnvio,
-                                       final Clock clock,
-                                       final SincronizacaoModeloMultiappService sincronizacaoModeloMultiappService) {
+    RegistroDispositivoService(final RegistroDispositivoRepositorio registroRepositorio,
+                               final CodigoVerificacaoRepositorio codigoRepositorio,
+                               final TokenDispositivoService tokenDispositivoService,
+                               final ResolvedorContextoAutenticacaoService resolvedorContextoAutenticacaoService,
+                               final ClienteContextoPessoaPerfilSistema clienteContextoPessoaPerfilSistema,
+                               final DispositivoIdentidadeService dispositivoIdentidadeService,
+                               final DispositivoProperties propriedades,
+                               final AuditoriaService auditoriaService,
+                               final List<CanalEnvioCodigo> canaisEnvio,
+                               final Clock clock,
+                               final SincronizacaoModeloMultiappService sincronizacaoModeloMultiappService) {
         this.registroRepositorio = registroRepositorio;
         this.codigoRepositorio = codigoRepositorio;
         this.tokenDispositivoService = tokenDispositivoService;
@@ -116,31 +115,6 @@ public class RegistroDispositivoService {
         this.canaisEnvio = construirMapaCanais(canaisEnvio);
         this.clock = clock;
         this.sincronizacaoModeloMultiappService = sincronizacaoModeloMultiappService;
-    }
-
-    public RegistroDispositivoService(final RegistroDispositivoRepositorio registroRepositorio,
-                                      final CodigoVerificacaoRepositorio codigoRepositorio,
-                                      final TokenDispositivoService tokenDispositivoService,
-                                      final ProvisionamentoIdentidadeService provisionamentoIdentidadeService,
-                                      final DispositivoIdentidadeService dispositivoIdentidadeService,
-                                      final DispositivoProperties propriedades,
-                                      final AuditoriaService auditoriaService,
-                                      final List<CanalEnvioCodigo> canaisEnvio,
-                                      final Clock clock) {
-        this(
-                registroRepositorio,
-                codigoRepositorio,
-                tokenDispositivoService,
-                null,
-                new ClienteContextoPessoaPerfilSistemaLegado(Objects.requireNonNull(provisionamentoIdentidadeService,
-                        "provisionamentoIdentidadeService é obrigatório")),
-                dispositivoIdentidadeService,
-                propriedades,
-                auditoriaService,
-                canaisEnvio,
-                clock,
-                null
-        );
     }
 
     @Transactional
@@ -519,38 +493,4 @@ public class RegistroDispositivoService {
         }
     }
 
-    private static final class ClienteContextoPessoaPerfilSistemaLegado implements ClienteContextoPessoaPerfilSistema {
-
-        private final ProvisionamentoIdentidadeService provisionamentoIdentidadeService;
-
-        private ClienteContextoPessoaPerfilSistemaLegado(final ProvisionamentoIdentidadeService provisionamentoIdentidadeService) {
-            this.provisionamentoIdentidadeService = provisionamentoIdentidadeService;
-        }
-
-        @Override
-        public Optional<ContextoPessoaPerfilSistema> buscarPorPessoaId(final Long pessoaId) {
-            return Optional.empty();
-        }
-
-        @Override
-        public Optional<ContextoPessoaPerfilSistema> buscarPorSub(final String sub) {
-            return provisionamentoIdentidadeService.localizarPessoaPorSub(sub)
-                    .map(RegistroDispositivoService.ClienteContextoPessoaPerfilSistemaLegado::paraContexto);
-        }
-
-        @Override
-        public Optional<ContextoPessoaPerfilSistema> buscarPorEmail(final String email) {
-            return Optional.empty();
-        }
-
-        private static ContextoPessoaPerfilSistema paraContexto(final Pessoa pessoa) {
-            return new ContextoPessoaPerfilSistema(
-                    pessoa.getId(),
-                    pessoa.getSub(),
-                    pessoa.getEmail(),
-                    pessoa.getNome(),
-                    null,
-                    null);
-        }
-    }
 }

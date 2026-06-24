@@ -53,7 +53,7 @@ curl -X POST http://localhost:8080/realms/eickrono/protocol/openid-connect/token
 - `transacoes:ler` — autoriza `GET /transacoes?contaId=...`.
 - `cliente` — realm role que mapeia para `ROLE_cliente`, usada pelas APIs para impor o cabeçalho `X-Device-Token` e garantir que se trata de um cliente humano.
 
-Todos esses nomes são customizados pelas nossas APIs e não vêm prontos no Keycloak; por isso é necessário criá-los e associá-los manualmente ou via script antes de testar. Nos ambientes oficiais (hml/prod), esses escopos e roles já devem ser provisionados pelas pipelines de infraestrutura ou pela importação automática do realm; o passo manual é exclusivo do ambiente local/dev quando o realm é iniciado do zero.
+Todos esses nomes são customizados pelas nossas APIs e não vêm prontos no Keycloak; por isso é necessário criá-los e associá-los manualmente ou via script antes de testar. Nos ambientes oficiais (stg/prod), esses escopos e roles já devem ser provisionados pelas pipelines de infraestrutura ou pela importação automática do realm; o passo manual é exclusivo do ambiente local/dev quando o realm é iniciado do zero.
 
 #### Como identificar escopos/roles diretamente no código
 

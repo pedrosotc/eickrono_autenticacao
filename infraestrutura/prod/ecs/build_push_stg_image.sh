@@ -4,7 +4,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-uso: build_push_hml_image.sh --service <auth|identidade|thimisu-backend> --tag <hml-YYYYMMDD-NN> [opcoes]
+uso: build_push_stg_image.sh --service <auth|identidade|thimisu-backend> --tag <stg-YYYYMMDD-NN> [opcoes]
 
 opcoes:
   --account-id <id>            conta AWS/ECR (default: 531708494702)
@@ -82,7 +82,7 @@ case "$service_key" in
   auth)
     repository_name="eickrono-autenticacao-servidor"
     context_dir="$AUTH_REPO_ROOT"
-    dockerfile_path="${AUTH_REPO_ROOT}/infraestrutura/prod/docker/Dockerfile.keycloak-hml"
+    dockerfile_path="${AUTH_REPO_ROOT}/infraestrutura/prod/docker/Dockerfile.keycloak-stg"
     prebuild_cmd="mvn -q -DskipTests package"
     ;;
   identidade)
@@ -128,8 +128,8 @@ run_cmd() {
     return 0
   fi
 
-  if [ -n "${EICKRONO_HML_HISTORICO:-}" ] && [ -f "$LOG_WRAPPER" ]; then
-    "$LOG_WRAPPER" "$EICKRONO_HML_HISTORICO" "$@"
+  if [ -n "${EICKRONO_STG_HISTORICO:-}" ] && [ -f "$LOG_WRAPPER" ]; then
+    "$LOG_WRAPPER" "$EICKRONO_STG_HISTORICO" "$@"
     return $?
   fi
 

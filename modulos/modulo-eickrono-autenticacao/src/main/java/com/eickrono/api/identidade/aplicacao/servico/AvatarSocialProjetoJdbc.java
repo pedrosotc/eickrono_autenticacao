@@ -729,27 +729,6 @@ public class AvatarSocialProjetoJdbc {
                 ));
     }
 
-    private UUID localizarUsuarioClienteIdObrigatorio(final UUID usuarioId,
-                                                      final Long clienteEcossistemaId) {
-        return jdbcTemplate.query("""
-                SELECT id
-                FROM autenticacao.usuarios_clientes_ecossistema
-                WHERE usuario_id = :usuarioId
-                  AND cliente_ecossistema_id = :clienteEcossistemaId
-                  AND revogado_em IS NULL
-                """,
-                new MapSqlParameterSource()
-                        .addValue("usuarioId", usuarioId)
-                        .addValue("clienteEcossistemaId", clienteEcossistemaId),
-                (rs, rowNum) -> UUID.fromString(rs.getString("id")))
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "O usuario autenticado ainda nao possui vinculo ativo com o projeto."
-                ));
-    }
-
     private UUID localizarUsuarioClienteIdComIdentificadorObrigatorio(final UUID usuarioId,
                                                                       final Long clienteEcossistemaId) {
         return localizarUsuarioClienteIdComIdentificadorOpcional(usuarioId, clienteEcossistemaId)

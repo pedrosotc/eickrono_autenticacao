@@ -66,7 +66,7 @@ callbacks, exports de realm, configuracoes Spring e configuracoes do app.
 
 **O que falta**
 
-- padronizar o realm em `eickrono` para `dev`, `hml` e `prod`;
+- padronizar o realm em `eickrono` para `dev`, `stg` e `prod`;
 - separar claramente `id-*` para APIs e `oidc-*` para o servidor de
   autorizacao;
 - consolidar `thimisu-*` para a superficie do produto e
@@ -85,7 +85,7 @@ callbacks, exports de realm, configuracoes Spring e configuracoes do app.
 **Estado desta rodada**
 
 - primeiro corte aplicado no runtime:
-  - `hml` dos backends autenticados passou para `https://oidc-hml.eickrono.store/realms/eickrono`;
+  - `stg` dos backends autenticados passou para `https://oidc-stg.eickrono.store/realms/eickrono`;
   - `prd` do `identidade-servidor` passou para `https://oidc.eickrono.com/realms/eickrono`;
   - o app em `prod` passou a usar `https://id.eickrono.com/` como host operacional da borda canonica de autenticacao;
 - o app agora aceita sobrescritas independentes por build para:
@@ -98,7 +98,7 @@ callbacks, exports de realm, configuracoes Spring e configuracoes do app.
 - a leitura do que ja pode mudar e do que ainda depende de migracao
   coordenada ficou centralizada em
   `matriz_migracao_autenticacao_identidade_thimisu_backend.md`
-- ainda falta publicar DNS/runtime correspondente para fechar `hml`
+- ainda falta publicar DNS/runtime correspondente para fechar `stg`
   do app como ambiente publico completo.
 
 ### P0. Governanca De Sessao E Dispositivo

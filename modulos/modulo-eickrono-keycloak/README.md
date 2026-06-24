@@ -115,9 +115,9 @@ Observações operacionais:
 - Instagram continua no broker `instagram`, com `defaultScope=user_profile`, e permanece deprecated no Keycloak 26.5.5. Para o import aceitar `providerId=instagram`, o servidor precisa subir com `--features=instagram-broker`.
 - O setup atual de `Instagram Business Login` / Graph API da Meta não está materializado nesses exports. Publicação, mensageria e permissões como `instagram_business_*` ou `pages_*` pedem integração dedicada no servidor, não apenas ajuste de broker social.
 - Por causa disso, o app Flutter esconde temporariamente o caminho visual de `Instagram` e mantém apenas `Facebook` como login Meta exposto ao usuário final.
-- Os valores `${KEYCLOAK_IDP_<APP>_*}` nos realms são placeholders de credencial. Em `infraestrutura/dev` e `infraestrutura/hml`, o startup do Keycloak passa por `render-realms.sh`, que substitui apenas esses placeholders antes do `--import-realm`.
+- Os valores `${KEYCLOAK_IDP_<APP>_*}` nos realms são placeholders de credencial. Em `infraestrutura/dev` e `infraestrutura/stg`, o startup do Keycloak passa por `render-realms.sh`, que substitui apenas esses placeholders antes do `--import-realm`.
 - A renderização é seletiva de propósito: placeholders nativos do próprio Keycloak como `${username}` precisam continuar literais dentro do realm export.
-- Os exemplos de `.env` em `infraestrutura/dev` e `infraestrutura/hml` já listam as chaves esperadas para facilitar esse preenchimento.
+- Os exemplos de `.env` em `infraestrutura/dev` e `infraestrutura/stg` já listam as chaves esperadas para facilitar esse preenchimento.
 
 Teste do módulo:
 

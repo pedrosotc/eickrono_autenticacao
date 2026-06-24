@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPT_UNDER_TEST="${ROOT_DIR}/ecs/validate_hml_task_templates.sh"
+SCRIPT_UNDER_TEST="${ROOT_DIR}/ecs/validate_stg_task_templates.sh"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -48,18 +48,18 @@ test_validation_accepts_db_overrides_file() {
   overrides_file="${tmpdir}/db.env"
 
   cat >"$overrides_file" <<'EOF'
-export AUTH_KC_DB_HOST=auth-db-interno.hml.eickrono.internal
-export AUTH_KC_DB_NAME=keycloak_hml_v2
+export AUTH_KC_DB_HOST=auth-db-interno.stg.eickrono.internal
+export AUTH_KC_DB_NAME=keycloak_stg_v2
 export AUTH_KC_DB_USERNAME=keycloak_app
-export AUTH_KC_DB_PASSWORD_SECRET_ARN=arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/hml/auth/db-password-XYZ
-export IDENTIDADE_DB_HOST=identidade-db-interno.hml.eickrono.internal
-export IDENTIDADE_DB_NAME=eickrono_identidade_hml_v2
+export AUTH_KC_DB_PASSWORD_SECRET_ARN=arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/auth/db-password-XYZ
+export IDENTIDADE_DB_HOST=identidade-db-interno.stg.eickrono.internal
+export IDENTIDADE_DB_NAME=eickrono_identidade_stg_v2
 export IDENTIDADE_DB_USERNAME=identidade_app
-export IDENTIDADE_DB_PASSWORD_SECRET_ARN=arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/hml/identidade/db-password-XYZ
-export THIMISU_DB_HOST=thimisu-db-interno.hml.eickrono.internal
-export THIMISU_DB_NAME=eickrono_thimisu_hml_v2
+export IDENTIDADE_DB_PASSWORD_SECRET_ARN=arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/identidade/db-password-XYZ
+export THIMISU_DB_HOST=thimisu-db-interno.stg.eickrono.internal
+export THIMISU_DB_NAME=eickrono_thimisu_stg_v2
 export THIMISU_DB_USERNAME=thimisu_app
-export THIMISU_DB_PASSWORD_SECRET_ARN=arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/hml/thimisu/db-password-XYZ
+export THIMISU_DB_PASSWORD_SECRET_ARN=arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/thimisu/db-password-XYZ
 EOF
 
   output="$("$SCRIPT_UNDER_TEST" --db-overrides-file "$overrides_file")"

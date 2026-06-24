@@ -50,7 +50,7 @@ As variáveis abaixo ainda estão com placeholder nos arquivos de ambiente:
 Hoje elas ficam principalmente em:
 
 - `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev/.env`
-- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml/.env`
+- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/stg/.env`
 
 ## O que cada variável representa
 
@@ -129,9 +129,9 @@ Para reduzir ambiguidade nos proximos passos operacionais, a convencao documenta
 - `dev`:
   - API de identidade: `id-dev.eickrono.com`
   - servidor OIDC: `oidc-dev.eickrono.com`
-- `hml`:
-  - API de identidade: `id-hml.eickrono.com`
-  - servidor OIDC: `oidc-hml.eickrono.com`
+- `stg`:
+  - API de identidade: `id-stg.eickrono.com`
+  - servidor OIDC: `oidc-stg.eickrono.com`
 - `prod`:
   - API de identidade: `id.eickrono.com`
   - servidor OIDC: `oidc.eickrono.com`
@@ -141,9 +141,9 @@ Para reduzir ambiguidade nos proximos passos operacionais, a convencao documenta
 - `dev`:
   - API de identidade: `id-dev.eickrono.online`
   - servidor OIDC: `oidc-dev.eickrono.online`
-- `hml`:
-  - API pública de autenticação: `auth-hml.eickrono.store`
-  - servidor OIDC: `oidc-hml.eickrono.store`
+- `stg`:
+  - API pública de autenticação: `auth-stg.eickrono.store`
+  - servidor OIDC: `oidc-stg.eickrono.store`
 
 Os dominios auxiliares existem para permitir configuracao inicial de brokers e tunnels com menor risco no dominio principal.
 Eles nao substituem o alvo canonico final em `eickrono.com`.
@@ -168,12 +168,12 @@ Mesmo com um dominio por ambiente, o path do realm continua obrigatorio no desen
 Exemplos corretos:
 
 - `https://oidc-dev.eickrono.online/realms/eickrono/...`
-- `https://oidc-hml.eickrono.store/realms/eickrono/...`
+- `https://oidc-stg.eickrono.store/realms/eickrono/...`
 
 O dominio separa o ambiente na internet.
 O realm separa a configuracao OIDC dentro do servidor de autorizacao.
 
-No runtime atual, o realm padronizado ja e `eickrono` em `dev`, `hml` e `prod`.
+No runtime atual, o realm padronizado ja e `eickrono` em `dev`, `stg` e `prod`.
 
 ## Callbacks que cada portal precisa aceitar
 
@@ -232,17 +232,17 @@ Para testes publicos com tunnel e iPhone fisico, a referencia operacional atual 
 Observacao:
 
 - o runtime atual de `dev` ja responde em `/realms/eickrono`;
-- o mesmo padrao deve ser mantido em `hml` e `prod`.
+- o mesmo padrao deve ser mantido em `stg` e `prod`.
 
-### Homologação
+### Staging
 
-Com o compose atual de `hml`, o Keycloak sobe localmente em:
+Com o compose atual de `stg`, o Keycloak é publicado no host em:
 
 ```text
 http://localhost:18080
 ```
 
-Para execucao local pura, as callbacks ficam:
+Para execução via Docker no computador do desenvolvedor, as callbacks ficam:
 
 - `http://localhost:18080/realms/eickrono/broker/google/endpoint`
 - `http://localhost:18080/realms/eickrono/broker/apple/endpoint`
@@ -256,40 +256,40 @@ Observacao importante para cadastro nos provedores:
 - para `Google Web`, `localhost` pode continuar como callback adicional do client `Web application`;
 - para `Apple Web`, `localhost` nao deve entrar em `Domains and Subdomains` nem em `Return URLs`; para Apple use apenas host publico HTTPS.
 
-Para a convencao publica recomendada do ambiente `hml`, a referencia passa a ser:
+Para a convencao publica recomendada do ambiente `stg`, a referencia passa a ser:
 
-- `https://oidc-hml.eickrono.store/realms/eickrono/broker/google/endpoint`
-- `https://oidc-hml.eickrono.store/realms/eickrono/broker/apple/endpoint`
-- `https://oidc-hml.eickrono.store/realms/eickrono/broker/facebook/endpoint`
-- `https://oidc-hml.eickrono.store/realms/eickrono/broker/linkedin/endpoint`
-- `https://oidc-hml.eickrono.store/realms/eickrono/broker/instagram/endpoint`
+- `https://oidc-stg.eickrono.store/realms/eickrono/broker/google/endpoint`
+- `https://oidc-stg.eickrono.store/realms/eickrono/broker/apple/endpoint`
+- `https://oidc-stg.eickrono.store/realms/eickrono/broker/facebook/endpoint`
+- `https://oidc-stg.eickrono.store/realms/eickrono/broker/linkedin/endpoint`
+- `https://oidc-stg.eickrono.store/realms/eickrono/broker/instagram/endpoint`
 
-## Resumo operacional de `hml` para brokers sociais
+## Resumo operacional de `stg` para brokers sociais
 
-Esta seção deixa explícito o conjunto mínimo de valores operacionais do `hml` no mesmo modelo já usado para Google e Apple.
+Esta seção deixa explícito o conjunto mínimo de valores operacionais do `stg` no mesmo modelo já usado para Google e Apple.
 
 ### Google
 
 - OAuth Web Client atual:
   - `<google-web-client-id>.apps.googleusercontent.com`
-- Redirect URI pública de `hml`:
-  - `https://oidc-hml.eickrono.store/realms/eickrono/broker/google/endpoint`
+- Redirect URI pública de `stg`:
+  - `https://oidc-stg.eickrono.store/realms/eickrono/broker/google/endpoint`
 - Variáveis do Keycloak:
   - `KEYCLOAK_IDP_THIMISU_GOOGLE_CLIENT_ID`
   - `KEYCLOAK_IDP_THIMISU_GOOGLE_CLIENT_SECRET`
 
 ### Apple
 
-- `Services ID` de `hml`:
-  - `com.eickrono.thimisu.oidc.hml`
+- `Services ID` de `stg`:
+  - `com.eickrono.thimisu.oidc.stg`
 - `Team ID`:
   - `M863Q6N87G`
 - `Key ID`:
   - `SD47UPB393`
 - `Domain/Subdomain`:
-  - `oidc-hml.eickrono.store`
+  - `oidc-stg.eickrono.store`
 - `Return URL`:
-  - `https://oidc-hml.eickrono.store/realms/eickrono/broker/apple/endpoint`
+  - `https://oidc-stg.eickrono.store/realms/eickrono/broker/apple/endpoint`
 - Variáveis do Keycloak:
   - `KEYCLOAK_IDP_THIMISU_APPLE_CLIENT_ID`
   - `KEYCLOAK_IDP_THIMISU_APPLE_CLIENT_SECRET_JWT`
@@ -298,27 +298,27 @@ Esta seção deixa explícito o conjunto mínimo de valores operacionais do `hml
 
 - broker alias:
   - `facebook`
-- `App Domains` em `hml`:
-  - `oidc-hml.eickrono.store`
-- `Valid OAuth Redirect URI` em `hml`:
-  - `https://oidc-hml.eickrono.store/realms/eickrono/broker/facebook/endpoint`
+- `App Domains` em `stg`:
+  - `oidc-stg.eickrono.store`
+- `Valid OAuth Redirect URI` em `stg`:
+  - `https://oidc-stg.eickrono.store/realms/eickrono/broker/facebook/endpoint`
 - Variáveis do Keycloak:
   - `KEYCLOAK_IDP_THIMISU_FACEBOOK_APP_ID`
   - `KEYCLOAK_IDP_THIMISU_FACEBOOK_APP_SECRET`
-- valor local já catalogado para `App ID` de `hml`:
+- valor de desenvolvimento já catalogado para `App ID` de `stg`:
   - `1615481193012133`
 
 Observações:
 
 - o `App Secret` não deve ser repetido neste guia; ele deve continuar em material sigiloso e no secret store do ambiente;
-- no `hml` atual da AWS, o broker `facebook` só deve ser religado depois que o secret materializado no runtime deixar de ser placeholder e o redirect público acima estiver confirmado na Meta.
+- no `stg` atual da AWS, o broker `facebook` só deve ser religado depois que o secret materializado no runtime deixar de ser placeholder e o redirect público acima estiver confirmado na Meta.
 
 ### LinkedIn
 
 - broker alias:
   - `linkedin`
-- `Authorized redirect URL` em `hml`:
-  - `https://oidc-hml.eickrono.store/realms/eickrono/broker/linkedin/endpoint`
+- `Authorized redirect URL` em `stg`:
+  - `https://oidc-stg.eickrono.store/realms/eickrono/broker/linkedin/endpoint`
 - Variáveis do Keycloak:
   - `KEYCLOAK_IDP_THIMISU_LINKEDIN_CLIENT_ID`
   - `KEYCLOAK_IDP_THIMISU_LINKEDIN_CLIENT_SECRET`
@@ -402,7 +402,7 @@ Para o caso específico de `Google OAuth web + Keycloak local + iPhone físico`,
 7. Em `Application type`, escolha `Web application`.
 8. Dê um nome claro para o client, por exemplo:
    - `eickrono-keycloak-dev`
-   - `eickrono-keycloak-hml`
+   - `eickrono-keycloak-stg`
 9. Em `Authorized redirect URIs`, adicione a callback do Keycloak correspondente ao ambiente.
    Exemplo em `dev` local puro:
 
@@ -423,14 +423,14 @@ https://oidc-dev.eickrono.online/realms/eickrono/broker/google/endpoint
 | `dev` | `eickrono-keycloak-dev` | `https://oidc-dev.eickrono.online/realms/eickrono/broker/google/endpoint` |
 | `dev` | `eickrono-keycloak-dev` | `https://oidc-dev.eickrono.com/realms/eickrono/broker/google/endpoint` |
 | `dev` | `eickrono-keycloak-dev` | `http://localhost:8080/realms/eickrono/broker/google/endpoint` |
-| `hml` | `eickrono-keycloak-hml` | `https://oidc-hml.eickrono.store/realms/eickrono/broker/google/endpoint` |
-| `hml` | `eickrono-keycloak-hml` | `https://oidc-hml.eickrono.com/realms/eickrono/broker/google/endpoint` |
-| `hml` | `eickrono-keycloak-hml` | `http://localhost:18080/realms/eickrono/broker/google/endpoint` |
+| `stg` | `eickrono-keycloak-stg` | `https://oidc-stg.eickrono.store/realms/eickrono/broker/google/endpoint` |
+| `stg` | `eickrono-keycloak-stg` | `https://oidc-stg.eickrono.com/realms/eickrono/broker/google/endpoint` |
+| `stg` | `eickrono-keycloak-stg` | `http://localhost:18080/realms/eickrono/broker/google/endpoint` |
 | `prod` | `eickrono-keycloak-prod` | `https://oidc.eickrono.com/realms/eickrono/broker/google/endpoint` |
 
    Observacoes:
 
-   - em `dev` e `hml`, mantenha apenas as URIs que aquele ambiente realmente usa;
+   - em `dev` e `stg`, mantenha apenas as URIs que aquele ambiente realmente usa;
    - `localhost` pode entrar como callback adicional no `Google Web`;
    - em `prod`, a configuracao esperada hoje usa apenas o host canonico publico;
    - `Authorized JavaScript origins` podem ficar vazios neste fluxo brokerado, porque o ponto critico aqui e a callback web do Keycloak.
@@ -447,7 +447,7 @@ https://oidc-dev.eickrono.online/realms/eickrono/broker/google/endpoint
 - Se você perder o secret, o caminho correto é gerar um novo, não tentar “revelar” o antigo.
 - Em alguns cenários, o Google pode pedir configuração de consent screen, audience e eventualmente verificação, dependendo dos escopos usados.
 - Para login simples brokerizado pelo Keycloak, o fluxo costuma ser mais leve do que integrações com APIs sensíveis.
-- Para `dev` e `hml`, o client `Web application` do Google pode acumular callbacks publicas e um `localhost` adicional, desde que cada URI autorizada seja exata.
+- Para `dev` e `stg`, o client `Web application` do Google pode acumular callbacks publicas e um `localhost` adicional, desde que cada URI autorizada seja exata.
 
 ### Credencial Google web atual do Keycloak em `dev`
 
@@ -526,7 +526,7 @@ Os arquivos locais atuais são:
 
 ```text
 /Users/thiago/Desenvolvedor/flutter/eickrono-thimisu/eickrono-thimisu-app/android/.signing/dev-local.jks
-/Users/thiago/Desenvolvedor/flutter/eickrono-thimisu/eickrono-thimisu-app/android/.signing/hml-local.jks
+/Users/thiago/Desenvolvedor/flutter/eickrono-thimisu/eickrono-thimisu-app/android/.signing/stg-signing.jks
 /Users/thiago/Desenvolvedor/flutter/eickrono-thimisu/eickrono-thimisu-app/android/.signing/prd-local.jks
 ```
 
@@ -535,7 +535,7 @@ Os comandos de consulta passam a ser:
 ```bash
 cd /Users/thiago/Desenvolvedor/flutter/eickrono-thimisu/eickrono-thimisu-app/android
 keytool -list -v -alias thimisu-dev -keystore .signing/dev-local.jks -storepass <devStorePassword> -keypass <devKeyPassword>
-keytool -list -v -alias thimisu-hml -keystore .signing/hml-local.jks -storepass <hmlStorePassword> -keypass <hmlKeyPassword>
+keytool -list -v -alias thimisu-stg -keystore .signing/stg-signing.jks -storepass <stgStorePassword> -keypass <stgKeyPassword>
 keytool -list -v -alias thimisu-prd -keystore .signing/prd-local.jks -storepass <prdStorePassword> -keypass <prdKeyPassword>
 ```
 
@@ -547,15 +547,15 @@ Com a separação por flavor, a identidade Android local passa a ser esta:
 
 - `dev`: package `com.eickrono.thimisu.dev`
 - `dev`: `SHA-1` `3D:C7:CC:F9:93:5D:CF:CB:B2:15:D8:80:59:A7:23:43:DD:20:4D:A3`
-- `hml`: package `com.eickrono.thimisu.hml`
-- `hml`: `SHA-1` `3E:27:D2:98:8B:55:54:32:62:5C:66:65:53:D3:E9:9B:CA:98:94:78`
+- `stg`: package `com.eickrono.thimisu.stg`
+- `stg`: `SHA-1` `3E:27:D2:98:8B:55:54:32:62:5C:66:65:53:D3:E9:9B:CA:98:94:78`
 - `prd`: package `com.eickrono.thimisu`
 - `prd`: `SHA-1` `E4:0B:10:42:67:87:45:A4:8D:DB:BE:21:23:CA:A3:08:0E:2A:3E:DA`
 
 ### Observações importantes sobre o novo padrão
 
 - o Google identifica Android OAuth por `package name + SHA-1`;
-- `dev`, `hml` e `prd` agora são três identidades Android locais diferentes;
+- `dev`, `stg` e `prd` agora são três identidades Android locais diferentes;
 - isso permite cadastrar três clientes OAuth Android separados, um por ambiente;
 - o `android/key.properties` e o diretório `android/.signing/` devem continuar fora do versionamento;
 - se uma dessas keystores for apagada e recriada, o `SHA-1` daquele ambiente muda.
@@ -566,7 +566,7 @@ Depois de criar cada cliente Android no Google, salve o JSON baixado apenas em d
 
 ```text
 /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/.local-secrets/google/thimisu/android-dev/client_secret_<google-android-dev-client-id>.json
-/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/.local-secrets/google/thimisu/android-hml/client_secret_<google-android-hml-client-id>.json
+/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/.local-secrets/google/thimisu/android-stg/client_secret_<google-android-stg-client-id>.json
 /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/.local-secrets/google/thimisu/android-prd/client_secret_<google-android-prd-client-id>.json
 ```
 
@@ -849,7 +849,7 @@ Isso significa:
 - o `Primary App ID` continua sendo `com.eickrono.thimisu`;
 - os `Services IDs` continuam separados por ambiente:
   - `com.eickrono.thimisu.oidc.dev`
-  - `com.eickrono.thimisu.oidc.hml`
+  - `com.eickrono.thimisu.oidc.stg`
   - `com.eickrono.thimisu.oidc.prd`
 - as private keys `.p8` nao precisam existir uma por ambiente;
 - a Apple permite no maximo **duas** private keys por `Primary App ID`;
@@ -865,7 +865,7 @@ Convencao operacional adotada:
 Conclusao:
 
 - separe por ambiente no `Services ID`;
-- compartilhe a key `Principal` entre `dev`, `hml` e `prod`;
+- compartilhe a key `Principal` entre `dev`, `stg` e `prod`;
 - mantenha a key `Rotacao` reservada para troca segura sem downtime;
 - nao tente manter uma terceira key exclusiva de `prd`, porque isso foge do limite operacional da Apple para este `Primary App ID`.
 
@@ -980,7 +980,7 @@ Como preencher:
 Importante:
 
 - `Thimisu DEV` / `com.eickrono.thimisu.oidc.dev` servem apenas para o ambiente `dev`;
-- esse `Services ID` nao deve ser reutilizado em `hml` nem em `prod`;
+- esse `Services ID` nao deve ser reutilizado em `stg` nem em `prod`;
 - para cada ambiente adicional, crie um `Services ID` separado.
 
 Convencao recomendada para este projeto:
@@ -992,7 +992,7 @@ Convencao recomendada para este projeto:
 Se quiser separar por ambiente:
 
 - `dev`: `com.eickrono.thimisu.oidc.dev`
-- `hml`: `com.eickrono.thimisu.oidc.hml`
+- `stg`: `com.eickrono.thimisu.oidc.stg`
 - `prod`: `com.eickrono.thimisu.oidc.prd`
 
 No desenho atual, isso significa:
@@ -1000,11 +1000,11 @@ No desenho atual, isso significa:
 - `dev`
   - `Description`: `Thimisu DEV`
   - `Identifier`: `com.eickrono.thimisu.oidc.dev`
-- `hml`
+- `stg`
   - criar outro `Services ID`
   - sugestao:
-    - `Description`: `Thimisu HML`
-    - `Identifier`: `com.eickrono.thimisu.oidc.hml`
+    - `Description`: `Thimisu STG`
+    - `Identifier`: `com.eickrono.thimisu.oidc.stg`
 - `prod`
   - criar outro `Services ID`
   - sugestao:
@@ -1111,14 +1111,14 @@ Tabela resumida para copiar:
 | --- | --- | --- | --- |
 | `dev` | `com.eickrono.thimisu.oidc.dev` | `oidc-dev.eickrono.online` | `https://oidc-dev.eickrono.online/realms/eickrono/broker/apple/endpoint` |
 | `dev` | `com.eickrono.thimisu.oidc.dev` | `oidc-dev.eickrono.com` | `https://oidc-dev.eickrono.com/realms/eickrono/broker/apple/endpoint` |
-| `hml` | `com.eickrono.thimisu.oidc.hml` | `oidc-hml.eickrono.store` | `https://oidc-hml.eickrono.store/realms/eickrono/broker/apple/endpoint` |
-| `hml` | `com.eickrono.thimisu.oidc.hml` | `oidc-hml.eickrono.com` | `https://oidc-hml.eickrono.com/realms/eickrono/broker/apple/endpoint` |
+| `stg` | `com.eickrono.thimisu.oidc.stg` | `oidc-stg.eickrono.store` | `https://oidc-stg.eickrono.store/realms/eickrono/broker/apple/endpoint` |
+| `stg` | `com.eickrono.thimisu.oidc.stg` | `oidc-stg.eickrono.com` | `https://oidc-stg.eickrono.com/realms/eickrono/broker/apple/endpoint` |
 | `prod` | `com.eickrono.thimisu.oidc.prd` | `oidc.eickrono.com` | `https://oidc.eickrono.com/realms/eickrono/broker/apple/endpoint` |
 
 Observacoes:
 
 - `Primary App ID` continua unico para os tres ambientes: `com.eickrono.thimisu`;
-- em `dev` e `hml`, mantenha apenas as linhas dos hosts publicos realmente usados naquele momento;
+- em `dev` e `stg`, mantenha apenas as linhas dos hosts publicos realmente usados naquele momento;
 - `localhost` nao deve entrar aqui para Apple Web.
 
 #### `dev`
@@ -1147,20 +1147,20 @@ Diagnostico rapido para `invalid_client` no Apple `dev`:
 - se o dominio canonico `oidc-dev.eickrono.com` tambem estiver em uso, ele precisa entrar como linha adicional propria, junto com a `Return URL` equivalente;
 - se o Keycloak estiver redirecionando a Apple com `client_id=com.eickrono.thimisu.oidc.dev` e `redirect_uri=https://oidc-dev.eickrono.online/realms/eickrono/broker/apple/endpoint`, mas a Apple ainda retornar `invalid_client`, a pendencia esta no cadastro ou na propagacao do `Services ID` no portal da Apple, nao no Flutter.
 
-#### `hml`
+#### `stg`
 
-Se o ambiente `hml` ainda usa o host publico atual:
+Se o ambiente `stg` ainda usa o host publico atual:
 
 ```text
-Domain/Subdomain: oidc-hml.eickrono.store
-Return URL: https://oidc-hml.eickrono.store/realms/eickrono/broker/apple/endpoint
+Domain/Subdomain: oidc-stg.eickrono.store
+Return URL: https://oidc-stg.eickrono.store/realms/eickrono/broker/apple/endpoint
 ```
 
-Se o ambiente `hml` tambem ja estiver atendendo pelo dominio canonico, adicione tambem:
+Se o ambiente `stg` tambem ja estiver atendendo pelo dominio canonico, adicione tambem:
 
 ```text
-Domain/Subdomain: oidc-hml.eickrono.com
-Return URL: https://oidc-hml.eickrono.com/realms/eickrono/broker/apple/endpoint
+Domain/Subdomain: oidc-stg.eickrono.com
+Return URL: https://oidc-stg.eickrono.com/realms/eickrono/broker/apple/endpoint
 ```
 
 #### `prod`
@@ -1175,12 +1175,12 @@ Return URL: https://oidc.eickrono.com/realms/eickrono/broker/apple/endpoint
 Resumo operacional:
 
 - `dev`: hoje pode precisar de `oidc-dev.eickrono.online` e `oidc-dev.eickrono.com`;
-- `hml`: hoje pode precisar de `oidc-hml.eickrono.store` e `oidc-hml.eickrono.com`;
+- `stg`: hoje pode precisar de `oidc-stg.eickrono.store` e `oidc-stg.eickrono.com`;
 - `prod`: hoje usa apenas `oidc.eickrono.com`.
 
 ### Restrição prática importante da Apple
 
-Embora o projeto hoje tenha callbacks locais para `dev` e `hml`, a Apple é o provedor mais sensível para teste local.
+Embora o projeto hoje tenha callbacks locais para `dev` e `stg`, a Apple é o provedor mais sensível para teste local.
 
 Inferência operacional importante:
 
@@ -1190,9 +1190,9 @@ Inferência operacional importante:
 
 Ou seja:
 
-- Google, Facebook e LinkedIn tendem a ser mais tolerantes ao setup local;
+- Google, Facebook e LinkedIn tendem a ser mais tolerantes ao setup executado no computador do desenvolvedor;
 - Apple merece ser validada cedo em ambiente com URL pública.
-- no resumo operacional atual deste projeto: `Google Web` pode manter `localhost` como callback adicional em `dev` e `hml`, mas `Apple Web` nao deve cadastrar `localhost`.
+- no resumo operacional atual deste projeto: `Google Web` pode manter `localhost` como callback adicional em `dev` e `stg`, mas `Apple Web` nao deve cadastrar `localhost`.
 
 #### Parte 3: criar a private key
 
@@ -1235,7 +1235,7 @@ Registro operacional atual das chaves Apple do app `Thimisu`:
 
 Leitura correta dessas duas chaves:
 
-- a key `Principal` e a candidata padrao para assinar os JWTs de `dev`, `hml` e `prod`;
+- a key `Principal` e a candidata padrao para assinar os JWTs de `dev`, `stg` e `prod`;
 - a key `Rotacao` fica reservada para rotacao/contingencia;
 - a presenca de `DeviceCheck` na key de rotacao nao substitui a configuracao do `Services ID` nem o JWT do broker Apple;
 - o aviso do portal sobre `Services` significa apenas que o `Services ID` precisa continuar com a configuracao web concluida para a equipe.
@@ -1252,7 +1252,7 @@ Valores operacionais da key `Principal`:
 
 - `Team ID`: `M863Q6N87G`
 - `Key ID`: `SD47UPB393`
-- `uso esperado`: `dev`, `hml` e `prod`
+- `uso esperado`: `dev`, `stg` e `prod`
 
 Se o navegador baixar a key `Principal` para `Downloads`, mova-o para o diretório local de segredos com:
 
@@ -1269,7 +1269,7 @@ Observacoes:
 
 - esse arquivo nao deve ser versionado no Git;
 - a permissao `600` reduz exposicao desnecessaria do segredo;
-- a mesma key `Principal` pode assinar os JWTs de `dev`, `hml` e `prod`;
+- a mesma key `Principal` pode assinar os JWTs de `dev`, `stg` e `prod`;
 - a key `Rotacao` deve ficar guardada separadamente para troca futura;
 - a Apple permite no maximo duas private keys por `Primary App ID`, entao o desenho correto e `Principal` + `Rotacao`, nao uma key por ambiente.
 
@@ -1312,7 +1312,7 @@ KEYCLOAK_IDP_THIMISU_APPLE_CLIENT_ID=<services_id_identifier>
 KEYCLOAK_IDP_THIMISU_APPLE_CLIENT_SECRET_JWT=<jwt_gerado>
 ```
 
-Exemplo equivalente para gerar o JWT de `hml` com a mesma key `Principal`:
+Exemplo equivalente para gerar o JWT de `stg` com a mesma key `Principal`:
 
 ```bash
 cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor
@@ -1320,7 +1320,7 @@ cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor
 export APPLE_TEAM_ID="M863Q6N87G"
 export APPLE_KEY_ID="SD47UPB393"
 export APPLE_PRIVATE_KEY_P8="/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/.local-secrets/apple/eickrono-oidc/principal/AuthKey_SD47UPB393.p8"
-export APPLE_CLIENT_ID="com.eickrono.thimisu.oidc.hml"
+export APPLE_CLIENT_ID="com.eickrono.thimisu.oidc.stg"
 export OUTPUT_ENV_LINE=true
 
 sh autorizacao/realms/gerar-apple-client-secret-jwt.sh
@@ -1343,7 +1343,7 @@ sh autorizacao/realms/gerar-apple-client-secret-jwt.sh
 Materializacoes locais recomendadas para o JWT gerado:
 
 - `dev`: `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/.local-secrets/apple/eickrono-oidc/dev/keycloak-apple.env`
-- `hml`: `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/.local-secrets/apple/eickrono-oidc/hml/keycloak-apple.env`
+- `stg`: `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/.local-secrets/apple/eickrono-oidc/stg/keycloak-apple.env`
 - `prod`: `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/.local-secrets/apple/eickrono-oidc/prod/keycloak-apple.env`
 
 #### Parte 5: aplicar nos ambientes do Keycloak
@@ -1351,13 +1351,13 @@ Materializacoes locais recomendadas para o JWT gerado:
 Com a convencao por app ja adotada, os valores por ambiente ficam assim:
 
 - `dev`: `com.eickrono.thimisu.oidc.dev`
-- `hml`: `com.eickrono.thimisu.oidc.hml`
+- `stg`: `com.eickrono.thimisu.oidc.stg`
 - `prod`: `com.eickrono.thimisu.oidc.prd`
 
 Aplicacao real no workspace atual:
 
 - `dev`: atualizar `infraestrutura/dev/.env`
-- `hml`: atualizar `infraestrutura/hml/.env`
+- `stg`: atualizar `infraestrutura/stg/.env`
 - `prod`: materializar o segredo fora do Git, por exemplo em `.local-secrets/apple/eickrono-oidc/prod/keycloak-apple.env`
 
 Depois de gerar o JWT, aplique-o no arquivo:
@@ -1514,16 +1514,16 @@ oidc-dev.eickrono.online
 oidc-dev.eickrono.com
 ```
 
-   Para `hml`:
+   Para `stg`:
 
 ```text
-oidc-hml.eickrono.store
+oidc-stg.eickrono.store
 ```
 
-   Se o dominio canonico do `hml` tambem estiver em uso, adicione tambem:
+   Se o dominio canonico do `stg` tambem estiver em uso, adicione tambem:
 
 ```text
-oidc-hml.eickrono.com
+oidc-stg.eickrono.com
 ```
 
    Para `prod`:
@@ -1743,10 +1743,10 @@ Exemplo em `dev`:
 http://localhost:8080/realms/eickrono/broker/instagram/endpoint
 ```
 
-Exemplo em `hml`:
+Exemplo em `stg`:
 
 ```text
-https://oidc-hml.eickrono.store/realms/eickrono/broker/instagram/endpoint
+https://oidc-stg.eickrono.store/realms/eickrono/broker/instagram/endpoint
 ```
 
 Exemplo em `prod`:
@@ -1809,11 +1809,11 @@ KEYCLOAK_IDP_THIMISU_INSTAGRAM_APP_SECRET=trocar-instagram-app-secret
 
 pelos valores reais.
 
-### Homologação
+### Staging
 
 Arquivo:
 
-- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml/.env`
+- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/stg/.env`
 
 Faça a mesma substituição.
 
@@ -1826,10 +1826,10 @@ cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestru
 docker compose up -d --force-recreate eickrono-keycloak
 ```
 
-### Homologação
+### Staging
 
 ```bash
-cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml
+cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/stg
 docker compose up -d --force-recreate eickrono-keycloak
 ```
 

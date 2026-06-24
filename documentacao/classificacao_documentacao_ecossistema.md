@@ -111,7 +111,7 @@ Total de arquivos classificados nesta passada:
 - `infraestrutura/prod/docker/README.md`
 - `infraestrutura/prod/ecs/README.md`
 - `infraestrutura/prod/pipeline/README.md`
-- `infraestrutura/prod/runbook_hml_aws_operacional.md`
+- `infraestrutura/prod/runbook_stg_aws_operacional.md`
 - `infraestrutura/prod/validacao_cabecalho_email_provedores.md`
 - `modulos/modulo-eickrono-keycloak/README.md`
 - `modulos/modulo-eickrono-autenticacao/README.md`
@@ -144,7 +144,7 @@ Total de arquivos classificados nesta passada:
 - `docs/fluxo_cadastro_login_nativo.md`
 - `docs/guia-mtls.md`
 - `docs/proposta_cisao_identidade_thimisu.md`
-- `infraestrutura/hml/README.md`
+- `infraestrutura/stg/README.md`
 - `infraestrutura/prd/README.md`
 
 Observacao importante:

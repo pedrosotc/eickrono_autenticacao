@@ -146,7 +146,7 @@
   <!-- Autoridade certificadora -->
   <rect class="box-purple" x="410" y="380" width="240" height="120" />
   <text class="subtitle" x="430" y="410">Autoridade certificadora interna</text>
-  <text class="body-small" x="430" y="430">ACM + scripts autoassinados dev/hml</text>
+  <text class="body-small" x="430" y="430">ACM + scripts autoassinados dev/stg</text>
   <text class="body-small" x="430" y="450">Distribuição certificados mTLS</text>
 
   <!-- Legenda -->

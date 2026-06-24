@@ -3,7 +3,7 @@
 Este guia consolida como o `mTLS` funciona no repositório
 `eickrono-autenticacao-servidor`, quais módulos realmente o usam hoje, quais
 certificados cada um consome e como gerar os artefatos locais de `dev` e
-`hml`.
+`stg`.
 
 ## Nota de nomenclatura operacional
 
@@ -69,10 +69,10 @@ As propriedades são carregadas por `seguranca.mtls`:
 Comportamento por ambiente:
 
 - `application.yml`: nasce desligado por padrão.
-- `application-hml.yml`: marcado como ligado.
+- `application-stg.yml`: marcado como ligado.
 - `application-prod.yml`: marcado como ligado.
 
-No runtime via `docker-compose`, `dev` e `hml` sobrescrevem os caminhos para `file:/certificados/...`, que é o que realmente vale no container.
+No runtime via `docker-compose`, `dev` e `stg` sobrescrevem os caminhos para `file:/certificados/...`, que é o que realmente vale no container.
 
 ### Como o servidor sobe
 
@@ -90,7 +90,7 @@ Na prática atual da estrutura física do repositório:
 
 - em `dev`, a porta pública da autenticação continua em `8081`;
 - a porta interna `mTLS` sobe em `8443` dentro do container e é publicada como `18481` no host;
-- em `hml`, a mesma lógica vale, mas publicada como `19481`.
+- em `stg`, a mesma lógica vale, mas publicada como `19481`.
 
 ### Como o cliente HTTP usa mTLS
 
@@ -196,12 +196,12 @@ O módulo tem suporte de servidor para `mTLS`, mas seu desenho ainda é mais sim
 No código:
 
 - `application.yml` nasce com `seguranca.mtls.habilitado=false`;
-- `application-hml.yml` e `application-prod.yml` marcam `mTLS` como ligado.
+- `application-stg.yml` e `application-prod.yml` marcam `mTLS` como ligado.
 
 No runtime dos ambientes locais:
 
 - `dev`: o `docker-compose` não ativa `mTLS`;
-- `hml`: o `docker-compose` ativa explicitamente `SEGURANCA_MTLS_HABILITADO=false`.
+- `stg`: o `docker-compose` ativa explicitamente `SEGURANCA_MTLS_HABILITADO=false`.
 
 Na prática, hoje o `api-contas-eickrono` ainda não participa do
 `backchannel mTLS` ativo da stack local padrão.
@@ -221,7 +221,7 @@ O validador remoto de `device token` usa `RestTemplate` simples. Então:
 Os scripts oficiais ficam em:
 
 - `infraestrutura/dev/certificados/gerar_certificados.sh`
-- `infraestrutura/hml/certificados/gerar_certificados.sh`
+- `infraestrutura/stg/certificados/gerar_certificados.sh`
 
 Eles geram:
 
@@ -253,12 +253,12 @@ MTLS_TRUSTSTORE_SENHA=senhaBackchannelDev \
 ./gerar_certificados.sh
 ```
 
-### Execução em hml
+### Execução em stg
 
 ```bash
-cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml/certificados
-MTLS_KEYSTORE_SENHA=senhaBackchannelHml \
-MTLS_TRUSTSTORE_SENHA=senhaBackchannelHml \
+cd /Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/stg/certificados
+MTLS_KEYSTORE_SENHA=senhaBackchannelStg \
+MTLS_TRUSTSTORE_SENHA=senhaBackchannelStg \
 ./gerar_certificados.sh
 ```
 
@@ -288,7 +288,7 @@ cd /Users/thiago/Desenvolvedor/flutter/eickrono-thimisu-backend/infraestrutura/d
 docker compose up -d --force-recreate thimisu-backend
 ```
 
-Em `hml`, use os `docker compose` equivalentes do diretório `infraestrutura/hml`.
+Em `stg`, use os `docker compose` equivalentes do diretório `infraestrutura/stg`.
 
 ### SAN e uso estendido
 
@@ -311,7 +311,7 @@ Os SANs incluem nomes úteis para container e host local, como:
 
 ## Como os certificados entram nos containers
 
-Em `dev` e `hml`, o `docker-compose` monta a pasta `certificados` em `/certificados`.
+Em `dev` e `stg`, o `docker-compose` monta a pasta `certificados` em `/certificados`.
 
 Exemplos de uso real:
 

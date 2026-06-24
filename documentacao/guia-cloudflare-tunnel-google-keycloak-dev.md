@@ -7,27 +7,27 @@ Este guia registra o procedimento adotado para viabilizar o login Google brokera
 Os dominios auxiliares hoje reservados para implantacao inicial sao:
 
 - `eickrono.online` para `dev`
-- `eickrono.store` para `hml`
+- `eickrono.store` para `stg`
 
 O padrão canonico futuro continua concentrado em `eickrono.com`:
 
 - API de identidade:
   - `id-dev.eickrono.com`
-  - `id-hml.eickrono.com`
+  - `id-stg.eickrono.com`
   - `id.eickrono.com`
 - servidor de autorizacao OIDC:
   - `oidc-dev.eickrono.com`
-  - `oidc-hml.eickrono.com`
+  - `oidc-stg.eickrono.com`
   - `oidc.eickrono.com`
 
-Para a implantacao transitória segura, enquanto `dev` e `hml` ainda nao estiverem publicados no dominio principal, este guia usa:
+Para a implantacao transitória segura, enquanto `dev` e `stg` ainda nao estiverem publicados no dominio principal, este guia usa:
 
 - API de identidade:
   - `id-dev.eickrono.online`
-  - `auth-hml.eickrono.store`
+  - `auth-stg.eickrono.store`
 - servidor de autorizacao OIDC:
   - `oidc-dev.eickrono.online`
-  - `oidc-hml.eickrono.store`
+  - `oidc-stg.eickrono.store`
 
 ### O que cada hostname representa
 
@@ -51,15 +51,15 @@ Este guia mistura dois planos diferentes e eles nao devem ser confundidos:
 
 - estado atual do runtime local: todos os ambientes ja usam o realm unico `eickrono`;
 - estado alvo de DNS/hostnames: publicacao canonica sob `eickrono.com`;
-- estado transitorio de implantacao: `dev` e `hml` podem usar `eickrono.online` e `eickrono.store` ate a publicacao equivalente em `eickrono.com`.
+- estado transitorio de implantacao: `dev` e `stg` podem usar `eickrono.online` e `eickrono.store` ate a publicacao equivalente em `eickrono.com`.
 
 Neste documento:
 
 - exemplos de `localhost` representam o estado atual local puro;
-- exemplos com dominios publicos `oidc-dev.eickrono.online` e `oidc-hml.eickrono.store` representam a fase transitoria;
+- exemplos com dominios publicos `oidc-dev.eickrono.online` e `oidc-stg.eickrono.store` representam a fase transitoria;
 - o alvo canonico final correspondente e:
   - `oidc-dev.eickrono.com`
-  - `oidc-hml.eickrono.com`
+  - `oidc-stg.eickrono.com`
   - `oidc.eickrono.com`
 
 ## Por que este guia existe
@@ -198,10 +198,10 @@ Exemplo:
 cloudflared tunnel route dns oidc-dev oidc-dev.eickrono.online
 ```
 
-Para homologacao, a mesma ideia ficaria:
+Para staging, a mesma ideia ficaria:
 
 ```bash
-cloudflared tunnel route dns oidc-hml oidc-hml.eickrono.store
+cloudflared tunnel route dns oidc-stg oidc-stg.eickrono.store
 ```
 
 ### 3. Criar a configuracao local do tunnel
@@ -279,17 +279,17 @@ Depois que o tunnel e o dominio publico estiverem prontos, o cliente `Web applic
 https://oidc-dev.eickrono.online/realms/eickrono/broker/google/endpoint
 ```
 
-Para `hml`, a mesma regra ficaria:
+Para `stg`, a mesma regra ficaria:
 
 ```text
-https://oidc-hml.eickrono.store/realms/eickrono/broker/google/endpoint
+https://oidc-stg.eickrono.store/realms/eickrono/broker/google/endpoint
 ```
 
 Observacoes:
 
 - `localhost` pode continuar cadastrado como callback adicional para testes no navegador do Mac;
 - IP privado, como `192.168.0.49`, nao deve ser usado no Google OAuth web.
-- quando `dev` e `hml` migrarem para o dominio principal, as callbacks devem ser regravadas para `oidc-dev.eickrono.com` e `oidc-hml.eickrono.com`.
+- quando `dev` e `stg` migrarem para o dominio principal, as callbacks devem ser regravadas para `oidc-dev.eickrono.com` e `oidc-stg.eickrono.com`.
 
 ## O que precisa mudar no app
 
@@ -314,12 +314,12 @@ https://id-dev.eickrono.online/
 
 ## Por que o `/realms/<realm>` continua necessario
 
-Mesmo com um dominio separado por ambiente, como `oidc-dev.eickrono.online` e `oidc-hml.eickrono.store`, o path do realm continua obrigatorio.
+Mesmo com um dominio separado por ambiente, como `oidc-dev.eickrono.online` e `oidc-stg.eickrono.store`, o path do realm continua obrigatorio.
 
 No Keycloak, o realm faz parte estrutural do `issuer` e dos endpoints OIDC:
 
 - `https://oidc-dev.eickrono.online/realms/eickrono`
-- `https://oidc-hml.eickrono.store/realms/eickrono`
+- `https://oidc-stg.eickrono.store/realms/eickrono`
 
 O dominio separa o ambiente na camada de rede.
 O realm separa a configuracao OIDC dentro do servidor de autorizacao.
@@ -340,7 +340,7 @@ Para remover o realm do caminho seria necessario redesenhar a topologia do servi
 Observacao:
 
 - o runtime atual ja responde com `realm=eickrono`;
-- enquanto `dev` e `hml` ainda estiverem na fase transitoria, os hosts publicos podem usar `eickrono.online` e `eickrono.store`;
+- enquanto `dev` e `stg` ainda estiverem na fase transitoria, os hosts publicos podem usar `eickrono.online` e `eickrono.store`;
 - o destino final recomendado continua sendo `eickrono.com` para todos os ambientes.
 
 ## O que ja foi executado neste guia
@@ -362,7 +362,7 @@ No `dev`, ja foi executado:
 Ainda nao foi executado neste guia:
 
 - migracao de `dev` para `oidc-dev.eickrono.com`;
-- configuracao equivalente de `hml`;
+- configuracao equivalente de `stg`;
 - endurecimento operacional do tunnel como servico persistente.
 
 ## Execucao do app Flutter

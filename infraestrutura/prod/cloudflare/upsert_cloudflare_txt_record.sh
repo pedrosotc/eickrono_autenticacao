@@ -112,8 +112,8 @@ cf_api() {
 }
 
 run_logged_curl() {
-  if [ -n "${EICKRONO_HML_HISTORICO:-}" ] && [ -f "$LOG_WRAPPER" ]; then
-    "$LOG_WRAPPER" "$EICKRONO_HML_HISTORICO" "$@"
+  if [ -n "${EICKRONO_STG_HISTORICO:-}" ] && [ -f "$LOG_WRAPPER" ]; then
+    "$LOG_WRAPPER" "$EICKRONO_STG_HISTORICO" "$@"
     return $?
   fi
   "$@"

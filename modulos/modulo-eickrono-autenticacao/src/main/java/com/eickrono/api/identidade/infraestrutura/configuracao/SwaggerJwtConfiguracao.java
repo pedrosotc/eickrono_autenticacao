@@ -9,10 +9,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Configura o esquema de segurança Bearer JWT no Swagger (dev/hml).
+ * Configura o esquema de segurança Bearer JWT no Swagger (dev/stg).
  */
 @Configuration
-@Profile({"dev", "hml"})
+@Profile({"dev", "stg"})
 public class SwaggerJwtConfiguracao {
 
     private static final String SECURITY_SCHEME = "bearer-jwt";

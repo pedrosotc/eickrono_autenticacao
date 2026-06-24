@@ -26,13 +26,13 @@ O objetivo era deixar o Keycloak preparado para:
 Os principais arquivos modificados nesta etapa foram:
 
 - `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/autorizacao/realms/desenvolvimento-realm.json`
-- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/autorizacao/realms/homologacao-realm.json`
+- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/autorizacao/realms/staging-realm.json`
 - `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/autorizacao/realms/producao-realm.json`
 - `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/autorizacao/realms/render-realms.sh`
 - `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev/docker-compose.yml`
-- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml/docker-compose.yml`
+- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/stg/docker-compose.yml`
 - `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev/.env`
-- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml/.env`
+- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/stg/.env`
 - `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/README.md`
 - `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/prod/README.md`
 
@@ -43,7 +43,7 @@ Foi adicionada a seção `identityProviders` em cada um dos três realm exports.
 Isso foi feito em:
 
 - `desenvolvimento-realm.json`
-- `homologacao-realm.json`
+- `staging-realm.json`
 - `producao-realm.json`
 
 Cada realm agora carrega os seis provedores abaixo:
@@ -241,9 +241,9 @@ Ou seja:
 - o startup deve falhar cedo;
 - em vez de subir um Keycloak aparentemente saudável, mas com configuração social quebrada.
 
-## Alteração 4: ajuste do Docker Compose de `dev` e `hml`
+## Alteração 4: ajuste do Docker Compose de `dev` e `stg`
 
-Os `docker-compose.yml` de desenvolvimento e homologação foram adaptados para usar o wrapper.
+Os `docker-compose.yml` de desenvolvimento e staging foram adaptados para usar o wrapper.
 
 Antes:
 
@@ -261,9 +261,9 @@ Agora:
 Essa mudança aconteceu em:
 
 - `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev/docker-compose.yml`
-- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml/docker-compose.yml`
+- `/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/stg/docker-compose.yml`
 
-## Alteração 5: ativação da feature de Instagram em `dev` e `hml`
+## Alteração 5: ativação da feature de Instagram em `dev` e `stg`
 
 Como Instagram não é aceito por padrão no Keycloak 26.5.5, foi adicionada a variável:
 
@@ -274,7 +274,7 @@ KEYCLOAK_FEATURES=instagram-broker
 nos `.env` locais de:
 
 - `infraestrutura/dev/.env`
-- `infraestrutura/hml/.env`
+- `infraestrutura/stg/.env`
 
 e os `docker-compose.yml` passaram a iniciar o Keycloak com:
 
@@ -284,7 +284,7 @@ e os `docker-compose.yml` passaram a iniciar o Keycloak com:
 
 Isso garante que:
 
-- em `dev` e `hml`, o broker `instagram` possa ser importado;
+- em `dev` e `stg`, o broker `instagram` possa ser importado;
 - o mesmo padrão possa ser transportado para produção pela infraestrutura futura.
 
 ## Alteração 6: documentação operacional
@@ -436,7 +436,7 @@ Isso confirmou que:
 
 ### 4. Validação do compose
 
-Foi usado `docker compose config` em `dev` e `hml` para confirmar:
+Foi usado `docker compose config` em `dev` e `stg` para confirmar:
 
 - que o wrapper `render-realms.sh` está configurado como `entrypoint` do serviço;
 - que o mount foi alterado para `import-source`;
@@ -519,7 +519,7 @@ O que foi concluído nesta etapa:
 - Apple foi configurado corretamente como `oidc`;
 - LinkedIn foi configurado corretamente como `linkedin-openid-connect`;
 - Instagram foi mantido com suporte condicionado à feature flag;
-- a infraestrutura de `dev` e `hml` foi preparada para materializar credenciais em tempo de startup;
+- a infraestrutura de `dev` e `stg` foi preparada para materializar credenciais em tempo de startup;
 - a substituição foi feita de forma seletiva para não corromper placeholders internos do realm;
 - a documentação operacional foi atualizada;
 - a estrutura ficou pronta para receber credenciais reais sem novo retrabalho estrutural.

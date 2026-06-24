@@ -382,16 +382,16 @@ estrutura antiga.
 3. gravar vinculos sociais e avatares apenas quando o cadastro ou o vínculo
    local estiver confirmado
 
-## Preparacao de local e hml
+## Preparacao em execucao local e stg
 
-### Local
+### Execucao local
 
-- aplicar migrations primeiro em `local`
+- aplicar migrations primeiro na execucao local
 - criar ou ajustar registros reais no catalogo para os projetos em teste
 - validar `cadastro`, `login`, `recuperacao` e `login social` contra o
   catalogo novo
 
-### HML
+### STG
 
 - so aplicar migrations depois que:
   - `DB-01` e `DB-02` estiverem aprovados nesta especificacao
@@ -402,8 +402,8 @@ estrutura antiga.
 
 Conclusao operacional:
 
-- `sim`, local e `hml` vao precisar de atualizacao de banco para fechar o alvo
+- `sim`, a execucao local e `stg` vao precisar de atualizacao de banco para fechar o alvo
   funcional;
-- `nao`, ainda nao e momento de aplicar isso em `hml`;
+- `nao`, ainda nao e momento de aplicar isso em `stg`;
 - esta especificacao existe justamente para que a migration seja desenhada
   antes de qualquer rollout.

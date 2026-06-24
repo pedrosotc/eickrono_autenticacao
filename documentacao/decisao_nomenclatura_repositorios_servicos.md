@@ -74,7 +74,7 @@ Padrão canônico aprovado para novos segredos:
 
 Onde:
 
-- `<ambiente>`: `dev`, `hml`, `prod`
+- `<ambiente>`: `dev`, `stg`, `prod`
 - `<dominio>`: `keycloak`, `auth`, `identidade`, `shared`, `thimisu-backend`
 - `<categoria>`: `clientes`, `admin`, `smtp`, `mtls`, `jwt-interno`,
   `device-token`, `codigo-token`
@@ -85,20 +85,20 @@ Onde:
 Exemplos canônicos:
 
 - cliente interno do domínio de autenticação:
-  `/eickrono/hml/keycloak/clientes/autenticacao-servidor/secret`
+  `/eickrono/stg/keycloak/clientes/autenticacao-servidor/secret`
 - cliente interno do módulo Keycloak:
-  `/eickrono/hml/keycloak/clientes/eickrono-keycloak/secret`
+  `/eickrono/stg/keycloak/clientes/eickrono-keycloak/secret`
 - cliente interno do backend do Thimisu:
-  `/eickrono/hml/keycloak/clientes/thimisu-backend/secret`
+  `/eickrono/stg/keycloak/clientes/thimisu-backend/secret`
 - cliente móvel do app Flutter:
-  `/eickrono/hml/keycloak/clientes/app-flutter-hml/secret`
+  `/eickrono/stg/keycloak/clientes/app-flutter-stg/secret`
 - usuário administrador do Keycloak:
-  `/eickrono/hml/keycloak/admin/password`
+  `/eickrono/stg/keycloak/admin/password`
 - credencial SMTP da identidade:
-  `/eickrono/hml/identidade/smtp/primario/username`
-  `/eickrono/hml/identidade/smtp/primario/password`
+  `/eickrono/stg/identidade/smtp/primario/username`
+  `/eickrono/stg/identidade/smtp/primario/password`
 - segredo compartilhado interno:
-  `/eickrono/hml/shared/jwt-interno/autenticacao/secret`
+  `/eickrono/stg/shared/jwt-interno/autenticacao/secret`
 
 Regra prática:
 
@@ -108,13 +108,13 @@ Regra prática:
 - nomes misturando `client` com `servidor` fora do `client_id` ficam proibidos
   como namespace canônico.
 
-### Namespaces materializados em `hml`
+### Namespaces materializados em `stg`
 
 | Namespace | Client ID | Para que serve | Consumidores |
 | --- | --- | --- | --- |
-| `/eickrono/hml/keycloak/clientes/autenticacao-servidor/secret` | `autenticacao-servidor` | token/backchannel interno entre autenticação e identidade | `identidade-hml`, `auth-hml` |
-| `/eickrono/hml/keycloak/clientes/eickrono-keycloak/secret` | `eickrono-keycloak` | operações internas do módulo Keycloak/customizações | `auth-hml` |
-| `/eickrono/hml/keycloak/clientes/thimisu-backend/secret` | `thimisu-backend` | backchannel JWT interno do `thimisu-backend` | `thimisu-backend-hml`, `auth-hml` |
+| `/eickrono/stg/keycloak/clientes/autenticacao-servidor/secret` | `autenticacao-servidor` | token/backchannel interno entre autenticação e identidade | `identidade-stg`, `auth-stg` |
+| `/eickrono/stg/keycloak/clientes/eickrono-keycloak/secret` | `eickrono-keycloak` | operações internas do módulo Keycloak/customizações | `auth-stg` |
+| `/eickrono/stg/keycloak/clientes/thimisu-backend/secret` | `thimisu-backend` | backchannel JWT interno do `thimisu-backend` | `thimisu-backend-stg`, `auth-stg` |
 
 ## O que deve deixar de existir
 

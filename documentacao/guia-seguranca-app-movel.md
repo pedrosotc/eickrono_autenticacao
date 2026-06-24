@@ -42,7 +42,7 @@ Tambem ja esta implementado:
 Para este projeto, a regra operacional correta e:
 
 - `dev`: a validacao oficial de dispositivo pode ficar desligada;
-- `hml`: a validacao oficial de dispositivo deve ficar ligada;
+- `stg`: a validacao oficial de dispositivo deve ficar ligada;
 - `prod`: a validacao oficial de dispositivo deve ficar ligada.
 
 Isso vale para as duas plataformas:
@@ -53,8 +53,8 @@ Isso vale para as duas plataformas:
 Observacao importante:
 
 - o codigo hoje endurece automaticamente `prod`;
-- `hml` ainda depende de configuracao e checklist operacional para respeitar a mesma exigencia;
-- a documentacao deste guia deve ser tratada como a politica desejada do ambiente, mesmo antes de eventual endurecimento automatico equivalente em `hml`.
+- `stg` ainda depende de configuracao e checklist operacional para respeitar a mesma exigencia;
+- a documentacao deste guia deve ser tratada como a politica desejada do ambiente, mesmo antes de eventual endurecimento automatico equivalente em `stg`.
 
 ## O que esta em jogo
 
@@ -72,7 +72,7 @@ Camadas contempladas:
 No Android, a identidade esperada mudou com os flavors do aplicativo:
 
 - `dev`: `com.eickrono.thimisu.dev`
-- `hml`: `com.eickrono.thimisu.hml`
+- `stg`: `com.eickrono.thimisu.stg`
 - `prod`: `com.eickrono.thimisu`
 
 No iOS, a identidade tecnica permaneceu estavel:
@@ -87,7 +87,7 @@ Consequencia pratica para a autenticacao:
 
 Em especial:
 
-- a separacao recente de `dev` e `hml` no Android exige ajuste do valor esperado pelo servidor nesses ambientes;
+- a separacao recente de `dev` e `stg` no Android exige ajuste do valor esperado pelo servidor nesses ambientes;
 - essa mesma mudanca nao deveria causar problema na validacao Apple.
 
 ## Configuracao minima por ambiente
@@ -108,11 +108,11 @@ Politica esperada:
   - pode usar `IDENTIDADE_ATESTACAO_APP_PERMITIR_VALIDACAO_LOCAL_SEM_PROVEDOR_OFICIAL=true`
   - pode manter `IDENTIDADE_ATESTACAO_APP_GOOGLE_HABILITADO=false`
   - pode manter `IDENTIDADE_ATESTACAO_APP_APPLE_HABILITADO=false`
-- `hml`:
+- `stg`:
   - deve usar `IDENTIDADE_ATESTACAO_APP_PERMITIR_VALIDACAO_LOCAL_SEM_PROVEDOR_OFICIAL=false`
   - deve usar `IDENTIDADE_ATESTACAO_APP_GOOGLE_HABILITADO=true`
   - deve usar `IDENTIDADE_ATESTACAO_APP_APPLE_HABILITADO=true`
-  - deve apontar `IDENTIDADE_ATESTACAO_APP_GOOGLE_PACKAGE_NAME=com.eickrono.thimisu.hml`
+  - deve apontar `IDENTIDADE_ATESTACAO_APP_GOOGLE_PACKAGE_NAME=com.eickrono.thimisu.stg`
   - deve apontar `IDENTIDADE_ATESTACAO_APP_APPLE_BUNDLE_IDENTIFIER=com.eickrono.thimisu`
   - deve apontar `IDENTIDADE_ATESTACAO_APP_APPLE_TEAM_IDENTIFIER=M863Q6N87G`
 - `prod`:
@@ -228,7 +228,7 @@ O app Android tambem envia `assinaturaSha256`, mas esse valor ainda nao esta fix
 
 Isso significa:
 
-- a troca de `packageName` em `dev` e `hml` precisa ser refletida no servidor;
+- a troca de `packageName` em `dev` e `stg` precisa ser refletida no servidor;
 - a troca de keystore Android, por si so, nao quebra a correlacao atual enquanto nao houver pin explicito da assinatura esperada;
 - para endurecer a deteccao de reempacotamento Android, ainda falta comparar `assinaturaSha256` com um valor confiavel por ambiente.
 

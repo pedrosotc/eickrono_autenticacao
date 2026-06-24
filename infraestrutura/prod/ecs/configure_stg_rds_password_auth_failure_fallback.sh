@@ -8,7 +8,7 @@ LAMBDA_SOURCE_FILE="${LAMBDA_SOURCE_DIR}/handler.py"
 
 usage() {
   cat <<'EOF'
-uso: configure_hml_rds_password_auth_failure_fallback.sh [opcoes]
+uso: configure_stg_rds_password_auth_failure_fallback.sh [opcoes]
 
 Configura o fallback que observa logs com erro de senha antiga do RDS e,
 apos validar a senha atual por uma task Fargate de psql, forca novo deploy
@@ -78,19 +78,19 @@ print(value[:80] or "LogGroup")
 PY
 }
 
-CLUSTER="eickrono-hml"
-SERVICES_CSV="autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml"
-LOG_GROUPS_CSV="/ecs/hml/autenticacao,/ecs/hml/auth,/ecs/hml/identidade,/ecs/hml/thimisu-backend"
-FUNCTION_NAME="eickrono-hml-rds-password-auth-failure-fallback"
-ROLE_NAME="eickrono-hml-rds-password-auth-failure-fallback-role"
-FILTER_NAME="eickrono-hml-rds-password-auth-failure-fallback"
+CLUSTER="eickrono-stg"
+SERVICES_CSV="autenticacao-api-stg,auth-stg,identidade-stg,thimisu-backend-stg"
+LOG_GROUPS_CSV="/ecs/stg/autenticacao,/ecs/stg/auth,/ecs/stg/identidade,/ecs/stg/thimisu-backend"
+FUNCTION_NAME="eickrono-stg-rds-password-auth-failure-fallback"
+ROLE_NAME="eickrono-stg-rds-password-auth-failure-fallback-role"
+FILTER_NAME="eickrono-stg-rds-password-auth-failure-fallback"
 FILTER_PATTERN='"password authentication failed" "eickrono_admin"'
-VALIDATION_TASK_DEFINITION="eickrono-hml-db-query-codex:1"
+VALIDATION_TASK_DEFINITION="eickrono-stg-db-query-codex:1"
 VALIDATION_CONTAINER_NAME="psql"
 VALIDATION_SUBNETS_CSV="subnet-064c1362d7b4635db,subnet-0d91dc50495fb52c9"
 VALIDATION_SECURITY_GROUPS_CSV="sg-05d90b4911b4326b8"
-VALIDATION_DATABASE="eickrono_identidade_hml"
-COOLDOWN_PARAMETER_NAME="/eickrono/hml/rds-password-auth-failure-fallback/last-run"
+VALIDATION_DATABASE="eickrono_identidade_stg"
+COOLDOWN_PARAMETER_NAME="/eickrono/stg/rds-password-auth-failure-fallback/last-run"
 COOLDOWN_SECONDS="900"
 REGION="sa-east-1"
 PROFILE=""

@@ -18,10 +18,10 @@ consumindo explicitamente:
 
 - `CREDENCIAIS_RAPIDAS.md`
   Acesso direto a tokens, senhas, usuários e caminhos reais mais usados.
-- `runbook_hml_aws_operacional.md`
-  Caminho canônico e resumido para subir, atualizar e validar `hml`.
-- `guia_subida_hml_aws.md`
-  Trilha completa da subida de `hml`, incluindo contexto, causas-raiz e
+- `runbook_stg_aws_operacional.md`
+  Caminho canônico e resumido para subir, atualizar e validar `stg`.
+- `guia_subida_stg_aws.md`
+  Trilha completa da subida de `stg`, incluindo contexto, causas-raiz e
   historico cronologico consolidado.
 - `ecs/README.md`
   Caminho focado para build, push e rollout dos servicos no `ECS`.
@@ -31,9 +31,9 @@ consumindo explicitamente:
   Validacao de entregabilidade e leitura de cabecalhos reais.
 
 O ponto de entrada canônico agora passa a ser
-`runbook_hml_aws_operacional.md`.
+`runbook_stg_aws_operacional.md`.
 
-O arquivo `guia_subida_hml_aws.md` continua importante, mas deve ser tratado
+O arquivo `guia_subida_stg_aws.md` continua importante, mas deve ser tratado
 como trilha historica ampliada. Para execucao focada por assunto, prefira o
 runbook operacional novo e os arquivos especializados acima.
 

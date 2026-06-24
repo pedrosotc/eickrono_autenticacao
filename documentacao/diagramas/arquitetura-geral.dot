@@ -83,7 +83,7 @@ digraph "Arquitetura Eickrono Autenticacao Servidor" {
         }
     }
 
-    chaveiro [label=<<b>Autoridade certificadora interna</b><br/>ACM + scripts autoassinados dev/hml<br/>Distribuição certificados mTLS>>, fillcolor="#FAF5FF"];
+    chaveiro [label=<<b>Autoridade certificadora interna</b><br/>ACM + scripts autoassinados dev/stg<br/>Distribuição certificados mTLS>>, fillcolor="#FAF5FF"];
 
     legenda [label=<<b>Notas</b><br/>• Fluxo público: Authorization Code + PKCE (Flutter)<br/>• Clientes confidenciais: PAR + JAR + JARM + mTLS<br/>• Anti-replay: nonce, jti store, PKCE<br/>• Logs mascarados antes de enviar ao SIEM<br/>• Tolerância clock skew: 1 min (auditada)>>, shape=note, style=filled, fillcolor="#FFFFF0"];
 

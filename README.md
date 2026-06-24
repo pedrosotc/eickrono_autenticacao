@@ -106,13 +106,13 @@ Regra prática:
   `/eickrono/<ambiente>/identidade/smtp/primario/username`
   e `/password`
 
-Namespaces canônicos atualmente usados em `hml`:
+Namespaces canônicos atualmente usados em `stg`:
 
 | Namespace | Client ID | Finalidade | Consumidores |
 | --- | --- | --- | --- |
-| `/eickrono/hml/keycloak/clientes/autenticacao-servidor/secret` | `autenticacao-servidor` | segredo do cliente interno usado para token JWT/backchannel entre autenticação e identidade | `identidade-hml`, `auth-hml` |
-| `/eickrono/hml/keycloak/clientes/eickrono-keycloak/secret` | `eickrono-keycloak` | segredo do cliente interno do próprio módulo Keycloak/customizações | `auth-hml` |
-| `/eickrono/hml/keycloak/clientes/thimisu-backend/secret` | `thimisu-backend` | segredo do cliente interno usado pelo backend do Thimisu no backchannel JWT | `thimisu-backend-hml`, `auth-hml` |
+| `/eickrono/stg/keycloak/clientes/autenticacao-servidor/secret` | `autenticacao-servidor` | segredo do cliente interno usado para token JWT/backchannel entre autenticação e identidade | `identidade-stg`, `auth-stg` |
+| `/eickrono/stg/keycloak/clientes/eickrono-keycloak/secret` | `eickrono-keycloak` | segredo do cliente interno do próprio módulo Keycloak/customizações | `auth-stg` |
+| `/eickrono/stg/keycloak/clientes/thimisu-backend/secret` | `thimisu-backend` | segredo do cliente interno usado pelo backend do Thimisu no backchannel JWT | `thimisu-backend-stg`, `auth-stg` |
 
 Fonte de verdade: `documentacao/decisao_nomenclatura_repositorios_servicos.md`.
 
@@ -155,6 +155,7 @@ resume a estrutura física e a direção vigente do repositório.
 - `documentacao/guia-operacao-producao.md`: runtime, operação e observabilidade
 - `documentacao/padrao-codigos-erro-correlacao-observabilidade.md`: padrão canônico de `error_code`, `flow_id`, logs mascarados, traces e auditoria
 - `documentacao/guia-cloudflare-tunnel-google-keycloak-dev.md`: exposição temporária do Keycloak local para Google OAuth brokerado
+- `documentacao/decisao_ambientes_dev_stg_hml_prod.md`: nomes canônicos dos ambientes e regra para não confundir Docker local com ambiente
 - `documentacao/plano-padronizacao-realm-unico.md`: alvo arquitetural para padronizar o realm `OIDC`
 - `documentacao/matriz_migracao_autenticacao_identidade_thimisu_backend.md`: transição consolidada entre autenticação, identidade e `thimisu-backend`
 - `documentacao/analise_fronteiras_funcionais_autenticacao_identidade_thimisu_backend.md`: verificação objetiva das fronteiras funcionais
@@ -171,13 +172,13 @@ centralizados neste repositório:
 - `make test-servicos-completo` (`Docker` acessível, porque a identidade usa `Testcontainers`)
 - `make compose-config`
 - `make up-dev`
-- `make up-hml`
+- `make up-stg`
 
 Observações desta etapa:
 
 - `make package` e `make test` agora exercitam apenas o build canônico de autenticação;
 - para subir `contas` junto na stack local, use `INCLUIR_API_CONTAS=true make up-dev`
-  ou `INCLUIR_API_CONTAS=true make up-hml`.
+  ou `INCLUIR_API_CONTAS=true make up-stg`.
 
 ## Consulta de versão em runtime
 
@@ -311,12 +312,21 @@ Observação:
   `eickrono-autenticacao-servidor` deve convergir para um projeto simples,
   central e sem módulo interno de `contas`.
 
-## Ambientes locais
+## Execução Local Com Docker
 
-Em `dev` e `hml`, o `docker compose` inclui `MailHog` para testes locais de e-mail:
+Ambientes e forma de execução são conceitos separados. Os ambientes canônicos
+ativos são `dev`, `stg` e `prod`/`prd`. A decisão completa sobre a renomeação
+do ambiente compartilhado na AWS está em
+`documentacao/decisao_ambientes_dev_stg_hml_prod.md`.
+
+Não crie nomes de ambiente com sufixo local. Quando a pasta `infraestrutura/stg`
+é executada via Docker no computador do desenvolvedor, o ambiente continua
+sendo `stg`; Docker é apenas a forma de execução.
+
+Em `dev` e `stg`, o `docker compose` inclui `MailHog` para testes locais de e-mail:
 
 - `dev`: SMTP `localhost:1025`, UI `http://localhost:8025`
-- `hml`: SMTP `localhost:11025`, UI `http://localhost:18025`
+- `stg`: SMTP `localhost:11025`, UI `http://localhost:18025`
 
 No `dev`, se o `.env` ja estiver apontando para um SMTP real, ainda e possivel
 forcar o uso do MailHog sem alterar essas credenciais:
@@ -330,26 +340,26 @@ O `docker compose` local usa PostgreSQL já existente no ambiente local, com ban
 - `dev` Keycloak/autorização: `jdbc:postgresql://localhost:5432/eickrono_autorizacao`
 - `dev` identidade: `jdbc:postgresql://localhost:5432/eickrono_identidade`
 - `dev` contas: `jdbc:postgresql://localhost:5432/eickrono_contas`
-- `hml` Keycloak: `jdbc:postgresql://localhost:5432/keycloak_hml`
-- `hml` identidade: `jdbc:postgresql://localhost:5432/eickrono_identidade_hml`
-- `hml` contas: `jdbc:postgresql://localhost:5432/eickrono_contas_hml`
+- `stg` Keycloak: `jdbc:postgresql://localhost:5432/keycloak_stg`
+- `stg` identidade: `jdbc:postgresql://localhost:5432/eickrono_identidade_stg`
+- `stg` contas: `jdbc:postgresql://localhost:5432/eickrono_contas_stg`
 
 ## Swagger
 
 - API autenticacao `dev`: `http://127.0.0.1:8081/swagger-ui/index.html`
 - API autenticacao `dev` OpenAPI: `http://127.0.0.1:8081/v3/api-docs`
-- API identidade `hml`: `http://localhost:18081/swagger-ui/index.html`
-- API identidade `hml` OpenAPI: `http://localhost:18081/v3/api-docs`
+- API identidade `stg`: `http://localhost:18081/swagger-ui/index.html`
+- API identidade `stg` OpenAPI: `http://localhost:18081/v3/api-docs`
 - API contas `dev`: `http://localhost:8082/swagger-ui/index.html`
 - API contas `dev` OpenAPI: `http://localhost:8082/v3/api-docs`
-- API contas `hml`: `http://localhost:18082/swagger-ui/index.html`
-- API contas `hml` OpenAPI: `http://localhost:18082/v3/api-docs`
+- API contas `stg`: `http://localhost:18082/swagger-ui/index.html`
+- API contas `stg` OpenAPI: `http://localhost:18082/v3/api-docs`
 
 Proteção:
 
 - `dev`: uso local liberado;
-- `hml`: `Basic Auth` + whitelist de IP;
-- credenciais padrão de `hml`: usuário `swagger`, senha `swagger-hml`.
+- `stg`: `Basic Auth` + whitelist de IP;
+- credenciais padrão de `stg`: usuário `swagger`, senha `swagger-stg`.
 
 ## Leitura recomendada
 

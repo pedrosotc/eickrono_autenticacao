@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPT_UNDER_TEST="${ROOT_DIR}/ecs/build_push_hml_image.sh"
+SCRIPT_UNDER_TEST="${ROOT_DIR}/ecs/build_push_stg_image.sh"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -33,13 +33,13 @@ test_missing_required_args() {
   local status=$?
   set -e
   assert_equals "2" "$status"
-  assert_contains "$output" "uso: build_push_hml_image.sh"
+  assert_contains "$output" "uso: build_push_stg_image.sh"
 }
 
 test_invalid_service() {
   local output
   set +e
-  output="$("$SCRIPT_UNDER_TEST" --service invalido --tag hml-test 2>&1)"
+  output="$("$SCRIPT_UNDER_TEST" --service invalido --tag stg-test 2>&1)"
   local status=$?
   set -e
   assert_equals "2" "$status"
@@ -50,7 +50,7 @@ test_dry_run_auth_includes_prebuild_and_push() {
   local output
   output="$("$SCRIPT_UNDER_TEST" \
     --service auth \
-    --tag hml-20260429-001 \
+    --tag stg-20260429-001 \
     --profile Codex-cli_aws \
     --dry-run)"
 
@@ -60,14 +60,14 @@ test_dry_run_auth_includes_prebuild_and_push() {
   assert_contains "$output" "[dry-run] (cd "
   assert_contains "$output" "aws --profile Codex-cli_aws ecr get-login-password --region sa-east-1"
   assert_contains "$output" "docker buildx build"
-  assert_contains "$output" "531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-autenticacao-servidor:hml-20260429-001"
+  assert_contains "$output" "531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-autenticacao-servidor:stg-20260429-001"
 }
 
 test_dry_run_thimisu_backend_skips_prebuild_command() {
   local output
   output="$("$SCRIPT_UNDER_TEST" \
     --service thimisu-backend \
-    --tag hml-20260429-002 \
+    --tag stg-20260429-002 \
     --dry-run)"
 
   assert_contains "$output" "SERVICE_KEY=thimisu-backend"

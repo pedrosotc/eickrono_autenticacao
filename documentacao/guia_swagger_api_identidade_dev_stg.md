@@ -1,4 +1,4 @@
-# Guia de Acesso ao Swagger da API Autenticacao em Dev e HML
+# Guia de Acesso ao Swagger da API Autenticacao em Dev e STG
 
 Este guia resume como abrir o Swagger/OpenAPI do runtime
 `eickrono-autenticacao` dentro do repositório
@@ -28,7 +28,7 @@ Nota:
 - em `dev`, o Swagger fica liberado para uso local;
 - nao exige `Basic Auth`.
 
-## 2. HML local
+## 2. STG
 
 ### 2.1 Swagger UI
 
@@ -47,5 +47,5 @@ Nota:
 
 | Ambiente | Swagger UI | OpenAPI JSON | Credencial |
 | --- | --- | --- | --- |
-| `dev` local | `http://127.0.0.1:8081/swagger-ui/index.html` | `http://127.0.0.1:8081/v3/api-docs` | nao exige |
-| `hml` local | `http://localhost:18081/swagger-ui/index.html` | `http://localhost:18081/v3/api-docs` | `swagger / Sw9@Qm2!Tx7#Lp4$Vz8Kr` |
+| `dev` via compose | `http://127.0.0.1:8081/swagger-ui/index.html` | `http://127.0.0.1:8081/v3/api-docs` | nao exige |
+| `stg` via compose | `http://localhost:18081/swagger-ui/index.html` | `http://localhost:18081/v3/api-docs` | `swagger / Sw9@Qm2!Tx7#Lp4$Vz8Kr` |

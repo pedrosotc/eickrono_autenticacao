@@ -1,11 +1,11 @@
-# Docker HML
+# Docker STG
 
-Esta pasta guarda os artefatos de imagem do runtime de `hml`.
+Esta pasta guarda os artefatos de imagem do runtime de `stg`.
 
 Arquivos:
 
-- `Dockerfile.keycloak-hml`
-- `start-keycloak-hml.sh`
+- `Dockerfile.keycloak-stg`
+- `start-keycloak-stg.sh`
 
 Objetivo:
 
@@ -15,8 +15,8 @@ Objetivo:
 
 A trilha operacional principal de build e uso desse Dockerfile esta em:
 
-- `../runbook_hml_aws_operacional.md`
+- `../runbook_stg_aws_operacional.md`
 
 Para contexto cronologico mais amplo da implantacao:
 
-- `../guia_subida_hml_aws.md`
+- `../guia_subida_stg_aws.md`

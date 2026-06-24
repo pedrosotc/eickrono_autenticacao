@@ -46,5 +46,5 @@ O `docker compose` local sobe este módulo como o serviço
 Arquivos relevantes:
 
 - `../../infraestrutura/dev/docker-compose.yml`
-- `../../infraestrutura/hml/docker-compose.yml`
+- `../../infraestrutura/stg/docker-compose.yml`
 - `Dockerfile`

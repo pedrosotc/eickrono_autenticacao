@@ -77,30 +77,30 @@ class RotationRedeployLambdaTest(unittest.TestCase):
             event,
             ecs_client=ecs_client,
             secret_arn="arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc",
-            cluster="eickrono-hml",
-            services=["auth-hml", "identidade-hml", "thimisu-backend-hml"],
+            cluster="eickrono-stg",
+            services=["auth-stg", "identidade-stg", "thimisu-backend-stg"],
         )
 
         self.assertTrue(result["matched"])
         self.assertEqual(
-            ["auth-hml", "identidade-hml", "thimisu-backend-hml"],
+            ["auth-stg", "identidade-stg", "thimisu-backend-stg"],
             result["servicesRedeployed"],
         )
         self.assertEqual(
             [
                 {
-                    "cluster": "eickrono-hml",
-                    "service": "auth-hml",
+                    "cluster": "eickrono-stg",
+                    "service": "auth-stg",
                     "forceNewDeployment": True,
                 },
                 {
-                    "cluster": "eickrono-hml",
-                    "service": "identidade-hml",
+                    "cluster": "eickrono-stg",
+                    "service": "identidade-stg",
                     "forceNewDeployment": True,
                 },
                 {
-                    "cluster": "eickrono-hml",
-                    "service": "thimisu-backend-hml",
+                    "cluster": "eickrono-stg",
+                    "service": "thimisu-backend-stg",
                     "forceNewDeployment": True,
                 },
             ],
@@ -108,12 +108,12 @@ class RotationRedeployLambdaTest(unittest.TestCase):
         )
         self.assertEqual(
             [
-                ("update", "auth-hml"),
-                ("wait", "eickrono-hml", ("auth-hml",), 15, 40),
-                ("update", "identidade-hml"),
-                ("wait", "eickrono-hml", ("identidade-hml",), 15, 40),
-                ("update", "thimisu-backend-hml"),
-                ("wait", "eickrono-hml", ("thimisu-backend-hml",), 15, 40),
+                ("update", "auth-stg"),
+                ("wait", "eickrono-stg", ("auth-stg",), 15, 40),
+                ("update", "identidade-stg"),
+                ("wait", "eickrono-stg", ("identidade-stg",), 15, 40),
+                ("update", "thimisu-backend-stg"),
+                ("wait", "eickrono-stg", ("thimisu-backend-stg",), 15, 40),
             ],
             ecs_client.operations,
         )
@@ -140,30 +140,30 @@ class RotationRedeployLambdaTest(unittest.TestCase):
             event,
             ecs_client=ecs_client,
             secret_arn="arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc",
-            cluster="eickrono-hml",
-            services=["auth-hml", "identidade-hml", "thimisu-backend-hml"],
+            cluster="eickrono-stg",
+            services=["auth-stg", "identidade-stg", "thimisu-backend-stg"],
         )
 
         self.assertTrue(result["matched"])
         self.assertEqual(
-            ["auth-hml", "identidade-hml", "thimisu-backend-hml"],
+            ["auth-stg", "identidade-stg", "thimisu-backend-stg"],
             result["servicesRedeployed"],
         )
         self.assertEqual(
             [
                 {
-                    "cluster": "eickrono-hml",
-                    "service": "auth-hml",
+                    "cluster": "eickrono-stg",
+                    "service": "auth-stg",
                     "forceNewDeployment": True,
                 },
                 {
-                    "cluster": "eickrono-hml",
-                    "service": "identidade-hml",
+                    "cluster": "eickrono-stg",
+                    "service": "identidade-stg",
                     "forceNewDeployment": True,
                 },
                 {
-                    "cluster": "eickrono-hml",
-                    "service": "thimisu-backend-hml",
+                    "cluster": "eickrono-stg",
+                    "service": "thimisu-backend-stg",
                     "forceNewDeployment": True,
                 },
             ],
@@ -171,12 +171,12 @@ class RotationRedeployLambdaTest(unittest.TestCase):
         )
         self.assertEqual(
             [
-                ("update", "auth-hml"),
-                ("wait", "eickrono-hml", ("auth-hml",), 15, 40),
-                ("update", "identidade-hml"),
-                ("wait", "eickrono-hml", ("identidade-hml",), 15, 40),
-                ("update", "thimisu-backend-hml"),
-                ("wait", "eickrono-hml", ("thimisu-backend-hml",), 15, 40),
+                ("update", "auth-stg"),
+                ("wait", "eickrono-stg", ("auth-stg",), 15, 40),
+                ("update", "identidade-stg"),
+                ("wait", "eickrono-stg", ("identidade-stg",), 15, 40),
+                ("update", "thimisu-backend-stg"),
+                ("wait", "eickrono-stg", ("thimisu-backend-stg",), 15, 40),
             ],
             ecs_client.operations,
         )
@@ -197,8 +197,8 @@ class RotationRedeployLambdaTest(unittest.TestCase):
             event,
             ecs_client=ecs_client,
             secret_arn="arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc",
-            cluster="eickrono-hml",
-            services=["auth-hml"],
+            cluster="eickrono-stg",
+            services=["auth-stg"],
         )
 
         self.assertFalse(result["matched"])
@@ -214,8 +214,8 @@ class RotationRedeployLambdaTest(unittest.TestCase):
             os.environ["TARGET_SECRET_ARN"] = (
                 "arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc"
             )
-            os.environ["ECS_CLUSTER"] = "eickrono-hml"
-            os.environ["ECS_SERVICES"] = "auth-hml,identidade-hml"
+            os.environ["ECS_CLUSTER"] = "eickrono-stg"
+            os.environ["ECS_SERVICES"] = "auth-stg,identidade-stg"
             os.environ["SERVICE_STABLE_WAITER_DELAY_SECONDS"] = "3"
             os.environ["SERVICE_STABLE_WAITER_MAX_ATTEMPTS"] = "4"
 
@@ -256,15 +256,15 @@ class RotationRedeployLambdaTest(unittest.TestCase):
 
             self.assertTrue(result["matched"])
             self.assertEqual(
-                ["auth-hml", "identidade-hml"],
+                ["auth-stg", "identidade-stg"],
                 result["servicesRedeployed"],
             )
             self.assertEqual(
                 [
-                    ("update", "auth-hml"),
-                    ("wait", "eickrono-hml", ("auth-hml",), 3, 4),
-                    ("update", "identidade-hml"),
-                    ("wait", "eickrono-hml", ("identidade-hml",), 3, 4),
+                    ("update", "auth-stg"),
+                    ("wait", "eickrono-stg", ("auth-stg",), 3, 4),
+                    ("update", "identidade-stg"),
+                    ("wait", "eickrono-stg", ("identidade-stg",), 3, 4),
                 ],
                 boto3_fake.ecs.operations,
             )

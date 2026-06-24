@@ -18,7 +18,7 @@ Objetivo:
   runtime;
 - deixar claro quando um `seed`/registro de catalogo por projeto tambem e
   obrigatorio;
-- orientar a ordem de preparacao de `local` e `hml` antes do rollout.
+- orientar a ordem de preparacao em execucao local e em `stg` antes do rollout.
 
 Relacionamento com os outros documentos:
 
@@ -165,12 +165,12 @@ Ordem recomendada:
 2. escrever as migrations locais;
 3. aplicar e validar em `local`;
 4. popular seeds minimos de catalogo por projeto;
-5. so depois preparar rollout de migration para `hml`.
+5. so depois preparar rollout de migration para `stg`.
 
 Conclusao pratica:
 
-- `nao` e hora de subir migration direto em `hml`;
-- `sim`, local e `hml` muito provavelmente vao exigir atualizacao de banco para
+- `nao` e hora de subir migration direto em `stg`;
+- `sim`, a execucao local e `stg` muito provavelmente vao exigir atualizacao de banco para
   fechar o alvo funcional;
 - o minimo seguro antes do rollout e sair deste documento com `DB-01..03`
   fechados em especificacao de schema/migration.

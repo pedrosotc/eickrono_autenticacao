@@ -4,7 +4,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-uso: summarize_hml_db_config.sh [opcoes]
+uso: summarize_stg_db_config.sh [opcoes]
 
 opcoes:
   --db-overrides-file <arq>    carrega overrides de banco para a renderizacao
@@ -15,7 +15,7 @@ EOF
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROLLOUT_SCRIPT="${SCRIPT_DIR}/rollout_hml_service.sh"
+ROLLOUT_SCRIPT="${SCRIPT_DIR}/rollout_stg_service.sh"
 
 db_overrides_file=""
 region="sa-east-1"
@@ -109,7 +109,7 @@ auth_host="$(jq -r '.containerDefinitions[0].environment[] | select(.name == "KC
 auth_db_name="$(jq -r '.containerDefinitions[0].environment[] | select(.name == "KC_DB_URL_DATABASE") | .value' "${tmpdir}/auth.json")"
 auth_username="$(jq -r '.containerDefinitions[0].environment[] | select(.name == "KC_DB_USERNAME") | .value' "${tmpdir}/auth.json")"
 auth_password_secret="$(jq -r '.containerDefinitions[0].secrets[] | select(.name == "KC_DB_PASSWORD") | .valueFrom' "${tmpdir}/auth.json")"
-auth_port="${HML_SHARED_DB_PORT:-5432}"
+auth_port="${STG_SHARED_DB_PORT:-5432}"
 print_row "auth" "$auth_host" "$auth_port" "$auth_db_name" "$auth_username" "$auth_password_secret"
 
 identidade_jdbc_url="$(jq -r '.containerDefinitions[0].environment[] | select(.name == "SPRING_DATASOURCE_URL") | .value' "${tmpdir}/identidade.json")"

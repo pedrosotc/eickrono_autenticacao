@@ -4,19 +4,19 @@ Este guia orienta a preparação do ambiente local e o fluxo de trabalho diário
 
 ## Requisitos locais
 
-- **Sistema operacional:** macOS, Linux ou Windows 11 com WSL2.  
-- **JDK:** Temurin/Adoptium Java 21.  
-- **Maven:** 3.9 ou superior.  
-- **Docker + Docker Compose:** para execução dos ambientes dev/hml.  
-- **Node.js (opcional):** apenas se for necessário personalizar o tema do Keycloak com toolchain front-end.  
+- **Sistema operacional:** macOS, Linux ou Windows 11 com WSL2.
+- **JDK:** Temurin/Adoptium Java 21.
+- **Maven:** 3.9 ou superior.
+- **Docker + Docker Compose:** para execução dos ambientes dev/stg.
+- **Node.js (opcional):** apenas se for necessário personalizar o tema do Keycloak com toolchain front-end.
 - **Ferramentas auxiliares:** `make`, `openssl` para geração de certificados, `psql` para interações com PostgreSQL.
 
 ## Primeiros passos
 
-1. Execute `mvn -version` para validar a instalação do Maven e do JDK 21.  
-2. Rode `mvn verify` na raiz para baixar dependências e validar qualidade.  
-3. Revise `infraestrutura/dev/.env` e personalize os valores locais com segurança.  
-4. Execute `docker compose up` em `infraestrutura/dev` para subir Keycloak, PostgreSQL e as APIs.  
+1. Execute `mvn -version` para validar a instalação do Maven e do JDK 21.
+2. Rode `mvn verify` na raiz para baixar dependências e validar qualidade.
+3. Revise `infraestrutura/dev/.env` e personalize os valores locais com segurança.
+4. Execute `docker compose up` em `infraestrutura/dev` para subir Keycloak, PostgreSQL e as APIs.
 5. Acesse `http://127.0.0.1:8081/actuator/health` e `http://127.0.0.1:8082/actuator/health` para verificar se as APIs estão saudáveis.
 
 Estrutura prática do repositório:
@@ -99,11 +99,11 @@ Observações importantes do fluxo canônico:
 - se o backend exigir nova validação de contato, o app deve reutilizar a tela já existente de verificação;
 - em `docker compose`, a própria API de identidade precisa apontar o Keycloak interno para `http://eickrono-keycloak:8080`, não para `localhost`;
 - a derivação da senha efetiva no servidor de autorização usa apenas `pepper + createdTimestamp` do usuário no Keycloak, e não mais `data_nascimento`.
-- em `dev` e `hml`, o `docker compose` já inclui um SMTP local de teste (`MailHog`), mas o `dev` pode ser sobrescrito para SMTP real via `.env`.
+- em `dev` e `stg`, o `docker compose` já inclui um SMTP de teste (`MailHog`) publicado no host local, mas o `dev` pode ser sobrescrito para SMTP real via `.env`.
 - quando `IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR=smtp`, o envio passa a usar `JavaMailSender` com as propriedades `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` e derivados.
-- os `docker-compose` locais agora sobem `MailHog` para capturar esses e-mails:
+- os `docker compose` executados no computador do desenvolvedor sobem `MailHog` para capturar esses e-mails:
   - `dev`: UI em `http://localhost:8025`
-  - `hml`: UI em `http://localhost:18025`
+  - `stg`: UI em `http://localhost:18025`
 
 ## Como ver códigos de e-mail no MailHog
 
@@ -123,10 +123,10 @@ Fluxo prático em `dev`:
 7. leia o corpo do e-mail e copie o valor da linha `Código de confirmação: XXXXXX`;
 8. volte para o app e digite esse código na tela de verificação.
 
-Fluxo prático em `hml` local:
+Fluxo prático com o compose de `stg`:
 
-1. suba o ambiente local de homologação:
-   - `cd infraestrutura/hml`
+1. suba o compose de `stg`:
+   - `cd infraestrutura/stg`
    - `docker compose up -d`
 2. abra a UI do `MailHog` em `http://localhost:18025`;
 3. localize o e-mail correspondente e copie o código da mesma forma.
@@ -138,7 +138,7 @@ Observações importantes:
 
 ## Como usar um SMTP real em vez do MailHog
 
-O backend já suporta SMTP real. O que prendia o ambiente local ao MailHog era apenas o `docker compose` de `dev`/`hml`.
+O backend já suporta SMTP real. O que prendia o ambiente local ao MailHog era apenas o `docker compose` de `dev`/`stg`.
 
 Agora:
 
@@ -224,17 +224,20 @@ Observações:
   - `IDENTIDADE_POSTGRES_*`
   - `CONTAS_POSTGRES_*`
 
-## Homologação local no mesmo PostgreSQL
+## Execução do perfil stg no mesmo PostgreSQL
 
-O ambiente `hml` local também usa o mesmo servidor PostgreSQL em `localhost:5432`, mas com bancos separados para evitar mistura com o `dev`.
+O compose de `stg` usa o mesmo servidor PostgreSQL em `localhost:5432`, mas com
+bancos separados para evitar mistura com o `dev`. Isso não cria um ambiente
+novo; o ambiente é `stg` e a forma de execução é Docker no computador do
+desenvolvedor.
 
-Bancos usados no `hml` local:
+Bancos usados pelo compose de `stg`:
 
-- `keycloak_hml`
-- `eickrono_identidade_hml`
-- `eickrono_contas_hml`
+- `keycloak_stg`
+- `eickrono_identidade_stg`
+- `eickrono_contas_stg`
 
-Portas publicadas no `hml` local:
+Portas publicadas pelo compose de `stg`:
 
 - Keycloak: `18080`
 - API identidade: `18081`
@@ -246,17 +249,17 @@ Credenciais de acesso manual ao mesmo PostgreSQL compartilhado:
 - **Porta:** `5432`
 - **Usuário:** `adm`
 - **Senha:** `AdmDev2026!`
-- **JDBC URL do Keycloak em hml:** `jdbc:postgresql://localhost:5432/keycloak_hml`
-- **JDBC URL da identidade em hml:** `jdbc:postgresql://localhost:5432/eickrono_identidade_hml`
-- **JDBC URL de contas em hml:** `jdbc:postgresql://localhost:5432/eickrono_contas_hml`
+- **JDBC URL do Keycloak em stg:** `jdbc:postgresql://localhost:5432/keycloak_stg`
+- **JDBC URL da identidade em stg:** `jdbc:postgresql://localhost:5432/eickrono_identidade_stg`
+- **JDBC URL de contas em stg:** `jdbc:postgresql://localhost:5432/eickrono_contas_stg`
 
-Observações do `hml` local:
+Observações da execução do profile `stg` via Docker:
 
 - a malha interna `api-identidade <-> thimisu` e `eickrono-keycloak -> api-identidade` já usa `mTLS`;
 - o `api-contas-eickrono` continua fora dessa malha no `docker-compose` atual;
 - localmente, as APIs de identidade e contas usam `ddl-auto=update` para complementar tabelas ainda não cobertas pelas migrations atuais;
-- o objetivo desse perfil local é testar o fluxo real de login sem dividir estado com o `dev`.
-- no `docker compose` de `hml`, a separação por serviço usa:
+- o objetivo dessa execução é testar o fluxo real de login sem dividir estado com o `dev`.
+- no `docker compose` de `stg`, a separação por serviço usa:
   - `KEYCLOAK_POSTGRES_*`
   - `IDENTIDADE_POSTGRES_*`
   - `CONTAS_POSTGRES_*`
@@ -268,30 +271,30 @@ Endereços por API:
 
 - API autenticacao `dev`: `http://127.0.0.1:8081/swagger-ui/index.html`
 - API autenticacao `dev` OpenAPI: `http://127.0.0.1:8081/v3/api-docs`
-- API identidade `hml`: `http://localhost:18081/swagger-ui/index.html`
-- API identidade `hml` OpenAPI: `http://localhost:18081/v3/api-docs`
+- API identidade `stg`: `http://localhost:18081/swagger-ui/index.html`
+- API identidade `stg` OpenAPI: `http://localhost:18081/v3/api-docs`
 - API contas `dev`: `http://localhost:8082/swagger-ui/index.html`
 - API contas `dev` OpenAPI: `http://localhost:8082/v3/api-docs`
-- API contas `hml`: `http://localhost:18082/swagger-ui/index.html`
-- API contas `hml` OpenAPI: `http://localhost:18082/v3/api-docs`
+- API contas `stg`: `http://localhost:18082/swagger-ui/index.html`
+- API contas `stg` OpenAPI: `http://localhost:18082/v3/api-docs`
 
 Proteção por ambiente:
 
 - `dev`: acesso liberado para uso local;
-- `hml`: `Basic Auth` + whitelist de IP;
-- credenciais padrão de `hml`: usuário `swagger`, senha `swagger-hml`.
+- `stg`: `Basic Auth` + whitelist de IP;
+- credenciais padrão de `stg`: usuário `swagger`, senha `swagger-stg`.
 
 ## Fluxo Git recomendado
 
-- Branch principal: `main`.  
-- Branches de feature: `feature/<descricao-curta>`.  
-- Commits pequenos e em português.  
+- Branch principal: `main`.
+- Branches de feature: `feature/<descricao-curta>`.
+- Commits pequenos e em português.
 - Pull request acompanhado do `checklist-seguranca-fapi.md` preenchido.
 - Configure previamente as credenciais Git (PAT ou SSH). Um `git push --set-upstream origin main` falhará com `could not read Username` se o ambiente não puder autenticar no GitHub.
 
 ## Testes e qualidade
 
-- `mvn verify`: executa testes, Checkstyle, SpotBugs e validações do Spring Boot.  
+- `mvn verify`: executa testes, Checkstyle, SpotBugs e validações do Spring Boot.
 - `cd ../eickrono-identidade-servidor && mvn spring-boot:run`: inicia apenas a API de identidade.
 - `cd ../eickrono-contas-servidor && mvn spring-boot:run`: inicia a API de contas.
 - Testcontainers é utilizado para testes de integração com PostgreSQL real; não é necessário subir um PostgreSQL manualmente para a suíte de testes, mas o Docker local precisa estar saudável.
@@ -302,7 +305,7 @@ Proteção por ambiente:
 - os testes Spring Boot/integração sobem PostgreSQL real com Testcontainers;
 - a falha histórica de `permission denied ... docker.sock` e `Could not find a valid Docker environment` não era problema de schema, mas de compatibilidade entre a stack antiga de Testcontainers e a API atual do Docker Desktop local;
 - os testes **não** reutilizam host/porta do `docker compose`; o container de teste continua sendo criado pelo Testcontainers.
-- o `docker compose` de `dev/hml` agora usa variáveis separadas por serviço:
+- o `docker compose` de `dev/stg` agora usa variáveis separadas por serviço:
   - `KEYCLOAK_POSTGRES_*`
   - `IDENTIDADE_POSTGRES_*`
   - `CONTAS_POSTGRES_*`
@@ -314,11 +317,11 @@ Proteção por ambiente:
 
 ### Diferença entre `.env` da stack local e Testcontainers
 
-As variáveis de [`infraestrutura/dev/.env`](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev/.env) e [`infraestrutura/hml/.env`](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/hml/.env) descrevem o ambiente da aplicação.
+As variáveis de [`infraestrutura/dev/.env`](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/dev/.env) e [`infraestrutura/stg/.env`](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/stg/.env) descrevem o ambiente da aplicação.
 
 Para a abertura de sessão interna por `backchannel`, mantenha o `client_id` do app alinhado ao realm de cada ambiente:
 - `dev`: `app-flutter-local`
-- `hml`: `app-flutter-hml`
+- `stg`: `app-flutter-stg`
 - `prod`: `app-flutter-prod`
 
 Para o provisionamento interno do cadastro nativo, mantenha tambem configurados na API de identidade:
@@ -347,14 +350,14 @@ Já os testes de integração fazem outra coisa:
 
 - criam um PostgreSQL efêmero por execução;
 - escolhem porta dinâmica;
-- isolam o banco do estado do `dev`/`hml`;
+- isolam o banco do estado do `dev`/`stg`;
 - podem reaproveitar nome de banco, usuário e senha via variáveis de ambiente para manter alinhamento sem acoplar os testes ao banco do compose.
 
 Em outras palavras:
 
 - as portas de banco definidas no `docker compose` **não** são usadas pelos testes;
 - usuário, senha e nome de banco do ambiente local **podem** ser reaproveitados como defaults pelos containers de teste, quando fornecidos fora do `docker compose`;
-- o OIDC dos testes da identidade continua simulado em memória e não depende do `OIDC_ISSUER_URI` do ambiente `dev/hml`.
+- o OIDC dos testes da identidade continua simulado em memória e não depende do `OIDC_ISSUER_URI` do ambiente `dev/stg`.
 
 ### Diagnóstico reproduzível do Docker/Testcontainers
 
@@ -445,7 +448,7 @@ A correção escolhida foi:
 - manter PostgreSQL real nos testes;
 - atualizar Testcontainers para `1.21.4`;
 - remover H2 dos testes Spring Boot de `api-identidade-eickrono` e `api-contas-eickrono`;
-- manter o reaproveitamento apenas de `imagem`, `database`, `user` e `password` via variáveis de ambiente, sem reutilizar `host` e `porta` do ambiente `dev/hml`.
+- manter o reaproveitamento apenas de `imagem`, `database`, `user` e `password` via variáveis de ambiente, sem reutilizar `host` e `porta` do ambiente `dev/stg`.
 
 Arquivos centrais dessa decisão:
 
@@ -547,11 +550,11 @@ Variáveis de ambiente relevantes para reproduzir esse fluxo:
 - `EICKRONO_INTERNAL_SECRET`
 - `EICKRONO_AUTENTICACAO_TIMEOUT_MS`
 
-Essas variáveis precisam existir no container do Keycloak e na API pública de autenticação. O `docker compose` de `dev` e `hml` já foi alinhado com isso. Os nomes `EICKRONO_IDENTIDADE_*` continuam aceitos apenas como fallback transitório.
+Essas variáveis precisam existir no container do Keycloak e na API pública de autenticação. O `docker compose` de `dev` e `stg` já foi alinhado com isso. Os nomes `EICKRONO_IDENTIDADE_*` continuam aceitos apenas como fallback transitório.
 
 #### O que esta correção não faz
 
-- não usa o PostgreSQL já criado pelo `docker compose` de `dev`/`hml`;
+- não usa o PostgreSQL já criado pelo `docker compose` de `dev`/`stg`;
 - não reaproveita porta fixa do `docker compose`;
 - não elimina a necessidade de Docker local acessível;
 - não substitui Testcontainers por conexão em banco compartilhado.
@@ -658,7 +661,7 @@ Esse padrão é o preferido quando a IDE acusa que `@TestConfiguration` ou méto
 
 ## Dicas adicionais
 
-- Utilize perfis `application-dev.yml`, `application-hml.yml` e `application-prod.yml` para configurações específicas por ambiente.  
-- O Swagger (springdoc) fica acessível apenas em dev/hml, protegido por Basic Auth e whitelist em homologação.  
-- Certificados mTLS autoassinados podem ser regenerados com o script `infraestrutura/dev/certificados/gerar_certificados.sh`.  
+- Utilize perfis `application-dev.yml`, `application-stg.yml` e `application-prod.yml` para configurações específicas por ambiente.
+- O Swagger (springdoc) fica acessível apenas em dev/stg, protegido por Basic Auth e whitelist em staging.
+- Certificados mTLS autoassinados podem ser regenerados com o script `infraestrutura/dev/certificados/gerar_certificados.sh`.
 - Para Keycloak, utilize os realms exportados em `autorizacao/realms/`.

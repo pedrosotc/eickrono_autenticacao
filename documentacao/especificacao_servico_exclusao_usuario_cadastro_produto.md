@@ -437,8 +437,8 @@ Dados encontrados:
 
 | Sistema | Tabela/campo | Valor |
 | --- | --- | --- |
-| Thimisu | `thimisu_hml.perfis_sistema.identificador_publico_sistema` | `cenario01` |
-| Thimisu | `thimisu_hml.pessoas_produto_local.sub` | `4771695b-6bed-4f82-b58d-737b2d5fbf3e` |
+| Thimisu | `thimisu_stg.perfis_sistema.identificador_publico_sistema` | `cenario01` |
+| Thimisu | `thimisu_stg.pessoas_produto_local.sub` | `4771695b-6bed-4f82-b58d-737b2d5fbf3e` |
 | Autenticação | `autenticacao.usuarios.sub_remoto` | `4771695b-6bed-4f82-b58d-737b2d5fbf3e` |
 | Autenticação | `autenticacao.usuarios_clientes_ecossistema.identificador_publico_cliente` | vazio |
 
@@ -466,7 +466,7 @@ Interpretação:
 Teste obrigatório derivado:
 
 - criar cadastro real pelo app;
-- validar no banco que `thimisu_hml.perfis_sistema.identificador_publico_sistema`
+- validar no banco que `thimisu_stg.perfis_sistema.identificador_publico_sistema`
   e `autenticacao.usuarios_clientes_ecossistema.identificador_publico_cliente`
   possuem o mesmo valor;
 - executar `dryRun=true` e exigir `usuariosAutenticacaoIds` e
@@ -1964,7 +1964,7 @@ precedencia.
 ## Proximos passos operacionais
 
 1. Congelar esta especificacao como referencia do escopo.
-2. Usar o snapshot validado contra HML como base tecnica inicial. A validacao
+2. Usar o snapshot validado contra STG como base tecnica inicial. A validacao
    local preliminar mostrou schemas defasados e nao deve ser usada como fonte
    final sem migrar o banco local.
 3. Criar o contrato administrativo no `eickrono-autenticacao-servidor`, ainda
@@ -2356,7 +2356,7 @@ Testes minimos:
 - apos criar usuario completo pelo fluxo real do app, valida que
   `autenticacao.usuarios_clientes_ecossistema.identificador_publico_cliente`
   foi preenchido com o mesmo valor de
-  `thimisu_hml.perfis_sistema.identificador_publico_sistema`;
+  `thimisu_stg.perfis_sistema.identificador_publico_sistema`;
 - valida que o `dryRun=true` do usuario recem-cadastrado resolve
   `usuariosAutenticacaoIds` e `vinculosProdutoIds` antes da execucao real;
 - valida que a execucao usa o perfil do produto alvo como fonte principal;
@@ -2386,7 +2386,7 @@ Testes minimos:
 
 | Item | Status | Decisao/observacao |
 | --- | --- | --- |
-| Mapear tabela por tabela nos bancos envolvidos e classificar cada uma na matriz final. | Decisao sanada. | Snapshot SQL/MD foi gerado e validado contra HML em `documentacao/snapshot_schema_exclusao_usuario_cadastro_produto.md`. O banco local esta defasado e nao deve guiar queries destrutivas. |
+| Mapear tabela por tabela nos bancos envolvidos e classificar cada uma na matriz final. | Decisao sanada. | Snapshot SQL/MD foi gerado e validado contra STG em `documentacao/snapshot_schema_exclusao_usuario_cadastro_produto.md`. O banco local esta defasado e nao deve guiar queries destrutivas. |
 | Definir orquestrador. | Sanada. | O orquestrador sera o `eickrono-autenticacao-servidor`. Ele coordenara Keycloak, identidade, produto, storage e auditoria por contratos internos. |
 | Definir contrato interno entre autenticacao, identidade e backend do produto para execucao atomica ou compensavel. | Decisao sanada. | Usar chamadas internas sincronas para `dryRun` e execucao, com tabela principal de execucao e tabela filha de etapas no orquestrador. |
 | Definir autorizacao de execucao. | Sanada. | O servico tera contrato unico. A execucao sera controlada por permissao, aprovacao, auditoria e politica de retencao; qualquer bloqueio temporario deve ser explicito e nao deve criar outro contrato ou outra logica. |

@@ -62,7 +62,7 @@ Exemplos:
 
 - `app Thimisu da Eickrono`
 - `portal Backoffice da Empresa X`
-- `[HML] app Thimisu da Eickrono`
+- `[STG] app Thimisu da Eickrono`
 
 ## Implementacao Aplicada Nesta Etapa
 
@@ -148,7 +148,7 @@ Expandir `CadastroApiRequest` para aceitar:
   "produtoExibicao": "Thimisu",
   "canalExibicao": "ios",
   "empresaExibicao": "Eickrono",
-  "ambienteExibicao": "HML"
+  "ambienteExibicao": "STG"
 }
 ```
 
@@ -165,7 +165,7 @@ Expandir `IniciarRecuperacaoSenhaApiRequest` para aceitar:
   "produtoExibicao": "Thimisu",
   "canalExibicao": "ios",
   "empresaExibicao": "Eickrono",
-  "ambienteExibicao": "HML"
+  "ambienteExibicao": "STG"
 }
 ```
 
@@ -218,7 +218,7 @@ Regras:
 
 - receber contexto de produto/canal/empresa;
 - remover dependencia de um nome estatico unico no template;
-- suportar ambiente de homologacao sem perder o nome do produto.
+- suportar ambiente de staging sem perder o nome do produto.
 
 ### Fase 4
 

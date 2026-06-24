@@ -11,16 +11,15 @@ import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.PessoaCanonicaConfirmada;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.ProvisionamentoPerfilSistemaRealizado;
+import com.eickrono.api.identidade.aplicacao.modelo.StatusCadastroPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.dominio.modelo.CadastroConta;
 import com.eickrono.api.identidade.dominio.modelo.CanalValidacaoTelefoneCadastro;
 import com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial;
 import com.eickrono.api.identidade.dominio.modelo.SexoPessoaCadastro;
 import com.eickrono.api.identidade.dominio.modelo.StatusCadastroConta;
-import com.eickrono.api.identidade.dominio.modelo.TipoFormaAcesso;
 import com.eickrono.api.identidade.dominio.modelo.TipoPessoaCadastro;
 import com.eickrono.api.identidade.dominio.repositorio.CadastroContaRepositorio;
-import com.eickrono.api.identidade.dominio.repositorio.FormaAcessoRepositorio;
 import com.eickrono.api.identidade.infraestrutura.configuracao.DispositivoProperties;
 import jakarta.transaction.Transactional;
 import java.nio.charset.StandardCharsets;
@@ -54,6 +53,7 @@ public class CadastroContaInternaServico {
     private static final String SISTEMA_PUBLICO_PADRAO = "eickrono-thimisu-app";
     private static final String STATUS_PENDENTE_LIBERACAO_PRODUTO = "PENDENTE_LIBERACAO_PRODUTO";
     private static final String PROXIMO_PASSO_LOGIN = "LOGIN";
+    private static final String PROXIMO_PASSO_VALIDAR_CONTATOS = "VALIDAR_CONTATOS";
 
     private final CadastroContaRepositorio cadastroContaRepositorio;
     private final ClienteContextoPessoaPerfilSistema clienteContextoPessoaPerfilSistema;
@@ -146,38 +146,6 @@ public class CadastroContaInternaServico {
                 null,
                 null,
                 true
-        );
-    }
-
-    public CadastroContaInternaServico(final CadastroContaRepositorio cadastroContaRepositorio,
-                                       final FormaAcessoRepositorio formaAcessoRepositorio,
-                                       final ClienteAdministracaoCadastroKeycloak clienteAdministracaoCadastroKeycloak,
-                                       final ProvisionamentoIdentidadeService provisionamentoIdentidadeService,
-                                       final CanalEnvioCodigoCadastroEmail canalEnvioCodigoCadastroEmail,
-                                       final DispositivoProperties dispositivoProperties,
-                                       final Clock clock) {
-        this(
-                cadastroContaRepositorio,
-                new ClienteContextoPessoaPerfilSistemaLegado(
-                        Objects.requireNonNull(formaAcessoRepositorio, "formaAcessoRepositorio é obrigatório"),
-                        Objects.requireNonNull(provisionamentoIdentidadeService, "provisionamentoIdentidadeService é obrigatório")),
-                clienteAdministracaoCadastroKeycloak,
-                null,
-                null,
-                null,
-                provisionamentoIdentidadeService,
-                canalEnvioCodigoCadastroEmail,
-                email -> {
-                },
-                dispositivoProperties,
-                clock,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false
         );
     }
 
@@ -587,6 +555,25 @@ public class CadastroContaInternaServico {
                 .map(this::mapearContextoCentralFallback);
     }
 
+    public StatusCadastroPublicoResolvido consultarStatusCadastroPublico(final UUID cadastroId) {
+        if (cadastroId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CadastroId é obrigatório.");
+        }
+        CadastroConta cadastroConta = cadastroContaRepositorio.findByCadastroId(cadastroId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cadastro não encontrado."));
+        boolean emailConfirmado = cadastroConta.emailJaConfirmado();
+        return new StatusCadastroPublicoResolvido(
+                cadastroConta.getCadastroId(),
+                cadastroConta.getEmailPrincipal(),
+                Objects.requireNonNullElse(cadastroConta.getTelefonePrincipal(), ""),
+                emailConfirmado,
+                false,
+                false,
+                emailConfirmado,
+                emailConfirmado ? PROXIMO_PASSO_LOGIN : PROXIMO_PASSO_VALIDAR_CONTATOS
+        );
+    }
+
     public void reenviarCodigoEmail(final UUID cadastroId) {
         if (cadastroId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CadastroId é obrigatório.");
@@ -687,69 +674,74 @@ public class CadastroContaInternaServico {
                 senhaNormalizada
         );
 
-        OffsetDateTime agora = OffsetDateTime.now(clock);
-        String codigoClaro = gerarCodigoNumerico();
-        CadastroConta cadastroConta = cadastroContaRepositorio.save(new CadastroConta(
-                UUID.randomUUID(),
-                cadastroKeycloak.subjectRemoto(),
-                Objects.requireNonNull(tipoPessoa, "tipoPessoa é obrigatório"),
-                nomeNormalizado,
-                nomeFantasiaNormalizado,
-                Objects.requireNonNullElse(usuarioNormalizado, ""),
-                sexo,
-                paisNascimentoNormalizado,
-                dataNascimento,
-                emailNormalizado,
-                telefoneNormalizado,
-                tipoValidacaoTelefoneNormalizado,
-                hashCodigoEmail(codigoClaro, emailNormalizado, cadastroKeycloak.subjectRemoto()),
-                agora,
-                agora.plusHours(dispositivoProperties.getCodigo().getExpiracaoHoras()),
-                sistemaNormalizado,
-                ipSolicitante,
-                userAgentSolicitante,
-                agora,
-                agora
-        ));
-        LOGGER.info(
-                "qa_cadastro_pendente_criado cadastroId={} sistema={} emailConfirmado={} usuarioPresente={} vinculosSociaisConfirmados={} avataresConfirmados={}",
-                cadastroConta.getCadastroId(),
-                sistemaNormalizado,
-                cadastroConta.emailJaConfirmado(),
-                normalizarUsuarioOpcional(cadastroConta.getUsuario()) != null,
-                vinculosSociaisNormalizados.size(),
-                avataresNormalizados.size()
-        );
+        try {
+            OffsetDateTime agora = OffsetDateTime.now(clock);
+            String codigoClaro = gerarCodigoNumerico();
+            CadastroConta cadastroConta = cadastroContaRepositorio.save(new CadastroConta(
+                    UUID.randomUUID(),
+                    cadastroKeycloak.subjectRemoto(),
+                    Objects.requireNonNull(tipoPessoa, "tipoPessoa é obrigatório"),
+                    nomeNormalizado,
+                    nomeFantasiaNormalizado,
+                    Objects.requireNonNullElse(usuarioNormalizado, ""),
+                    sexo,
+                    paisNascimentoNormalizado,
+                    dataNascimento,
+                    emailNormalizado,
+                    telefoneNormalizado,
+                    tipoValidacaoTelefoneNormalizado,
+                    hashCodigoEmail(codigoClaro, emailNormalizado, cadastroKeycloak.subjectRemoto()),
+                    agora,
+                    agora.plusHours(dispositivoProperties.getCodigo().getExpiracaoHoras()),
+                    sistemaNormalizado,
+                    ipSolicitante,
+                    userAgentSolicitante,
+                    agora,
+                    agora
+            ));
+            LOGGER.info(
+                    "qa_cadastro_pendente_criado cadastroId={} sistema={} emailConfirmado={} usuarioPresente={} vinculosSociaisConfirmados={} avataresConfirmados={}",
+                    cadastroConta.getCadastroId(),
+                    sistemaNormalizado,
+                    cadastroConta.emailJaConfirmado(),
+                    normalizarUsuarioOpcional(cadastroConta.getUsuario()) != null,
+                    vinculosSociaisNormalizados.size(),
+                    avataresNormalizados.size()
+            );
 
-        if (provisionamentoIdentidadeServiceCompat != null) {
-            provisionamentoIdentidadeServiceCompat.provisionarCadastroPendente(
+            if (provisionamentoIdentidadeServiceCompat != null) {
+                provisionamentoIdentidadeServiceCompat.provisionarCadastroPendente(
+                        cadastroKeycloak.subjectRemoto(),
+                        emailNormalizado,
+                        nomeNormalizado,
+                        agora
+                );
+            }
+
+            sincronizarCadastroSeConfigurado(cadastroConta);
+            registrarVinculosSociaisConfirmadosDoCadastro(cadastroConta, vinculosSociaisNormalizados);
+            registrarAvataresConfirmadosDoCadastro(cadastroConta, avataresNormalizados);
+            LOGGER.info(
+                    "qa_cadastro_confirmados_registrados cadastroId={} sistema={} vinculosSociaisConfirmados={} avataresConfirmados={} avatarPreferidoTotal={}",
+                    cadastroConta.getCadastroId(),
+                    sistemaNormalizado,
+                    vinculosSociaisNormalizados.size(),
+                    avataresNormalizados.size(),
+                    vinculosSociaisNormalizados.stream().filter(VinculoSocialConfirmadoCadastro::avatarPreferido).count()
+                            + avataresNormalizados.stream().filter(AvatarCadastroConfirmado::preferido).count()
+            );
+            canalEnvioCodigoCadastroEmail.enviar(cadastroConta, codigoClaro);
+
+            return new CadastroInternoRealizado(
+                    cadastroConta.getCadastroId(),
                     cadastroKeycloak.subjectRemoto(),
                     emailNormalizado,
-                    nomeNormalizado,
-                    agora
+                    true
             );
+        } catch (RuntimeException ex) {
+            compensarUsuarioPendenteKeycloak(cadastroKeycloak, emailNormalizado, sistemaNormalizado, ex);
+            throw ex;
         }
-
-        sincronizarCadastroSeConfigurado(cadastroConta);
-        registrarVinculosSociaisConfirmadosDoCadastro(cadastroConta, vinculosSociaisNormalizados);
-        registrarAvataresConfirmadosDoCadastro(cadastroConta, avataresNormalizados);
-        LOGGER.info(
-                "qa_cadastro_confirmados_registrados cadastroId={} sistema={} vinculosSociaisConfirmados={} avataresConfirmados={} avatarPreferidoTotal={}",
-                cadastroConta.getCadastroId(),
-                sistemaNormalizado,
-                vinculosSociaisNormalizados.size(),
-                avataresNormalizados.size(),
-                vinculosSociaisNormalizados.stream().filter(VinculoSocialConfirmadoCadastro::avatarPreferido).count()
-                        + avataresNormalizados.stream().filter(AvatarCadastroConfirmado::preferido).count()
-        );
-        canalEnvioCodigoCadastroEmail.enviar(cadastroConta, codigoClaro);
-
-        return new CadastroInternoRealizado(
-                cadastroConta.getCadastroId(),
-                cadastroKeycloak.subjectRemoto(),
-                emailNormalizado,
-                true
-        );
     }
 
     private ConfirmacaoEmailCadastroPublicoRealizada confirmarEmailDetalhado(final UUID cadastroId, final String codigo) {
@@ -1188,6 +1180,35 @@ public class CadastroContaInternaServico {
         removerCadastroSeConfigurado(cadastroConta.getCadastroId());
     }
 
+    private void compensarUsuarioPendenteKeycloak(final CadastroKeycloakProvisionado cadastroKeycloak,
+                                                  final String emailNormalizado,
+                                                  final String sistemaNormalizado,
+                                                  final RuntimeException causa) {
+        if (cadastroKeycloak == null || normalizarOpcional(cadastroKeycloak.subjectRemoto()) == null) {
+            return;
+        }
+        try {
+            clienteAdministracaoCadastroKeycloak.removerUsuarioPendente(cadastroKeycloak.subjectRemoto());
+            LOGGER.warn(
+                    "qa_cadastro_pendente_keycloak_compensado subjectRemoto={} email={} sistema={} causa={}",
+                    cadastroKeycloak.subjectRemoto(),
+                    emailNormalizado,
+                    sistemaNormalizado,
+                    causa.getClass().getSimpleName()
+            );
+        } catch (RuntimeException ex) {
+            LOGGER.error(
+                    "qa_cadastro_pendente_keycloak_compensacao_falhou subjectRemoto={} email={} sistema={} causaOriginal={} causaCompensacao={}",
+                    cadastroKeycloak.subjectRemoto(),
+                    emailNormalizado,
+                    sistemaNormalizado,
+                    causa.getClass().getSimpleName(),
+                    ex.getClass().getSimpleName(),
+                    ex
+            );
+        }
+    }
+
     private boolean ehFluxoCadastroPublico(final CadastroConta cadastroConta) {
         return cadastroConta.getUsuario() != null && !cadastroConta.getUsuario().isBlank();
     }
@@ -1274,46 +1295,4 @@ public class CadastroContaInternaServico {
     ) {
     }
 
-    private static final class ClienteContextoPessoaPerfilSistemaLegado implements ClienteContextoPessoaPerfilSistema {
-
-        private final FormaAcessoRepositorio formaAcessoRepositorio;
-        private final ProvisionamentoIdentidadeService provisionamentoIdentidadeService;
-
-        private ClienteContextoPessoaPerfilSistemaLegado(final FormaAcessoRepositorio formaAcessoRepositorio,
-                                                  final ProvisionamentoIdentidadeService provisionamentoIdentidadeService) {
-            this.formaAcessoRepositorio = formaAcessoRepositorio;
-            this.provisionamentoIdentidadeService = provisionamentoIdentidadeService;
-        }
-
-        @Override
-        public Optional<ContextoPessoaPerfilSistema> buscarPorPessoaId(final Long pessoaId) {
-            return Optional.empty();
-        }
-
-        @Override
-        public Optional<ContextoPessoaPerfilSistema> buscarPorSub(final String sub) {
-            return provisionamentoIdentidadeService.localizarPessoaPorSub(sub)
-                    .map(pessoa -> new ContextoPessoaPerfilSistema(
-                            pessoa.getId(),
-                            pessoa.getSub(),
-                            pessoa.getEmail(),
-                            pessoa.getNome(),
-                            null,
-                            null));
-        }
-
-        @Override
-        public Optional<ContextoPessoaPerfilSistema> buscarPorEmail(final String email) {
-            return formaAcessoRepositorio.findByTipoAndProvedorAndIdentificador(
-                            TipoFormaAcesso.EMAIL_SENHA, "EMAIL", email)
-                    .map(formaAcesso -> formaAcesso.getPessoa())
-                    .map(pessoa -> new ContextoPessoaPerfilSistema(
-                            pessoa.getId(),
-                            pessoa.getSub(),
-                            pessoa.getEmail(),
-                            pessoa.getNome(),
-                            null,
-                            null));
-        }
-    }
 }

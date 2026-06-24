@@ -8,13 +8,13 @@ COPY autorizacao/temas/login-ptbr /opt/keycloak/themes/login-ptbr
 COPY autorizacao/providers/configuracoes-fapi /opt/keycloak/providers/configuracoes-fapi
 COPY autorizacao/providers/mapeamentos-atributos /opt/keycloak/providers/mapeamentos-atributos
 COPY autorizacao/providers/scripts-spi /opt/keycloak/providers/scripts-spi
-COPY infraestrutura/prod/docker/start-keycloak-hml.sh /opt/keycloak/bin/start-keycloak-hml.sh
+COPY infraestrutura/prod/docker/start-keycloak-stg.sh /opt/keycloak/bin/start-keycloak-stg.sh
 
-RUN chmod +x /opt/keycloak/bin/start-keycloak-hml.sh /opt/keycloak/import-source/render-realms.sh \
-    && chown -R keycloak:keycloak /opt/keycloak/providers /opt/keycloak/import-source /opt/keycloak/themes /opt/keycloak/bin/start-keycloak-hml.sh
+RUN chmod +x /opt/keycloak/bin/start-keycloak-stg.sh /opt/keycloak/import-source/render-realms.sh \
+    && chown -R keycloak:keycloak /opt/keycloak/providers /opt/keycloak/import-source /opt/keycloak/themes /opt/keycloak/bin/start-keycloak-stg.sh
 
 USER keycloak
 
 EXPOSE 8080
 
-ENTRYPOINT ["/opt/keycloak/bin/start-keycloak-hml.sh"]
+ENTRYPOINT ["/opt/keycloak/bin/start-keycloak-stg.sh"]

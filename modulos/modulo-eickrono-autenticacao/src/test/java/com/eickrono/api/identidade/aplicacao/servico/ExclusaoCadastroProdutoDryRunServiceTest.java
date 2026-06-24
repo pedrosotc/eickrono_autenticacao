@@ -35,7 +35,7 @@ class ExclusaoCadastroProdutoDryRunServiceTest {
     private ExclusaoCadastroProdutoDryRunService service;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         service = new ExclusaoCadastroProdutoDryRunService(jdbcTemplate, List.of(), new ObjectMapper());
     }
 
@@ -86,12 +86,10 @@ class ExclusaoCadastroProdutoDryRunServiceTest {
                 List.of(Map.of("id", usuarioId, "sub_remoto", "sub-keycloak-1"));
         List<Map<String, Object>> pessoaResolvida = List.of(Map.of("pessoa_id", pessoaId));
         when(jdbcTemplate.queryForList(anyString(), any(MapSqlParameterSource.class)))
-                .thenReturn(
-                        produtoResolvido,
-                        vinculoResolvido,
-                        usuarioKeycloakResolvido,
-                        pessoaResolvida
-                );
+                .thenReturn(produtoResolvido)
+                .thenReturn(vinculoResolvido)
+                .thenReturn(usuarioKeycloakResolvido)
+                .thenReturn(pessoaResolvida);
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
                 .thenReturn(0L, 1L, 1L, 2L, 1L, 0L, 1L, 1L, 1L, 1L, 2L, 1L, 2L);
 
@@ -166,12 +164,10 @@ class ExclusaoCadastroProdutoDryRunServiceTest {
                 List.of(Map.of("id", usuarioId, "sub_remoto", "sub-keycloak-1"));
         List<Map<String, Object>> pessoaResolvida = List.of(Map.of("pessoa_id", pessoaId));
         when(jdbcTemplate.queryForList(anyString(), any(MapSqlParameterSource.class)))
-                .thenReturn(
-                        produtoResolvido,
-                        vinculoResolvido,
-                        usuarioKeycloakResolvido,
-                        pessoaResolvida
-                );
+                .thenReturn(produtoResolvido)
+                .thenReturn(vinculoResolvido)
+                .thenReturn(usuarioKeycloakResolvido)
+                .thenReturn(pessoaResolvida);
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
                 .thenReturn(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 1L);
 
@@ -205,12 +201,10 @@ class ExclusaoCadastroProdutoDryRunServiceTest {
                 List.of(Map.of("id", usuarioId, "sub_remoto", "sub-keycloak-1"));
         List<Map<String, Object>> pessoaResolvida = List.of(Map.of("pessoa_id", pessoaId));
         when(jdbcTemplate.queryForList(anyString(), any(MapSqlParameterSource.class)))
-                .thenReturn(
-                        produtoResolvido,
-                        vinculoResolvido,
-                        usuarioKeycloakResolvido,
-                        pessoaResolvida
-                );
+                .thenReturn(produtoResolvido)
+                .thenReturn(vinculoResolvido)
+                .thenReturn(usuarioKeycloakResolvido)
+                .thenReturn(pessoaResolvida);
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
                 .thenReturn(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 1L);
         ResolvedorExclusaoCadastroProdutoService resolvedor = mock(ResolvedorExclusaoCadastroProdutoService.class);
@@ -254,12 +248,10 @@ class ExclusaoCadastroProdutoDryRunServiceTest {
                 List.of(Map.of("id", usuarioId, "sub_remoto", ""));
         List<Map<String, Object>> pessoaResolvida = List.of(Map.of("pessoa_id", pessoaId));
         when(jdbcTemplate.queryForList(anyString(), any(MapSqlParameterSource.class)))
-                .thenReturn(
-                        produtoResolvido,
-                        vinculoResolvido,
-                        usuarioSemSubKeycloak,
-                        pessoaResolvida
-                );
+                .thenReturn(produtoResolvido)
+                .thenReturn(vinculoResolvido)
+                .thenReturn(usuarioSemSubKeycloak)
+                .thenReturn(pessoaResolvida);
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
                 .thenReturn(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 1L, 1L);
 
@@ -293,12 +285,10 @@ class ExclusaoCadastroProdutoDryRunServiceTest {
                 List.of(Map.of("id", usuarioId, "sub_remoto", "sub-keycloak-1"));
         List<Map<String, Object>> pessoaResolvida = List.of(Map.of("pessoa_id", pessoaId));
         when(jdbcTemplate.queryForList(anyString(), any(MapSqlParameterSource.class)))
-                .thenReturn(
-                        produtoResolvido,
-                        vinculoResolvido,
-                        usuarioKeycloakResolvido,
-                        pessoaResolvida
-                );
+                .thenReturn(produtoResolvido)
+                .thenReturn(vinculoResolvido)
+                .thenReturn(usuarioKeycloakResolvido)
+                .thenReturn(pessoaResolvida);
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
                 .thenReturn(1L, 1L, 1L, 2L, 1L, 1L, 1L, 1L, 1L, 0L, 1L, 1L, 1L);
 

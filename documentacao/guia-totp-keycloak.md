@@ -37,7 +37,7 @@ O projeto [`eickrono-autenticacao-servidor`](/Users/thiago/Desenvolvedor/flutter
 Os domínios versionados já têm `CONFIGURE_TOTP` habilitado em:
 
 - [`desenvolvimento-realm.json`](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/autorizacao/realms/desenvolvimento-realm.json)
-- [`homologacao-realm.json`](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/autorizacao/realms/homologacao-realm.json)
+- [`staging-realm.json`](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/autorizacao/realms/staging-realm.json)
 - [`producao-realm.json`](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/autorizacao/realms/producao-realm.json)
 
 Ao mesmo tempo, o fluxo de navegador versionado da Eickrono hoje contém apenas o formulário customizado de usuário/senha, sem o subfluxo condicional de 2FA que existe no fluxo de navegador padrão do Keycloak.

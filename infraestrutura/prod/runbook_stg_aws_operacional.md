@@ -1,28 +1,28 @@
-# Runbook Operacional de HML na AWS
+# Runbook Operacional de STG na AWS
 
 ## Objetivo
 
 Este arquivo e o ponto de entrada canônico para subir, atualizar e validar o
-ambiente `hml` na AWS sem depender da leitura linear do historico completo.
+ambiente `stg` na AWS sem depender da leitura linear do historico completo.
 
-Estado atual da base de dados em `hml`:
+Estado atual da base de dados em `stg`:
 
 - `auth`, `identidade` e `thimisu-backend` ja usam bancos diferentes;
-- esses bancos ainda estao no mesmo host RDS em `hml`;
+- esses bancos ainda estao no mesmo host RDS em `stg`;
 - a separacao fisica completa por host/instancia ainda nao faz parte do estado
   atual do ambiente.
 
 ## Como usar
 
 - use este arquivo para a ordem operacional atual;
-- use `guia_subida_hml_aws.md` quando precisar da trilha historica completa,
+- use `guia_subida_stg_aws.md` quando precisar da trilha historica completa,
   com contexto, causas-raiz e comandos cronologicos;
 - use os arquivos especializados desta pasta quando quiser aprofundar apenas um
   assunto.
 
 Leitura complementar por assunto:
 
-- `README.md`: indice geral da infraestrutura de `prod` e `hml`
+- `README.md`: indice geral da infraestrutura de `prod` e `stg`
 - `ecs/README.md`: build, push e rollout dos servicos no `ECS`
 - `docker/README.md`: imagem do runtime Keycloak customizado
 - `cloudflare/README.md`: DNS e registros `TXT`
@@ -42,11 +42,11 @@ credenciais usados na operacao continuam documentados nos arquivos abaixo:
 - `README.md`, nesta mesma pasta
   Mantem a referencia operacional do broker Apple em
   `.local-secrets/apple/eickrono-oidc/prod/keycloak-apple.env`.
-- `guia_subida_hml_aws.md`
+- `guia_subida_stg_aws.md`
   Mantem o detalhamento completo de secrets, `SMTP`, `KEYCLOAK_ADMIN`,
   `KEYCLOAK_ADMIN_PASSWORD`, `mTLS`, `client secrets` e exemplos operacionais
   reais usados nas rodadas anteriores.
-- `historico_execucao_hml_aws_*.md`
+- `historico_execucao_stg_aws_*.md`
   Mantem registros cronologicos por rodada quando a operacao exigiu consultar ou
   atualizar credenciais reais.
 
@@ -55,7 +55,7 @@ credenciais usados na operacao continuam documentados nos arquivos abaixo:
 1. Preparar acesso e historico local
 
 - autenticar na AWS com o profile correto;
-- definir `EICKRONO_HML_HISTORICO` antes de executar comandos sensiveis ou
+- definir `EICKRONO_STG_HISTORICO` antes de executar comandos sensiveis ou
   rollout;
 - confirmar que os artefatos locais e segredos esperados estao disponiveis.
 
@@ -69,15 +69,15 @@ credenciais usados na operacao continuam documentados nos arquivos abaixo:
 3. Construir e publicar a imagem
 
 - para `auth`, `identidade` ou `thimisu-backend`, usar
-  `infraestrutura/prod/ecs/build_push_hml_image.sh`;
+  `infraestrutura/prod/ecs/build_push_stg_image.sh`;
 - validar primeiro com `--dry-run`;
 - so depois executar o push real com `--profile Codex-cli_aws`.
 
 4. Executar o rollout do servico
 
-- usar `infraestrutura/prod/ecs/rollout_hml_service.sh`;
+- usar `infraestrutura/prod/ecs/rollout_stg_service.sh`;
 - quando precisar mudar host, porta, nome do banco ou usuario por servico,
-  usar `--db-overrides-file infraestrutura/prod/ecs/hml-db-overrides.example.env`
+  usar `--db-overrides-file infraestrutura/prod/ecs/stg-db-overrides.example.env`
   como base e ajustar os valores necessarios nesse arquivo ou em uma copia dele;
 - registrar imagem, task definition e resultado no historico;
 - acompanhar `running`, `pending` e `rolloutState` ate `COMPLETED`.
@@ -85,9 +85,9 @@ credenciais usados na operacao continuam documentados nos arquivos abaixo:
 5. Validar a malha publica e interna
 
 - confirmar:
-  - `https://oidc-hml.eickrono.store/realms/eickrono/eickrono-runtime/estado`
-  - `https://id-hml.eickrono.store/api/v1/estado`
-  - `https://thimisu-backend-hml.eickrono.store/api/v1/estado`
+  - `https://oidc-stg.eickrono.store/realms/eickrono/eickrono-runtime/estado`
+  - `https://id-stg.eickrono.store/api/v1/estado`
+  - `https://thimisu-backend-stg.eickrono.store/api/v1/estado`
 - validar `issuer`, discovery OIDC e emissao de token interno;
 - validar o endpoint publico de disponibilidade da identidade.
 
@@ -105,12 +105,12 @@ credenciais usados na operacao continuam documentados nos arquivos abaixo:
 - endpoint publico de disponibilidade retornando `disponivel=true`;
 - login OIDC abrindo com `HTTP 200` em fluxo real de navegador/PKCE.
 
-## Licoes aprendidas - validacao HML exclusao cadastro produto
+## Licoes aprendidas - validacao STG exclusao cadastro produto
 
 Data de referencia: `2026-05-31`.
 
 Esta secao registra o que foi confirmado durante a validacao do servico
-administrativo de exclusao de cadastro/produto em `hml`. O objetivo e evitar
+administrativo de exclusao de cadastro/produto em `stg`. O objetivo e evitar
 repetir erros de arquitetura AWS, `ECS`, `Cloud Map`, `RDS`, `Keycloak`,
 `Flyway` e contratos internos.
 
@@ -120,23 +120,24 @@ Valores operacionais confirmados:
 
 - `AWS_PROFILE=Codex-cli_aws`
 - `AWS_REGION=sa-east-1`
-- cluster `ECS`: `eickrono-hml`
-- namespace `Cloud Map`: `hml.eickrono.internal`
+- cluster `ECS`: `eickrono-stg`
+- namespace `Cloud Map`: `stg.eickrono.internal`
 - namespace id: `ns-xucpyhbknyc2ozcj`
 
 Servicos relevantes:
 
 | Servico ECS | Papel | Observacao |
 | --- | --- | --- |
-| `auth-hml` | Keycloak/OIDC publico | Publica `https://oidc-hml.eickrono.store/realms/eickrono` |
-| `identidade-hml` | API Spring de identidade | Backchannel canonico de Pessoa |
-| `thimisu-backend-hml` | API Spring do produto Thimisu | Backend de produto |
-| `autenticacao-api-hml` | API Spring de autenticacao | Interna; modulo `modulo-eickrono-autenticacao` |
+| `auth-stg` | Keycloak/OIDC publico | Publica `https://oidc-stg.eickrono.store/realms/eickrono` |
+| `identidade-stg` | API Spring de identidade | Backchannel canonico de Pessoa |
+| `thimisu-backend-stg` | API Spring do produto Thimisu | Backend de produto |
+| `autenticacao-api-stg` | API Spring de autenticacao | Interna; modulo `modulo-eickrono-autenticacao`; nao e gerenciada pelos templates `ecs/*-task-definition.stg.json` atuais |
 
-Servico interno criado/validado para a API Spring de autenticacao:
+Servico interno criado/validado para a API Spring de autenticacao, separado do
+Keycloak/OIDC `auth-stg`:
 
 ```text
-autenticacao-api-hml-interno.hml.eickrono.internal
+autenticacao-api-stg-interno.stg.eickrono.internal
 arn:aws:servicediscovery:sa-east-1:531708494702:service/srv-bw7ljrefdisyqebx
 ```
 
@@ -144,7 +145,7 @@ Security group criado para a API Spring de autenticacao:
 
 ```text
 sg-00e0e62d88f67dfe1
-nome: eickrono-hml-autenticacao-api
+nome: eickrono-stg-autenticacao-api
 ```
 
 Regras de entrada confirmadas para `8081/8443`:
@@ -164,39 +165,39 @@ Na validacao da API de autenticacao, o servico usou tambem
 
 ### Bancos e schemas
 
-O `RDS` de `hml` e privado. Acesso operacional seguro e via task temporaria
+O `RDS` de `stg` e privado. Acesso operacional seguro e via task temporaria
 `Fargate` com `psql`, nao por conexao direta do Mac.
 
 Bancos confirmados no mesmo host `RDS`:
 
-- `keycloak_hml`
-- `eickrono_identidade_hml`
-- `eickrono_thimisu_hml`
+- `keycloak_stg`
+- `eickrono_identidade_stg`
+- `eickrono_thimisu_stg`
 
 Regras importantes:
 
-- `autenticacao-api-hml` usa `eickrono_identidade_hml` com
-  `currentSchema=identidade_hml`;
-- `thimisu-backend-hml` deve usar `eickrono_thimisu_hml` com
-  `currentSchema=thimisu_hml`;
-- sem `currentSchema=thimisu_hml`, queries nativas/JPA que referenciam tabelas
+- `autenticacao-api-stg` usa `eickrono_identidade_stg` com
+  `currentSchema=identidade_stg`;
+- `thimisu-backend-stg` deve usar `eickrono_thimisu_stg` com
+  `currentSchema=thimisu_stg`;
+- sem `currentSchema=thimisu_stg`, queries nativas/JPA que referenciam tabelas
   sem schema, por exemplo `perfis_sistema_historico`, podem falhar em runtime.
 
 Problema confirmado de `Flyway`:
 
 - `modulo-eickrono-autenticacao` e `eickrono-identidade-servidor` compartilham
-  o banco `eickrono_identidade_hml`;
+  o banco `eickrono_identidade_stg`;
 - os dois projetos possuem sequencias de migrations que podem colidir;
 - exemplos observados: `V33`, `V34` e outras versoes ja usadas pelo servidor de
   identidade.
 
-Decisao operacional temporaria usada em `hml`:
+Decisao operacional temporaria usada em `stg`:
 
 ```text
 SPRING_FLYWAY_ENABLED=false
 ```
 
-Essa decisao foi aplicada em `autenticacao-api-hml` para permitir subir o
+Essa decisao foi aplicada em `autenticacao-api-stg` para permitir subir o
 servico enquanto as migrations necessarias foram aplicadas manualmente.
 
 Objetos aplicados manualmente para a validacao:
@@ -215,7 +216,7 @@ Divida tecnica:
 - separar definitivamente a responsabilidade de migrations por schema/banco;
 - ou criar baseline separado para a API Spring de autenticacao;
 - ou mover a API de autenticacao para banco/schema proprio antes de depender de
-  `Flyway` automatico em `hml`.
+  `Flyway` automatico em `stg`.
 
 ### ECS, imagem e plataforma
 
@@ -268,30 +269,40 @@ Erro confirmado de tag:
 Regra operacional:
 
 - gerar tag nova para cada tentativa real de deploy;
-- nao assumir que `docker push` vai substituir uma imagem de `hml`.
+- nao assumir que `docker push` vai substituir uma imagem de `stg`.
 
 Historico relevante da validacao:
 
 | Task definition | Resultado |
 | --- | --- |
-| `autenticacao-api-hml:7` | ultima base estavel antes do ajuste SQL final |
-| `autenticacao-api-hml:8` | apontava para imagem sem manifesto `arm64` |
-| `autenticacao-api-hml:9` | imagem `hml-api-20260531-exclusao-cadastro-v5`, validada |
-| `thimisu-backend-hml:11` | adicionou cliente interno permitido |
-| `thimisu-backend-hml:12` | adicionou `currentSchema=thimisu_hml`, validada |
+| `autenticacao-api-stg:7` | ultima base estavel antes do ajuste SQL final |
+| `autenticacao-api-stg:8` | apontava para imagem sem manifesto `arm64` |
+| `autenticacao-api-stg:9` | imagem `stg-api-20260531-exclusao-cadastro-v5`, validada |
+| `thimisu-backend-stg:11` | adicionou cliente interno permitido |
+| `thimisu-backend-stg:12` | adicionou `currentSchema=thimisu_stg`, validada |
 
 ### mTLS, healthcheck e configuracao interna
 
-Erro confirmado:
+Erro confirmado anterior:
 
-- a API de autenticacao falhou ao apontar `keyStore/trustStore` para caminho
-  inexistente em `/app/seguranca/mtls/api-autenticacao-eickrono.p12`.
+- a API Spring de autenticacao falhou ao apontar `keyStore/trustStore` para
+  caminho inexistente/obsoleto em `/app/seguranca/mtls`;
+- nao reutilizar `api-autenticacao-eickrono.p12` nem
+  `servidor-autorizacao.p12` em novos seeds de EFS.
 
-Configuracao funcional usada em `hml`:
+Configuracao esperada para a API Spring de autenticacao, se esse servico
+separado for publicado em `stg`:
 
 ```text
-SEGURANCA_MTLS_KEYSTORE_ARQUIVO=file:/app/seguranca/mtls/servidor-autorizacao.p12
+SEGURANCA_MTLS_KEYSTORE_ARQUIVO=file:/app/seguranca/mtls/eickrono-autenticacao.p12
 SEGURANCA_MTLS_TRUSTSTORE_ARQUIVO=file:/app/seguranca/mtls/backchannel-truststore.p12
+```
+
+Configuracao esperada para o Keycloak/OIDC `auth-stg` nos templates ECS atuais:
+
+```text
+EICKRONO_INTERNO_MTLS_KEYSTORE_ARQUIVO=/certificados/eickrono-keycloak.p12
+EICKRONO_INTERNO_MTLS_TRUSTSTORE_ARQUIVO=/certificados/backchannel-truststore.p12
 ```
 
 Healthcheck:
@@ -323,7 +334,7 @@ Regra do endpoint administrativo:
 
 - `POST /api/interna/usuarios/exclusoes` aceita `ROLE_admin` ou
   `SCOPE_admin:exclusoes`;
-- em `hml`, o caminho validado foi por role (`ROLE_admin`).
+- em `stg`, o caminho validado foi por role (`ROLE_admin`).
 
 Problema confirmado no `thimisu-backend`:
 
@@ -339,17 +350,17 @@ INTEGRACAO_AUTENTICACAO_CLIENTE_INTERNO_PERMITIDO=autenticacao-servidor
 
 ### Endpoints internos validados
 
-API Spring de autenticacao:
+API Spring de autenticacao, separada do Keycloak/OIDC `auth-stg`:
 
 ```text
-GET  http://autenticacao-api-hml-interno.hml.eickrono.internal:8081/actuator/health
-POST http://autenticacao-api-hml-interno.hml.eickrono.internal:8081/api/interna/usuarios/exclusoes
+GET  http://autenticacao-api-stg-interno.stg.eickrono.internal:8081/actuator/health
+POST http://autenticacao-api-stg-interno.stg.eickrono.internal:8081/api/interna/usuarios/exclusoes
 ```
 
 Readiness operacional:
 
-- `autenticacao-api-hml` nao fica atras de ALB (Application Load Balancer);
-- a task definition `autenticacao-api-hml:12` valida readiness por health check
+- `autenticacao-api-stg` nao fica atras de ALB (Application Load Balancer);
+- a task definition `autenticacao-api-stg:12` valida readiness por health check
   de container contra `http://localhost:8081/actuator/health`;
 - o ECS deve mostrar duas tasks `RUNNING` e `HEALTHY` antes de considerar o
   servico pronto.
@@ -407,10 +418,10 @@ Resultado:
 - `autenticacao.usuarios_clientes_ecossistema`: sem vinculo remanescente do
   alvo;
 - `auditoria.exclusoes_cadastro_produto`: execucao `CONCLUIDA`;
-- `thimisu_hml.perfis_sistema`: sem registro remanescente do alvo;
-- `thimisu_hml.pessoas_produto_local`: sem registro remanescente do alvo;
-- logs recentes em `/ecs/hml/autenticacao`: sem `ERROR` apos o ajuste final;
-- logs recentes em `/ecs/hml/thimisu-backend`: sem `ERROR` apos o ajuste final.
+- `thimisu_stg.perfis_sistema`: sem registro remanescente do alvo;
+- `thimisu_stg.pessoas_produto_local`: sem registro remanescente do alvo;
+- logs recentes em `/ecs/stg/autenticacao`: sem `ERROR` apos o ajuste final;
+- logs recentes em `/ecs/stg/thimisu-backend`: sem `ERROR` apos o ajuste final.
 
 ### Risco de consistencia compensavel
 
@@ -454,14 +465,14 @@ como:
 aws ecs execute-command ...
 ```
 
-No contexto de HML, ele serve para acessar uma task ECS/Fargate e executar
+No contexto de STG, ele serve para acessar uma task ECS/Fargate e executar
 comandos dentro do container, por exemplo validar um endpoint interno que nao
 tem DNS publico:
 
 ```bash
 AWS_PROFILE=Codex-cli_aws AWS_REGION=sa-east-1 \
 aws ecs execute-command \
-  --cluster eickrono-hml \
+  --cluster eickrono-stg \
   --task <task-arn> \
   --container autenticacao-api \
   --interactive \
@@ -553,17 +564,17 @@ Acao correta nesse caso:
   sido criada;
 - usar CloudWatch Logs como alternativa enquanto ECS Exec nao estiver pronto.
 
-Correção aplicada em `hml` para a API Spring de autenticação:
+Correção aplicada em `stg` para a API Spring de autenticação:
 
-- `autenticacao-api-hml` já estava com `enableExecuteCommand=true`;
+- `autenticacao-api-stg` já estava com `enableExecuteCommand=true`;
 - o container já iniciava `ExecuteCommandAgent`;
 - faltavam permissões `ssmmessages` na task role
-  `eickrono-hml-ecs-task-role`.
+  `eickrono-stg-ecs-task-role`.
 
 Policy inline adicionada na role:
 
 ```text
-eickrono-hml-ecs-exec-ssmmessages
+eickrono-stg-ecs-exec-ssmmessages
 ```
 
 Ações permitidas:
@@ -581,8 +592,8 @@ task nascer com as credenciais atualizadas:
 ```bash
 AWS_PROFILE=Codex-cli_aws AWS_REGION=sa-east-1 \
 aws ecs update-service \
-  --cluster eickrono-hml \
-  --service autenticacao-api-hml \
+  --cluster eickrono-stg \
+  --service autenticacao-api-stg \
   --force-new-deployment
 ```
 
@@ -602,7 +613,7 @@ Causa:
 - a infraestrutura de ECS Exec está funcionando;
 - o bloqueio vem do `FiltroWhitelistIp` do Swagger;
 - chamadas locais feitas dentro do container chegam como `127.0.0.1`;
-- a whitelist atual de `hml` permite apenas os IPs configurados em
+- a whitelist atual de `stg` permite apenas os IPs configurados em
   `autenticacao.swagger.ips-permitidos`.
 
 Interpretação correta:
@@ -614,5 +625,5 @@ Não confundir esses dois erros durante validações.
 
 ## Trilha historica associada
 
-- `guia_subida_hml_aws.md`: runbook historico consolidado e hibrido
-- `historico_execucao_hml_aws_*.md`: registros de execucao pontuais por rodada
+- `guia_subida_stg_aws.md`: runbook historico consolidado e hibrido
+- `historico_execucao_stg_aws_*.md`: registros de execucao pontuais por rodada

@@ -4,7 +4,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-uso: upsert_hml_secret.sh --secret-id <id> [fonte-do-valor] [opcoes]
+uso: upsert_stg_secret.sh --secret-id <id> [fonte-do-valor] [opcoes]
 
 fonte do valor:
   --value-file <arquivo>       le o segredo do arquivo informado
@@ -129,8 +129,8 @@ run_cmd() {
     return 0
   fi
 
-  if [ -n "${EICKRONO_HML_HISTORICO:-}" ] && [ -f "$LOG_WRAPPER" ]; then
-    "$LOG_WRAPPER" "$EICKRONO_HML_HISTORICO" "$@"
+  if [ -n "${EICKRONO_STG_HISTORICO:-}" ] && [ -f "$LOG_WRAPPER" ]; then
+    "$LOG_WRAPPER" "$EICKRONO_STG_HISTORICO" "$@"
     return $?
   fi
 

@@ -184,7 +184,7 @@ Toda emissão precisa carregar um envelope mínimo.
 | Campo | Finalidade |
 | --- | --- |
 | `timestamp` | Momento UTC da ocorrência |
-| `environment` | `dev`, `hml`, `prd` |
+| `environment` | `dev`, `stg`, `prd` |
 | `service` | `app`, `autenticacao`, `identidade`, `thimisu-backend`, etc |
 | `error_code` | Tipo estável do erro |
 | `occurrence_id` | Identificador único da ocorrência |
@@ -388,7 +388,7 @@ Para `AU-GG-RDM`:
   - `flow_id=...`
   - `trace_id=...`
   - `provider=google`
-  - `redirect_uri=https://oidc-hml.eickrono.store/realms/eickrono/broker/google/endpoint`
+  - `redirect_uri=https://oidc-stg.eickrono.store/realms/eickrono/broker/google/endpoint`
 - trace:
   - span `broker_google_callback`
   - atributo `error_code=AU-GG-RDM`
@@ -659,7 +659,7 @@ Use esta sequência:
 ```json
 {
   "timestamp": "2026-04-27T15:22:31Z",
-  "environment": "hml",
+  "environment": "stg",
   "service": "autenticacao",
   "error_code": "AU-GG-RDM",
   "occurrence_id": "err_01JV9T7BME5KH1AFV0M4A9K8JQ",
@@ -682,7 +682,7 @@ Use esta sequência:
   "observed_result": "provedor recusou o callback",
   "details": {
     "client_id": "<google-web-client-id>.apps.googleusercontent.com",
-    "redirect_uri": "https://oidc-hml.eickrono.store/realms/eickrono/broker/google/endpoint"
+    "redirect_uri": "https://oidc-stg.eickrono.store/realms/eickrono/broker/google/endpoint"
   }
 }
 ```

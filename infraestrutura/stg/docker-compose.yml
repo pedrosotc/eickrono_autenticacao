@@ -1,16 +1,16 @@
 services:
   smtp-teste:
     image: mailhog/mailhog:v1.0.1
-    container_name: eickrono-mailhog-hml
+    container_name: eickrono-mailhog-stg
     ports:
       - "11025:1025"
       - "18025:8025"
     networks:
-      - rede_interna_hml
+      - rede_interna_stg
 
   eickrono-keycloak:
     image: quay.io/keycloak/keycloak:26.5.5
-    container_name: eickrono-keycloak-hml
+    container_name: eickrono-keycloak-stg
     entrypoint:
       [
         "sh",
@@ -36,7 +36,7 @@ services:
       KC_DB_USERNAME: ${KEYCLOAK_POSTGRES_USER}
       KC_DB_PASSWORD: ${KEYCLOAK_POSTGRES_PASSWORD}
       KC_PROXY: ${KC_PROXY}
-      KEYCLOAK_IMPORT_REALM_FILE: homologacao-realm.json
+      KEYCLOAK_IMPORT_REALM_FILE: staging-realm.json
       KEYCLOAK_IMPORT_REALM_TARGET_FILE: eickrono-realm.json
       KC_HOSTNAME_URL: ${KEYCLOAK_FRONTEND_URL}
       EICKRONO_PASSWORD_PEPPER: ${EICKRONO_PASSWORD_PEPPER}
@@ -70,22 +70,22 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
-      - rede_interna_hml
+      - rede_interna_stg
 
   eickrono-autenticacao:
     build:
       context: ../../modulos/modulo-eickrono-autenticacao
       dockerfile: Dockerfile
-    container_name: eickrono-autenticacao-hml
+    container_name: eickrono-autenticacao-stg
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: hml
+      SPRING_PROFILES_ACTIVE: stg
       SPRING_DATASOURCE_URL: jdbc:postgresql://${IDENTIDADE_POSTGRES_HOST}:${IDENTIDADE_POSTGRES_PORT}/${IDENTIDADE_POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${IDENTIDADE_POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${IDENTIDADE_POSTGRES_PASSWORD}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_FLYWAY_SCHEMAS: identidade_hml
+      SPRING_FLYWAY_SCHEMAS: identidade_stg
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${OIDC_ISSUER_URI}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${OIDC_JWKS_URI}
       EICKRONO_INTERNAL_SECRET: ${EICKRONO_INTERNAL_SECRET}
@@ -112,8 +112,8 @@ services:
       INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID: ${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID:-eickrono-autenticacao-interno}
       INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET: ${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET:-CHANGE_ME}
       IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR: ${IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR:-smtp}
-      IDENTIDADE_CADASTRO_EMAIL_REMETENTE: ${IDENTIDADE_CADASTRO_EMAIL_REMETENTE:-no-reply-hml@eickrono.local}
-      IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO: ${IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO:-Eickrono HML}
+      IDENTIDADE_CADASTRO_EMAIL_REMETENTE: ${IDENTIDADE_CADASTRO_EMAIL_REMETENTE:-no-reply-stg@eickrono.local}
+      IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO: ${IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO:-Eickrono STG}
       SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp-teste}
       SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-1025}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
@@ -141,22 +141,22 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
-      - rede_interna_hml
+      - rede_interna_stg
 
   identidade-servidor:
     build:
       context: ../../../eickrono-identidade-servidor
       dockerfile: Dockerfile
-    container_name: eickrono-identidade-servidor-hml
+    container_name: eickrono-identidade-servidor-stg
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: hml
+      SPRING_PROFILES_ACTIVE: stg
       SPRING_DATASOURCE_URL: jdbc:postgresql://${IDENTIDADE_POSTGRES_HOST}:${IDENTIDADE_POSTGRES_PORT}/${IDENTIDADE_POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${IDENTIDADE_POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${IDENTIDADE_POSTGRES_PASSWORD}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_FLYWAY_SCHEMAS: identidade_hml
+      SPRING_FLYWAY_SCHEMAS: identidade_stg
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${OIDC_ISSUER_URI}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${OIDC_JWKS_URI}
       SEGURANCA_MTLS_HABILITADO: "true"
@@ -178,8 +178,8 @@ services:
       INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID: ${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID:-eickrono-autenticacao-interno}
       INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET: ${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET:-CHANGE_ME}
       IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR: ${IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR:-smtp}
-      IDENTIDADE_CADASTRO_EMAIL_REMETENTE: ${IDENTIDADE_CADASTRO_EMAIL_REMETENTE:-no-reply-hml@eickrono.local}
-      IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO: ${IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO:-Eickrono HML}
+      IDENTIDADE_CADASTRO_EMAIL_REMETENTE: ${IDENTIDADE_CADASTRO_EMAIL_REMETENTE:-no-reply-stg@eickrono.local}
+      IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO: ${IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO:-Eickrono STG}
       SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp-teste}
       SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-1025}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
@@ -202,22 +202,22 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
-      - rede_interna_hml
+      - rede_interna_stg
 
   api-contas-eickrono:
     build:
       context: ../../../eickrono-contas-servidor
       dockerfile: Dockerfile
-    container_name: eickrono-api-contas-hml
+    container_name: eickrono-api-contas-stg
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: hml
+      SPRING_PROFILES_ACTIVE: stg
       SPRING_DATASOURCE_URL: jdbc:postgresql://${CONTAS_POSTGRES_HOST}:${CONTAS_POSTGRES_PORT}/${CONTAS_POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${CONTAS_POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${CONTAS_POSTGRES_PASSWORD}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_FLYWAY_SCHEMAS: contas_hml
+      SPRING_FLYWAY_SCHEMAS: contas_stg
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${OIDC_ISSUER_URI}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${OIDC_JWKS_URI}
       SEGURANCA_MTLS_HABILITADO: "false"
@@ -234,17 +234,17 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
-      - rede_interna_hml
+      - rede_interna_stg
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.100.0
-    container_name: eickrono-otel-collector-hml
+    container_name: eickrono-otel-collector-stg
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     networks:
-      - rede_interna_hml
+      - rede_interna_stg
 
 networks:
-  rede_interna_hml:
+  rede_interna_stg:
     driver: bridge

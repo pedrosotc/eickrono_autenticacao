@@ -10,7 +10,7 @@ assumir que este guia prevalece para:
 
 - leitura do runtime efetivo do app;
 - revisao dos fluxos reais publicados;
-- analise de erros reais em `dev`, `hml` e `prod`;
+- analise de erros reais em `dev`, `stg` e `prod`;
 - fechamento das proximas correcoes funcionais e tecnicas do login.
 
 Este guia foi reorganizado em duas partes principais:
@@ -704,9 +704,9 @@ Isso significa que a chave canonica de configuracao do app ja aponta para a
 borda publica final de `autenticacao`, mesmo quando o host fisico ainda usa um
 alias operacional legado de `id-*`.
 
-Em `hml`, isso significa:
+Em `stg`, isso significa:
 
-- `servicos.autenticacao.baseUrl = https://auth-hml.eickrono.store/`
+- `servicos.autenticacao.baseUrl = https://auth-stg.eickrono.store/`
 
 #### 3.3.2 Issuer OIDC e descoberta de provedores sociais
 
@@ -741,7 +741,7 @@ Leitura objetiva:
 
 - a visibilidade das redes sociais no app hoje nao depende so do Flutter;
 - depende tambem do que o runtime do Keycloak anuncia como habilitado;
-- isso explica por que um provedor pode aparecer em `hml` mesmo sem fluxo UX
+- isso explica por que um provedor pode aparecer em `stg` mesmo sem fluxo UX
   totalmente refinado no app.
 
 ### 3.4 Fluxo tecnico de cadastro publico atual
@@ -2232,7 +2232,7 @@ Aqui, drift de contrato significa:
 - mas a secao `5` continua com exemplo antigo.
 
 Quando isso acontece, o guia deixa de ser fonte confiavel e volta a obrigar
-leitura direta do codigo ou tentativa e erro em `dev`/`hml`.
+leitura direta do codigo ou tentativa e erro em `dev`/`stg`.
 
 #### 4.5.3 Regra pratica adotada
 
@@ -2283,7 +2283,7 @@ seguir este roteiro:
    aceito.
    O ideal e comparar o apendice com uma destas fontes:
    - teste de integracao do endpoint;
-   - chamada real em `dev` ou `hml`;
+   - chamada real em `dev` ou `stg`;
    - DTO/controller efetivamente publicado.
 
 6. Fechar a alteracao com criterio explicito de pronto.
@@ -2552,7 +2552,7 @@ Request representativo:
   "produtoExibicao": "Thimisu",
   "canalExibicao": "IOS",
   "empresaExibicao": "Eickrono",
-  "ambienteExibicao": "HML",
+  "ambienteExibicao": "STG",
   "senha": "Senha#123",
   "confirmacaoSenha": "Senha#123",
   "aceitouTermos": true,
@@ -2882,7 +2882,7 @@ Request:
   "produtoExibicao": "Thimisu",
   "canalExibicao": "IOS",
   "empresaExibicao": "Eickrono",
-  "ambienteExibicao": "HML"
+  "ambienteExibicao": "STG"
 }
 ```
 
@@ -3383,7 +3383,7 @@ Este guia deve ser usado como base para:
 - revisar bugs de login e autenticacao;
 - revisar erros de tela de login, cadastro e foto de perfil;
 - decidir qual fluxo ainda esta errado por regra e qual esta errado por bug;
-- desenhar os proximos testes integrados de `dev` e `hml`;
+- desenhar os proximos testes integrados de `dev` e `stg`;
 - fechar a migracao entre `identidade` e `autenticacao` na borda publica.
 
 ## 7. Complementos funcionais e tecnicos consolidados
@@ -4225,7 +4225,7 @@ Implementacao:
 1. adicionar testes unitarios, de integracao e de widget para cada trilha acima;
 2. atualizar o apendice de contratos sempre que endpoint externo mudar;
 3. revisar os fluxogramas afetados por eventuais mudancas de runtime;
-4. publicar primeiro em `dev`, depois em `hml`, e validar:
+4. publicar primeiro em `dev`, depois em `stg`, e validar:
    - login por senha;
    - login social;
    - cadastro com multiplas redes;

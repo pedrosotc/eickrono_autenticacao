@@ -31,23 +31,23 @@ Objetivo:
 
 O que ja ficou pronto:
 
-- `dev` e `hml` local com variaveis de banco por servico;
-- `rollout_hml_service.sh` preparado para host, porta, banco, usuario e segredo por servico;
+- `dev` e execucao do profile `stg` via Docker com variaveis de banco por servico;
+- `rollout_stg_service.sh` preparado para host, porta, banco, usuario e segredo por servico;
 - validacao automatica dos templates renderizados;
-- resumo automatizado da configuracao de banco usada por cada servico em `hml`.
+- resumo automatizado da configuracao de banco usada por cada servico em `stg`.
 
 O que ainda falta fechar:
 
-- decidir quando `hml` vai continuar no mesmo host RDS com bancos separados por nome e quando passara a usar separacao fisica por host ou instancia;
+- decidir quando `stg` vai continuar no mesmo host RDS com bancos separados por nome e quando passara a usar separacao fisica por host ou instancia;
 - aplicar esse mesmo padrao de configuracao no ambiente real quando a infraestrutura estiver pronta;
 - registrar no historico operacional a primeira rodada que usar overrides reais por servico;
 - confirmar se a conta `contas` tambem deve seguir a mesma estrategia de isolamento fisico no mesmo momento.
 
 Definicao de pronto:
 
-- o caminho operacional de `hml` deixa claro o estado atual;
+- o caminho operacional de `stg` deixa claro o estado atual;
 - o rollout aceita separacao fisica por servico sem refactor novo;
-- a equipe consegue inspecionar o layout efetivo de banco de `hml` sem leitura manual de JSON.
+- a equipe consegue inspecionar o layout efetivo de banco de `stg` sem leitura manual de JSON.
 
 ### 2. Fechar O Que Restar Da Limpeza Pos-Etapa 4
 
@@ -205,7 +205,7 @@ Pendencias:
 
 Objetivo:
 
-- manter o contrato OIDC uniforme entre `dev`, `hml` e `prod`.
+- manter o contrato OIDC uniforme entre `dev`, `stg` e `prod`.
 
 Pendencias:
 

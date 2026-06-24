@@ -59,17 +59,35 @@ Atalho prático para o caso mais sensível deste repositório:
 - segredos de clientes do Keycloak devem seguir:
   `/eickrono/<ambiente>/keycloak/clientes/<client-id>/secret`
 
-Aplicação vigente em `hml`:
+Aplicação vigente em `stg`:
 
 | Namespace | Client ID | Para que serve |
 | --- | --- | --- |
-| `/eickrono/hml/keycloak/clientes/autenticacao-servidor/secret` | `autenticacao-servidor` | autenticação interna entre `identidade` e o domínio de autenticação |
-| `/eickrono/hml/keycloak/clientes/eickrono-keycloak/secret` | `eickrono-keycloak` | autenticação interna do módulo Keycloak/customizações |
-| `/eickrono/hml/keycloak/clientes/thimisu-backend/secret` | `thimisu-backend` | autenticação interna do `thimisu-backend` |
+| `/eickrono/stg/keycloak/clientes/autenticacao-servidor/secret` | `autenticacao-servidor` | autenticação interna entre `identidade` e o domínio de autenticação |
+| `/eickrono/stg/keycloak/clientes/eickrono-keycloak/secret` | `eickrono-keycloak` | autenticação interna do módulo Keycloak/customizações |
+| `/eickrono/stg/keycloak/clientes/thimisu-backend/secret` | `thimisu-backend` | autenticação interna do `thimisu-backend` |
 
 Fonte de verdade:
 
 - `decisao_nomenclatura_repositorios_servicos.md`
+
+## Decisão de ambientes
+
+Ambientes e forma de execução são conceitos separados.
+
+Ambientes canônicos ativos:
+
+- `dev`: desenvolvimento;
+- `stg`: staging;
+- `prod`/`prd`: produção.
+
+Não crie nomes de ambiente com sufixo local. Docker, Kubernetes local, LocalStack
+ou ferramentas parecidas são apenas formas de executar componentes no computador
+do desenvolvedor.
+
+Fonte de verdade:
+
+- `decisao_ambientes_dev_stg_hml_prod.md`
 
 ## Diretriz vigente
 
@@ -103,6 +121,7 @@ Regra prática:
 - `guia_fluxos_login_autenticacao_app.md`: guia detalhado dos fluxos reais de cadastro, login por senha, login social, registro silencioso, recuperacao de senha e divergencias abertas entre runtime atual e alvo arquitetural
 - `consolidado_migracao_autenticacao_identidade_thimisu.md`: visão única das responsabilidades, migrações e inconsistências abertas entre autenticação, identidade e thimisu
 - `classificacao_documentacao_ecossistema.md`: mapa de quais `.md` dos repositorios centrais sao canonicos, historicos ou ainda precisam alinhar
+- `decisao_ambientes_dev_stg_hml_prod.md`: nomes canonicos dos ambientes e regra para nao confundir Docker local com ambiente
 - `especificacao_scheduler_pendencias_integracao_produto.md`: especificacao funcional e tecnica da fila persistida e do scheduler de novas tentativas para entregas ao backend do produto
 - `runbook_teste_integrado_dev_produto_indisponivel.md`: passo a passo validado em `dev` para cadastro confirmado com produto fora do ar, drenagem da fila ao religar o produto e login central sem dependencia do backend do produto
 - `guia-seguranca-app-movel.md`: sinais locais do app, integração com atestação oficial e decisão de risco no backend
@@ -110,7 +129,7 @@ Regra prática:
 - `guia-mtls.md`: malha mTLS do backchannel e geração de certificados
 - `guia-operacao-producao.md`: runtime, operação e observabilidade
 - `guia-cloudflare-tunnel-google-keycloak-dev.md`: exposição pública temporária do Keycloak local para Google OAuth brokerado no iPhone físico
-- `plano-padronizacao-realm-unico.md`: alvo arquitetural para padronizar o realm OIDC em `eickrono` entre `dev`, `hml` e `prod`
+- `plano-padronizacao-realm-unico.md`: alvo arquitetural para padronizar o realm OIDC em `eickrono` entre `dev`, `stg` e `prod`
 - `runbook_migracao_multiapp_schemas.md`: ordem prática da migração do legado em `public` para o modelo novo por schemas
 
 ## Estrutura

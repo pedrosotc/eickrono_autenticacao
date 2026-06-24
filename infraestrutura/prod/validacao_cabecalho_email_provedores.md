@@ -229,7 +229,7 @@ Modelo:
 
 ```text
 Provedor: Gmail
-Assunto: [HML] Codigo de recuperacao - Thimisu da Eickrono
+Assunto: [STG] Codigo de recuperacao - Thimisu da Eickrono
 Authentication-Results: spf=pass dkim=pass dmarc=pass
 Pasta: Inbox
 Observacoes: Mailed by eickrono.com; Signed by eickrono.com

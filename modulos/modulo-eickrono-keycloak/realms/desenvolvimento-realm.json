@@ -650,6 +650,17 @@
             "id.token.claim": "false",
             "access.token.claim": "true"
           }
+        },
+        {
+          "name": "aud-api-identidade-eickrono",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "api-identidade-eickrono",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
         }
       ],
       "optionalClientScopes": [
@@ -731,6 +742,17 @@
           "consentRequired": false,
           "config": {
             "included.client.audience": "eickrono-autenticacao",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "aud-api-identidade-eickrono",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "api-identidade-eickrono",
             "id.token.claim": "false",
             "access.token.claim": "true"
           }

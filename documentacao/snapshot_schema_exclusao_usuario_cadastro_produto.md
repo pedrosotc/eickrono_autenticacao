@@ -33,10 +33,10 @@ Resultado:
 
 | Banco local | Resultado | Conclusao |
 | --- | --- | --- |
-| `eickrono_identidade_hml` | Schema `identidade_hml` esta em Flyway V13. Ainda possui `vinculos_sociais` e nao possui o modelo canonico novo de avatar. | Nao representa o estado alvo atual. Nao usar como fonte final do servico. |
+| `eickrono_identidade_stg` | Schema `identidade_stg` esta em Flyway V13. Ainda possui `vinculos_sociais` e nao possui o modelo canonico novo de avatar. | Nao representa o estado alvo atual. Nao usar como fonte final do servico. |
 | `eickrono_identidade` | Possui schemas antigos `autenticacao`, `identidade`, `seguranca`, `auditoria` e ainda possui `autenticacao.contextos_sociais_pendentes` e `identidade.vinculos_sociais`. | Banco local antigo/misto. Nao usar como fonte final do servico sem migrar. |
-| `eickrono_thimisu_hml` | Sem tabelas de aplicacao no momento da consulta. | Nao serve para validar o schema de produto. |
-| `eickrono_flashcard_hml` | Possui tabelas antigas `flashcard_hml.pessoas`, `flashcard_hml.usuarios` e historicos. | Parece representar modelo antigo do produto, nao o schema alvo `thimisu_hml`. |
+| `eickrono_thimisu_stg` | Sem tabelas de aplicacao no momento da consulta. | Nao serve para validar o schema de produto. |
+| `eickrono_flashcard_stg` | Possui tabelas antigas `flashcard_stg.pessoas`, `flashcard_stg.usuarios` e historicos. | Parece representar modelo antigo do produto, nao o schema alvo `thimisu_stg`. |
 
 Decisao tecnica:
 
@@ -46,20 +46,20 @@ Decisao tecnica:
   `information_schema` ou o banco local precisa ser migrado para o mesmo estado
   das migrations atuais.
 
-## Validacao HML por `information_schema`
+## Validacao STG por `information_schema`
 
-Em 2026-05-29 foi feita consulta somente leitura no RDS de HML usando task
+Em 2026-05-29 foi feita consulta somente leitura no RDS de STG usando task
 Fargate temporaria com `psql`.
 
 Resultado por banco:
 
-| Banco HML | Resultado | Conclusao |
+| Banco STG | Resultado | Conclusao |
 | --- | --- | --- |
-| `keycloak_hml` | 90 tabelas no schema `public`, incluindo `user_entity`, `federated_identity`, `credential`, `user_attribute`, `realm`, `client` e `identity_provider`. | O resolvedor Keycloak deve usar Admin API ou leitura controlada dessas tabelas, preservando configuracoes globais. |
-| `eickrono_identidade_hml` | Schemas novos `catalogo`, `autenticacao`, `identidade`, `dispositivos`, `seguranca`, `auditoria` existem. | Este e o banco alvo para resolver autenticacao/identidade em HML. |
-| `eickrono_thimisu_hml` | Schema `thimisu_hml` possui `pessoas_produto_local`, `perfis_sistema` e historicos. | Este e o banco alvo do produto Thimisu em HML. |
+| `keycloak_stg` | 90 tabelas no schema `public`, incluindo `user_entity`, `federated_identity`, `credential`, `user_attribute`, `realm`, `client` e `identity_provider`. | O resolvedor Keycloak deve usar Admin API ou leitura controlada dessas tabelas, preservando configuracoes globais. |
+| `eickrono_identidade_stg` | Schemas novos `catalogo`, `autenticacao`, `identidade`, `dispositivos`, `seguranca`, `auditoria` existem. | Este e o banco alvo para resolver autenticacao/identidade em STG. |
+| `eickrono_thimisu_stg` | Schema `thimisu_stg` possui `pessoas_produto_local`, `perfis_sistema` e historicos. | Este e o banco alvo do produto Thimisu em STG. |
 
-Tabelas novas confirmadas em `eickrono_identidade_hml`:
+Tabelas novas confirmadas em `eickrono_identidade_stg`:
 
 | Tabela | Colunas chave confirmadas | Uso no servico |
 | --- | --- | --- |
@@ -75,7 +75,7 @@ Tabelas novas confirmadas em `eickrono_identidade_hml`:
 | `identidade.avatar_origens` | `id`, `codigo`, `tipo`, `cliente_ecossistema_id`, `permite_vinculo_social`, `permite_upload_usuario` | Catalogo; nao apagar. |
 | `identidade.avatar_usuario` | `id`, `usuario_cliente_id`, `origem_id`, `forma_acesso_id`, `url_avatar`, `storage_key`, `hash_conteudo`, `versao`, `preferido`, `removido_em` | Resolver avatar preferido/controlado e gerar pendencia de remocao fisica. |
 
-FKs relevantes confirmadas em `eickrono_identidade_hml`:
+FKs relevantes confirmadas em `eickrono_identidade_stg`:
 
 | FK | Impacto |
 | --- | --- |
@@ -87,17 +87,17 @@ FKs relevantes confirmadas em `eickrono_identidade_hml`:
 | `avatar_usuario.origem_id -> avatar_origens.id` | Origem e catalogo de avatar sao preservados. |
 | `contatos_email.pessoa_id -> pessoas.id` e `contatos_telefone.pessoa_id -> pessoas.id` | Pessoa canonica e contatos ficam fora da exclusao de produto. |
 
-Tabelas confirmadas em `eickrono_thimisu_hml`:
+Tabelas confirmadas em `eickrono_thimisu_stg`:
 
 | Tabela | Colunas chave confirmadas | Uso no servico |
 | --- | --- | --- |
-| `thimisu_hml.pessoas_produto_local` | `id`, `sub`, `email`, `nome`, `tipo_pessoa`, `telefone_principal`, `cadastro_id_origem`, `pessoa_id_central` | Apagar/anonimizar dados pessoais do produto alvo. |
-| `thimisu_hml.perfis_sistema` | `id`, `pessoa_produto_local_id`, `perfil_sistema_id`, `identificador_publico_sistema`, `email`, `ativo`, `status` | Remover/liberar perfil publico do produto alvo. |
-| `thimisu_hml.pessoas_produto_local_historico` | Snapshot historico de pessoa do produto. | Preservar/anonimizar conforme regra de auditoria/produto. |
-| `thimisu_hml.perfis_sistema_historico` | Snapshot historico de perfil. | Preservar/anonimizar conforme regra de auditoria/produto. |
-| `thimisu_hml.documentos_historico` | Historico de documentos. | Preservar/anonimizar; nao apagar cegamente. |
+| `thimisu_stg.pessoas_produto_local` | `id`, `sub`, `email`, `nome`, `tipo_pessoa`, `telefone_principal`, `cadastro_id_origem`, `pessoa_id_central` | Apagar/anonimizar dados pessoais do produto alvo. |
+| `thimisu_stg.perfis_sistema` | `id`, `pessoa_produto_local_id`, `perfil_sistema_id`, `identificador_publico_sistema`, `email`, `ativo`, `status` | Remover/liberar perfil publico do produto alvo. |
+| `thimisu_stg.pessoas_produto_local_historico` | Snapshot historico de pessoa do produto. | Preservar/anonimizar conforme regra de auditoria/produto. |
+| `thimisu_stg.perfis_sistema_historico` | Snapshot historico de perfil. | Preservar/anonimizar conforme regra de auditoria/produto. |
+| `thimisu_stg.documentos_historico` | Historico de documentos. | Preservar/anonimizar; nao apagar cegamente. |
 
-Lacunas reais confirmadas em HML:
+Lacunas reais confirmadas em STG:
 
 | Lacuna | Onde deve nascer |
 | --- | --- |

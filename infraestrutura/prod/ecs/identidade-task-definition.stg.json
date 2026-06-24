@@ -1,0 +1,112 @@
+{
+  "family": "identidade-stg",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": {
+    "cpuArchitecture": "ARM64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "executionRoleArn": "arn:aws:iam::531708494702:role/eickrono-stg-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::531708494702:role/eickrono-stg-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "identidade",
+      "image": "531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-identidade-servidor:stg-20260521-avatar-s3-01",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8081,
+          "hostPort": 8081,
+          "protocol": "tcp"
+        },
+        {
+          "containerPort": 8443,
+          "hostPort": 8443,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "stg" },
+        { "name": "SPRING_DATASOURCE_URL", "value": "__IDENTIDADE_DB_URL__" },
+        { "name": "SPRING_DATASOURCE_USERNAME", "value": "__IDENTIDADE_DB_USERNAME__" },
+        { "name": "SPRING_FLYWAY_SCHEMAS", "value": "identidade_stg" },
+        { "name": "SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA", "value": "identidade_stg" },
+        { "name": "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI", "value": "https://oidc-stg.eickrono.store/realms/eickrono" },
+        { "name": "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI", "value": "https://oidc-stg.eickrono.store/realms/eickrono/protocol/openid-connect/certs" },
+        { "name": "SEGURANCA_MTLS_HABILITADO", "value": "true" },
+        { "name": "SEGURANCA_MTLS_PORTA_INTERNA", "value": "8443" },
+        { "name": "SEGURANCA_MTLS_KEYSTORE_ARQUIVO", "value": "file:/app/seguranca/mtls/api-identidade-eickrono.p12" },
+        { "name": "SEGURANCA_MTLS_TRUSTSTORE_ARQUIVO", "value": "file:/app/seguranca/mtls/backchannel-truststore.p12" },
+        { "name": "IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_URL_BASE", "value": "http://auth-stg-interno.stg.eickrono.internal:8080" },
+        { "name": "IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_REALM", "value": "eickrono" },
+        { "name": "IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_ADMIN_USERNAME", "value": "admin" },
+        { "name": "IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_URL_BASE", "value": "http://auth-stg-interno.stg.eickrono.internal:8080" },
+        { "name": "IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_REALM", "value": "eickrono" },
+        { "name": "IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_ID", "value": "app-flutter-stg" },
+        { "name": "IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_CLIENT_ID", "value": "autenticacao-servidor" },
+        { "name": "INTEGRACAO_PERFIL_URL_BASE", "value": "https://thimisu-backend-stg-interno.stg.eickrono.internal:8443" },
+        { "name": "INTEGRACAO_PERFIL_DISPONIBILIDADE_URL_BASE", "value": "http://auth-stg-interno.stg.eickrono.internal:8080" },
+        { "name": "INTEGRACAO_PERFIL_JWT_INTERNO_URL_BASE", "value": "http://auth-stg-interno.stg.eickrono.internal:8080" },
+        { "name": "INTEGRACAO_PERFIL_JWT_INTERNO_REALM", "value": "eickrono" },
+        { "name": "INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_ID", "value": "autenticacao-servidor" },
+        { "name": "IDENTIDADE_CADASTRO_EMAIL_FORNECEDOR", "value": "smtp" },
+        { "name": "IDENTIDADE_CADASTRO_EMAIL_REMETENTE", "value": "info@eickrono.com" },
+        { "name": "IDENTIDADE_CADASTRO_EMAIL_NOME_APLICACAO", "value": "Eickrono STG" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_TIPO", "value": "s3" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_BUCKET", "value": "eickrono-avatares-stg" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_REGION", "value": "sa-east-1" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_PUBLIC_URL_BASE", "value": "https://id-stg.eickrono.store/identidade/avatares/publicos" },
+        { "name": "IDENTIDADE_AVATAR_STORAGE_MAX_BYTES", "value": "5242880" },
+        { "name": "SPRING_MAIL_HOST", "value": "smtp.mail.me.com" },
+        { "name": "SPRING_MAIL_PORT", "value": "587" },
+        { "name": "SPRING_MAIL_SMTP_AUTH", "value": "true" },
+        { "name": "SPRING_MAIL_SMTP_STARTTLS_ENABLE", "value": "true" }
+      ],
+      "secrets": [
+        { "name": "SPRING_DATASOURCE_PASSWORD", "valueFrom": "__IDENTIDADE_DB_PASSWORD_SECRET_ARN__" },
+        { "name": "EICKRONO_INTERNAL_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/eickrono-internal-secret-rbAreo" },
+        { "name": "SEGURANCA_MTLS_KEYSTORE_SENHA", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/mtls-keystore-password-2Ix8LB" },
+        { "name": "SEGURANCA_MTLS_TRUSTSTORE_SENHA", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/mtls-truststore-password-1oGP18" },
+        { "name": "IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_ADMIN_PASSWORD", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/keycloak-admin-password-sZBgPa" },
+        { "name": "IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/keycloak/clientes/autenticacao-servidor/secret-1QhCZx" },
+        { "name": "INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/keycloak/clientes/autenticacao-servidor/secret-1QhCZx" },
+        { "name": "EICKRONO_PASSWORD_PEPPER", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/eickrono-password-pepper-MjMlBO" },
+        { "name": "IDENTIDADE_DEVICE_TOKEN_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/identidade/device-token-secret-YaQScJ" },
+        { "name": "IDENTIDADE_CODIGO_TOKEN_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/identidade/codigo-token-secret-Yh8g7q" },
+        { "name": "SPRING_MAIL_USERNAME", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/identidade/smtp-username-eWzE4f" },
+        { "name": "SPRING_MAIL_PASSWORD", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/identidade/smtp-password-thPtVl" }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "mtls-artifacts",
+          "containerPath": "/app/seguranca/mtls",
+          "readOnly": true
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/stg/identidade",
+          "awslogs-region": "sa-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "mtls-artifacts",
+      "efsVolumeConfiguration": {
+          "fileSystemId": "fs-0edf45a03e2c64caa",
+        "rootDirectory": "/",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+            "accessPointId": "fsap-020a3308f01ba16b7",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ]
+}

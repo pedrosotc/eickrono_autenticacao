@@ -24,7 +24,7 @@ public class AtestacaoAppConfiguracaoAmbiente {
     void validar() {
         if (!ambienteFlexivel() && properties.isPermitirValidacaoLocalSemProvedorOficial()) {
             throw new IllegalStateException(
-                    "A validacao local sem provedor oficial so pode ser habilitada em dev, hml ou test."
+                    "A validacao local sem provedor oficial so pode ser habilitada em dev, stg ou test."
             );
         }
 
@@ -46,7 +46,7 @@ public class AtestacaoAppConfiguracaoAmbiente {
     }
 
     private boolean ambienteFlexivel() {
-        return environment.acceptsProfiles(Profiles.of("dev", "hml", "test"));
+        return environment.acceptsProfiles(Profiles.of("dev", "stg", "test"));
     }
 
     private static void validarGoogle(final GooglePlayIntegrityProperties google) {

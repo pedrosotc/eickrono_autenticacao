@@ -1199,9 +1199,9 @@ Ponto importante sobre o estado atual:
   - `src/main/resources/application-dev.yml`
     - `jdbc:postgresql://localhost:5432/eickrono_thimisu`
     - schema `thimisu`
-  - `src/main/resources/application-hml.yml`
-    - `jdbc:postgresql://banco-postgres:5432/eickrono_thimisu_hml`
-    - schema `thimisu_hml`
+  - `src/main/resources/application-stg.yml`
+    - `jdbc:postgresql://banco-postgres:5432/eickrono_thimisu_stg`
+    - schema `thimisu_stg`
   - `src/main/resources/application-prd.yml`
     - `jdbc:postgresql://rds-thimisu.eickrono.internal:5432/eickrono_thimisu`
     - schema `thimisu`
@@ -1210,9 +1210,9 @@ Ponto importante sobre o estado atual:
   - `src/main/resources/application-dev.yml`
     - `jdbc:postgresql://localhost:5432/eickrono_identidade`
     - schema `identidade`
-  - `src/main/resources/application-hml.yml`
-    - `jdbc:postgresql://banco-postgres:5432/eickrono_identidade_hml`
-    - schema `identidade_hml`
+  - `src/main/resources/application-stg.yml`
+    - `jdbc:postgresql://banco-postgres:5432/eickrono_identidade_stg`
+    - schema `identidade_stg`
   - `src/main/resources/application-prod.yml`
     - `jdbc:postgresql://rds-identidade.eickrono.internal:5432/eickrono_identidade`
     - schema `identidade`
@@ -1230,15 +1230,15 @@ Arquivos de infraestrutura e configuracao que precisam entrar na revisao desta
 etapa:
 
 - `eickrono-thimisu-backend/infraestrutura/dev/docker-compose.yml`
-- `eickrono-thimisu-backend/infraestrutura/hml/docker-compose.yml`
+- `eickrono-thimisu-backend/infraestrutura/stg/docker-compose.yml`
 - `eickrono-thimisu-backend/modulos/thimisu-backend/src/main/resources/application-dev.yml`
-- `eickrono-thimisu-backend/modulos/thimisu-backend/src/main/resources/application-hml.yml`
+- `eickrono-thimisu-backend/modulos/thimisu-backend/src/main/resources/application-stg.yml`
 - `eickrono-thimisu-backend/modulos/thimisu-backend/src/main/resources/application-prd.yml`
 - `eickrono-identidade-servidor/src/main/resources/application-dev.yml`
-- `eickrono-identidade-servidor/src/main/resources/application-hml.yml`
+- `eickrono-identidade-servidor/src/main/resources/application-stg.yml`
 - `eickrono-identidade-servidor/src/main/resources/application-prod.yml`
 - `eickrono-autenticacao-servidor/infraestrutura/dev/docker-compose.yml`
-- `eickrono-autenticacao-servidor/infraestrutura/hml/docker-compose.yml`
+- `eickrono-autenticacao-servidor/infraestrutura/stg/docker-compose.yml`
 
 O que precisa ser verificado nesses arquivos:
 

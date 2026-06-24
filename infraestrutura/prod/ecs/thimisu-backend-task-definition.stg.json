@@ -1,5 +1,5 @@
 {
-  "family": "thimisu-backend-hml",
+  "family": "thimisu-backend-stg",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "1024",
@@ -8,12 +8,12 @@
     "cpuArchitecture": "ARM64",
     "operatingSystemFamily": "LINUX"
   },
-  "executionRoleArn": "arn:aws:iam::531708494702:role/eickrono-hml-ecs-execution-role",
-  "taskRoleArn": "arn:aws:iam::531708494702:role/eickrono-hml-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::531708494702:role/eickrono-stg-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::531708494702:role/eickrono-stg-ecs-task-role",
   "containerDefinitions": [
     {
       "name": "thimisu-backend",
-      "image": "531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-thimisu-backend:hml-20260426-01",
+      "image": "531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-thimisu-backend:stg-20260426-01",
       "essential": true,
       "portMappings": [
         {
@@ -28,29 +28,29 @@
         }
       ],
       "environment": [
-        { "name": "SPRING_PROFILES_ACTIVE", "value": "hml" },
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "stg" },
         { "name": "SERVER_PORT", "value": "8082" },
         { "name": "SPRING_DATASOURCE_URL", "value": "__THIMISU_DB_URL__" },
         { "name": "SPRING_DATASOURCE_USERNAME", "value": "__THIMISU_DB_USERNAME__" },
-        { "name": "SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA", "value": "thimisu_hml" },
-        { "name": "SPRING_FLYWAY_SCHEMAS", "value": "thimisu_hml" },
-        { "name": "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI", "value": "https://oidc-hml.eickrono.store/realms/eickrono" },
-        { "name": "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI", "value": "https://oidc-hml.eickrono.store/realms/eickrono/protocol/openid-connect/certs" },
+        { "name": "SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA", "value": "thimisu_stg" },
+        { "name": "SPRING_FLYWAY_SCHEMAS", "value": "thimisu_stg" },
+        { "name": "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI", "value": "https://oidc-stg.eickrono.store/realms/eickrono" },
+        { "name": "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI", "value": "https://oidc-stg.eickrono.store/realms/eickrono/protocol/openid-connect/certs" },
         { "name": "SEGURANCA_MTLS_HABILITADO", "value": "true" },
         { "name": "SEGURANCA_MTLS_PORTA_INTERNA", "value": "8443" },
         { "name": "SEGURANCA_MTLS_KEYSTORE_ARQUIVO", "value": "file:/app/seguranca/mtls/thimisu-backend.p12" },
         { "name": "SEGURANCA_MTLS_TRUSTSTORE_ARQUIVO", "value": "file:/app/seguranca/mtls/backchannel-truststore.p12" },
-        { "name": "INTEGRACAO_AUTENTICACAO_URL_BASE", "value": "https://id-hml-interno.hml.eickrono.internal:8443" },
-        { "name": "INTEGRACAO_AUTENTICACAO_JWT_INTERNO_URL_BASE", "value": "http://auth-hml-interno.hml.eickrono.internal:8080" },
+        { "name": "INTEGRACAO_AUTENTICACAO_URL_BASE", "value": "https://id-stg-interno.stg.eickrono.internal:8443" },
+        { "name": "INTEGRACAO_AUTENTICACAO_JWT_INTERNO_URL_BASE", "value": "http://auth-stg-interno.stg.eickrono.internal:8080" },
         { "name": "INTEGRACAO_AUTENTICACAO_JWT_INTERNO_REALM", "value": "eickrono" },
         { "name": "INTEGRACAO_AUTENTICACAO_JWT_INTERNO_CLIENT_ID", "value": "thimisu-backend" }
       ],
       "secrets": [
         { "name": "SPRING_DATASOURCE_PASSWORD", "valueFrom": "__THIMISU_DB_PASSWORD_SECRET_ARN__" },
-        { "name": "SEGURANCA_MTLS_KEYSTORE_SENHA", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/hml/shared/mtls-keystore-password-2Ix8LB" },
-        { "name": "SEGURANCA_MTLS_TRUSTSTORE_SENHA", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/hml/shared/mtls-truststore-password-1oGP18" },
-        { "name": "INTEGRACAO_AUTENTICACAO_JWT_INTERNO_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/hml/keycloak/clientes/thimisu-backend/secret-ODcGPv" },
-        { "name": "EICKRONO_INTERNAL_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/hml/shared/eickrono-internal-secret-rbAreo" }
+        { "name": "SEGURANCA_MTLS_KEYSTORE_SENHA", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/mtls-keystore-password-2Ix8LB" },
+        { "name": "SEGURANCA_MTLS_TRUSTSTORE_SENHA", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/mtls-truststore-password-1oGP18" },
+        { "name": "INTEGRACAO_AUTENTICACAO_JWT_INTERNO_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/keycloak/clientes/thimisu-backend/secret-ODcGPv" },
+        { "name": "EICKRONO_INTERNAL_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/eickrono-internal-secret-rbAreo" }
       ],
       "mountPoints": [
         {
@@ -62,7 +62,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/hml/thimisu-backend",
+          "awslogs-group": "/ecs/stg/thimisu-backend",
           "awslogs-region": "sa-east-1",
           "awslogs-stream-prefix": "ecs"
         }

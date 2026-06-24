@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.eickrono.api.identidade.infraestrutura.configuracao.DispositivoProperties;
+import com.eickrono.api.identidade.aplicacao.modelo.ContextoPessoaPerfilSistema;
 import com.eickrono.api.identidade.dominio.modelo.AuditoriaEventoIdentidade;
 import com.eickrono.api.identidade.dominio.modelo.CanalVerificacao;
 import com.eickrono.api.identidade.dominio.modelo.CodigoVerificacao;
@@ -142,12 +143,14 @@ class RegistroDispositivoServiceTest {
                 registroRepositorio(),
                 codigoRepositorio(),
                 tokenDispositivoService,
-                provisionamentoIdentidadeService,
+                null,
+                new ClienteContextoPessoaPerfilSistemaFake(provisionamentoIdentidadeService.pessoa()),
                 dispositivoIdentidadeService,
                 properties,
                 auditoriaService,
                 List.of(canalSms, canalEmail),
-                CLOCK_FIXO);
+                CLOCK_FIXO,
+                null);
     }
 
     private RegistroDispositivo salvarRegistroLocal(RegistroDispositivo registro) {
@@ -579,6 +582,40 @@ class RegistroDispositivoServiceTest {
         @Override
         public Optional<Pessoa> localizarPessoaPorSub(String sub) {
             return Objects.equals(pessoa.getSub(), sub) ? Optional.of(pessoa) : Optional.empty();
+        }
+    }
+
+    private static class ClienteContextoPessoaPerfilSistemaFake implements ClienteContextoPessoaPerfilSistema {
+
+        private final Pessoa pessoa;
+
+        ClienteContextoPessoaPerfilSistemaFake(final Pessoa pessoa) {
+            this.pessoa = pessoa;
+        }
+
+        @Override
+        public Optional<ContextoPessoaPerfilSistema> buscarPorPessoaId(final Long pessoaId) {
+            return Objects.equals(pessoa.getId(), pessoaId) ? Optional.of(paraContexto()) : Optional.empty();
+        }
+
+        @Override
+        public Optional<ContextoPessoaPerfilSistema> buscarPorSub(final String sub) {
+            return Objects.equals(pessoa.getSub(), sub) ? Optional.of(paraContexto()) : Optional.empty();
+        }
+
+        @Override
+        public Optional<ContextoPessoaPerfilSistema> buscarPorEmail(final String email) {
+            return Objects.equals(pessoa.getEmail(), email) ? Optional.of(paraContexto()) : Optional.empty();
+        }
+
+        private ContextoPessoaPerfilSistema paraContexto() {
+            return new ContextoPessoaPerfilSistema(
+                    pessoa.getId(),
+                    pessoa.getSub(),
+                    pessoa.getEmail(),
+                    pessoa.getNome(),
+                    null,
+                    null);
         }
     }
 

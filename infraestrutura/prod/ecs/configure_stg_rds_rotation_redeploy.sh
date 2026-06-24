@@ -8,7 +8,7 @@ LAMBDA_SOURCE_FILE="${LAMBDA_SOURCE_DIR}/handler.py"
 
 usage() {
   cat <<'EOF'
-uso: configure_hml_rds_rotation_redeploy.sh [opcoes]
+uso: configure_stg_rds_rotation_redeploy.sh [opcoes]
 
 Configura a automacao que observa a rotacao bem-sucedida do segredo RDS e
 forca novo deploy dos servicos ECS dependentes da senha do banco.
@@ -67,12 +67,12 @@ print(json.dumps(sys.argv[1]))
 PY
 }
 
-CLUSTER="eickrono-hml"
-SERVICES_CSV="autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml"
+CLUSTER="eickrono-stg"
+SERVICES_CSV="autenticacao-api-stg,auth-stg,identidade-stg,thimisu-backend-stg"
 SECRET_ARN="arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-7df15f56-c831-40b7-be42-ebd935108b06-22Dwvf"
-FUNCTION_NAME="eickrono-hml-rds-rotation-ecs-redeploy"
-RULE_NAME="eickrono-hml-rds-rotation-succeeded"
-ROLE_NAME="eickrono-hml-rds-rotation-ecs-redeploy-role"
+FUNCTION_NAME="eickrono-stg-rds-rotation-ecs-redeploy"
+RULE_NAME="eickrono-stg-rds-rotation-succeeded"
+ROLE_NAME="eickrono-stg-rds-rotation-ecs-redeploy-role"
 REGION="sa-east-1"
 PROFILE=""
 ACCOUNT_ID=""

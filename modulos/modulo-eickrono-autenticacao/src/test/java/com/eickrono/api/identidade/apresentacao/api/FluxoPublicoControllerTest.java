@@ -14,6 +14,7 @@ import com.eickrono.api.identidade.aplicacao.modelo.LoginSocialProjetoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.PerfilSistemaProjetoPorEmailResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.SessaoInternaAutenticada;
+import com.eickrono.api.identidade.aplicacao.modelo.StatusCadastroPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.aplicacao.servico.AtestacaoAppServico;
 import com.eickrono.api.identidade.aplicacao.servico.AutenticacaoSessaoInternaServico;
@@ -38,6 +39,7 @@ import com.eickrono.api.identidade.apresentacao.dto.fluxo.DispositivoSessaoApiRe
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.RenovarSessaoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.SegurancaAplicativoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.SessaoApiResposta;
+import com.eickrono.api.identidade.apresentacao.dto.fluxo.StatusCadastroPublicoApiResposta;
 import com.eickrono.api.identidade.apresentacao.dto.fluxo.VinculoSocialConfirmadoApiRequest;
 import com.eickrono.api.identidade.dominio.modelo.CanalVerificacao;
 import com.eickrono.api.identidade.dominio.modelo.CanalValidacaoTelefoneCadastro;
@@ -114,6 +116,33 @@ class FluxoPublicoControllerTest {
 
     @InjectMocks
     private FluxoPublicoController controller;
+
+    @Test
+    void deveConsultarStatusDoCadastroPendente() {
+        UUID cadastroId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        when(cadastroContaInternaServico.consultarStatusCadastroPublico(cadastroId))
+                .thenReturn(new StatusCadastroPublicoResolvido(
+                        cadastroId,
+                        "ana@eickrono.com",
+                        "+5511999999999",
+                        false,
+                        false,
+                        false,
+                        false,
+                        "VALIDAR_CONTATOS"
+                ));
+
+        StatusCadastroPublicoApiResposta resposta = controller.consultarStatusCadastro(cadastroId.toString());
+
+        assertThat(resposta.cadastroId()).isEqualTo(cadastroId.toString());
+        assertThat(resposta.emailPrincipal()).isEqualTo("ana@eickrono.com");
+        assertThat(resposta.telefonePrincipal()).isEqualTo("+5511999999999");
+        assertThat(resposta.emailConfirmado()).isFalse();
+        assertThat(resposta.telefoneConfirmado()).isFalse();
+        assertThat(resposta.telefoneObrigatorio()).isFalse();
+        assertThat(resposta.liberadoParaLogin()).isFalse();
+        assertThat(resposta.proximoPasso()).isEqualTo("VALIDAR_CONTATOS");
+    }
 
     @Test
     void deveAceitarVinculosSociaisConfirmadosSemCriarContextoPendenteAoCriarCadastro() {

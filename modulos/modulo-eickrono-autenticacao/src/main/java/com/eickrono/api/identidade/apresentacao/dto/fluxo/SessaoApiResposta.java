@@ -22,6 +22,7 @@ public record SessaoApiResposta(
         List<CanalVerificacao> canaisConfirmacao,
         @JsonProperty("statusUsuario") String statusPerfilSistema,
         String emailPrincipal,
+        String sub,
         String usuario,
         String avatarPreferidoUrl,
         String avatarPreferidoOrigem,
@@ -67,6 +68,7 @@ public record SessaoApiResposta(
                 null,
                 null,
                 null,
+                null,
                 primeiraSessao,
                 podeOferecerBiometria,
                 podeOferecerVinculacaoSocial
@@ -104,6 +106,7 @@ public record SessaoApiResposta(
                 canaisConfirmacao,
                 statusPerfilSistema,
                 emailPrincipal,
+                null,
                 usuario,
                 null,
                 null,

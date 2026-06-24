@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
- * Propriedades de segurança aplicadas ao Swagger em homologação.
+ * Propriedades de segurança aplicadas ao Swagger em staging.
  */
 @ConfigurationProperties(prefix = "documentacao.swagger")
 public class SwaggerSegurancaProperties {

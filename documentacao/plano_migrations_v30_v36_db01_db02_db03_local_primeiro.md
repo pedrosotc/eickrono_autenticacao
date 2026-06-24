@@ -8,7 +8,7 @@ Escopo:
 - definir nomes e ordem sugerida das migrations `V30+`;
 - separar o que pode ser aplicado cedo em `local`;
 - separar o que depende de mudanca de contrato e runtime;
-- deixar claro o que **nao** deve ir para `hml` ainda.
+- deixar claro o que **nao** deve ir para `stg` ainda.
 
 Este plano **nao executa** migrations.
 
@@ -18,7 +18,7 @@ Este plano **nao executa** migrations.
   `eickrono-identidade-servidor/src/main/resources/db/migration`;
 - a maior migration atual e `V29`;
 - as proximas devem ser aditivas primeiro e restritivas depois;
-- `hml` continua bloqueado nesta etapa;
+- `stg` continua bloqueado nesta etapa;
 - primeiro fecha-se `local`, contrato e testes, depois se fala em rollout.
 
 ## Sequencia proposta
@@ -350,7 +350,7 @@ Pode entrar agora em `local`?
 
 - `nao`, nao antes da mudanca de contrato e do runtime
 
-Pode ir para `hml` agora?
+Pode ir para `stg` agora?
 
 - `nao`
 
@@ -418,7 +418,7 @@ Aplicar em `local` so depois da implementacao:
 
 ## O que ainda nao deve ser feito
 
-- nao aplicar nenhuma dessas migrations em `hml`
+- nao aplicar nenhuma dessas migrations em `stg`
 - nao endurecer `NOT NULL` na recuperacao antes da mudanca de contrato
 - nao apagar os campos legados de contexto social em `cadastros_conta`
 - nao remover heuristicas antigas antes de a nova persistencia estar validada

@@ -1,0 +1,97 @@
+{
+  "family": "auth-stg",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": {
+    "cpuArchitecture": "ARM64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "executionRoleArn": "arn:aws:iam::531708494702:role/eickrono-stg-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::531708494702:role/eickrono-stg-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "auth",
+      "image": "531708494702.dkr.ecr.sa-east-1.amazonaws.com/eickrono-autenticacao-servidor:stg-20260428-143043",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "KC_DB", "value": "postgres" },
+        { "name": "KC_DB_URL_HOST", "value": "__AUTH_KC_DB_HOST__" },
+        { "name": "KC_DB_URL_DATABASE", "value": "__AUTH_KC_DB_NAME__" },
+        { "name": "KC_DB_USERNAME", "value": "__AUTH_KC_DB_USERNAME__" },
+        { "name": "KC_HOSTNAME", "value": "https://oidc-stg.eickrono.store" },
+        { "name": "KC_PROXY_HEADERS", "value": "xforwarded" },
+        { "name": "KEYCLOAK_ADMIN", "value": "admin" },
+        { "name": "KEYCLOAK_IMPORT_REALM_FILE", "value": "staging-realm.json" },
+        { "name": "KEYCLOAK_IMPORT_REALM_TARGET_FILE", "value": "eickrono-realm.json" },
+        { "name": "KEYCLOAK_FEATURES", "value": "instagram-broker:v1,token-exchange:v1,admin-fine-grained-authz:v1" },
+        { "name": "EICKRONO_AUTENTICACAO_API_BASE_URL", "value": "https://id-stg-interno.stg.eickrono.internal:8443" },
+        { "name": "EICKRONO_KEYCLOAK_URL_BASE", "value": "http://localhost:8080" },
+        { "name": "EICKRONO_KEYCLOAK_REALM", "value": "eickrono" },
+        { "name": "EICKRONO_AUTENTICACAO_CLIENT_ID_INTERNO", "value": "eickrono-keycloak" },
+        { "name": "EICKRONO_INTERNO_MTLS_HABILITADO", "value": "true" },
+        { "name": "EICKRONO_INTERNO_MTLS_KEYSTORE_ARQUIVO", "value": "/certificados/eickrono-keycloak.p12" },
+        { "name": "EICKRONO_INTERNO_MTLS_TRUSTSTORE_ARQUIVO", "value": "/certificados/backchannel-truststore.p12" }
+      ],
+      "secrets": [
+        { "name": "KC_DB_PASSWORD", "valueFrom": "__AUTH_KC_DB_PASSWORD_SECRET_ARN__" },
+        { "name": "KEYCLOAK_ADMIN_PASSWORD", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/keycloak-admin-password-sZBgPa" },
+        { "name": "EICKRONO_PASSWORD_PEPPER", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/eickrono-password-pepper-MjMlBO" },
+        { "name": "EICKRONO_INTERNAL_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/eickrono-internal-secret-rbAreo" },
+        { "name": "EICKRONO_AUTENTICACAO_CLIENT_SECRET_INTERNO", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/keycloak/clientes/eickrono-keycloak/secret-zHnKx5" },
+        { "name": "EICKRONO_INTERNO_MTLS_KEYSTORE_SENHA", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/mtls-keystore-password-2Ix8LB" },
+        { "name": "EICKRONO_INTERNO_MTLS_TRUSTSTORE_SENHA", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/shared/mtls-truststore-password-1oGP18" },
+        { "name": "KEYCLOAK_CLIENT_THIMISU_BACKEND_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/keycloak/clientes/thimisu-backend/secret-ODcGPv" },
+        { "name": "KEYCLOAK_CLIENT_EICKRONO_AUTENTICACAO_INTERNO_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/keycloak/clientes/autenticacao-servidor/secret-1QhCZx" },
+        { "name": "KEYCLOAK_CLIENT_EICKRONO_KEYCLOAK_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/keycloak/clientes/eickrono-keycloak/secret-zHnKx5" },
+        { "name": "KEYCLOAK_IDP_THIMISU_GOOGLE_CLIENT_ID", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/google-client-id-Tg3aZ3" },
+        { "name": "KEYCLOAK_IDP_THIMISU_GOOGLE_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/google-client-secret-Wjq8OZ" },
+        { "name": "KEYCLOAK_IDP_THIMISU_APPLE_CLIENT_ID", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/apple-client-id-vxSX9B" },
+        { "name": "KEYCLOAK_IDP_THIMISU_APPLE_CLIENT_SECRET_JWT", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/apple-client-secret-jwt-1PQnkp" },
+        { "name": "KEYCLOAK_IDP_THIMISU_FACEBOOK_APP_ID", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/facebook-app-id-K4A3xu" },
+        { "name": "KEYCLOAK_IDP_THIMISU_FACEBOOK_APP_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/facebook-app-secret-ZuK6Nw" },
+        { "name": "KEYCLOAK_IDP_THIMISU_LINKEDIN_CLIENT_ID", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/linkedin-client-id-szjoXv" },
+        { "name": "KEYCLOAK_IDP_THIMISU_LINKEDIN_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/linkedin-client-secret-NqZWro" },
+        { "name": "KEYCLOAK_IDP_THIMISU_INSTAGRAM_APP_ID", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/instagram-app-id-Gt1s64" },
+        { "name": "KEYCLOAK_IDP_THIMISU_INSTAGRAM_APP_SECRET", "valueFrom": "arn:aws:secretsmanager:sa-east-1:531708494702:secret:/eickrono/stg/idp/instagram-app-secret-lRItVK" }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "mtls-artifacts",
+          "containerPath": "/certificados",
+          "readOnly": true
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/stg/auth",
+          "awslogs-region": "sa-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "mtls-artifacts",
+      "efsVolumeConfiguration": {
+          "fileSystemId": "fs-0edf45a03e2c64caa",
+        "rootDirectory": "/",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+            "accessPointId": "fsap-020a3308f01ba16b7",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ]
+}

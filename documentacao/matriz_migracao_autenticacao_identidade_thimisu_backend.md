@@ -25,23 +25,23 @@ No desenho atual, existem dois planos de leitura:
 
 - alvo canônico final em `eickrono.com`;
 - estado transitorio efetivamente publicado por ambiente, que ainda pode usar
-  `eickrono.online` em `dev` e `eickrono.store` em `hml`.
+  `eickrono.online` em `dev` e `eickrono.store` em `stg`.
 
 - superficie do produto:
   - `thimisu-dev.eickrono.com`
-  - `thimisu-hml.eickrono.com`
+  - `thimisu-stg.eickrono.com`
   - `thimisu.eickrono.com`
 - backend de dominio consumido pelo app e pelo ecossistema:
   - `thimisu-backend-dev.eickrono.com`
-  - `thimisu-backend-hml.eickrono.com`
+  - `thimisu-backend-stg.eickrono.com`
   - `thimisu-backend.eickrono.com`
 - borda publica de autenticacao/identidade:
   - `id-dev.eickrono.com`
-  - `id-hml.eickrono.com`
+  - `id-stg.eickrono.com`
   - `id.eickrono.com`
 - servidor OIDC:
   - `oidc-dev.eickrono.com`
-  - `oidc-hml.eickrono.com`
+  - `oidc-stg.eickrono.com`
   - `oidc.eickrono.com`
 
 ### Identificadores canônicos de sistema
@@ -68,8 +68,8 @@ imediato. Por isso a matriz abaixo classifica o estado de cada uma.
 | Superficie | Valor atual | Alvo canônico | Estado desta rodada | Proximo passo |
 | --- | --- | --- | --- | --- |
 | Nome logico do sistema chamador no fluxo interno | `identidade-servidor` em parte do legado | `thimisu-backend` | Concluido no codigo principal. A `autenticacao` ja usa `thimisu-backend` como nome logico de sistema, mantendo apenas compatibilidades residuais onde necessario. | Remover alias legado restante quando nao houver mais consumer antigo. |
-| Host publico do backend de dominio | host transitorio depende do ambiente | `thimisu-backend-*` | Convenção canônica continua aprovada, mas `hml` ainda publica host real em `eickrono.store`. | Fechar a migracao final de DNS quando a camada publica consolidar em `eickrono.com`. |
-| Realm OIDC em `hml` e `prd` | legado parcialmente divergente | `eickrono` | Concluido no runtime principal dos servicos e nos templates atuais. | Apenas vigiar pontos externos ainda nao reexportados. |
+| Host publico do backend de dominio | host transitorio depende do ambiente | `thimisu-backend-*` | Convenção canônica continua aprovada, mas `stg` ainda publica host real em `eickrono.store`. | Fechar a migracao final de DNS quando a camada publica consolidar em `eickrono.com`. |
+| Realm OIDC em `stg` e `prd` | legado parcialmente divergente | `eickrono` | Concluido no runtime principal dos servicos e nos templates atuais. | Apenas vigiar pontos externos ainda nao reexportados. |
 | Client id de backchannel JWT | `identidade-servidor` em parte do legado | `thimisu-backend` | Concluido no desenho principal e aceito nos contratos internos atuais. | Revisar apenas secrets e cadastros antigos de ambiente ainda nao rotacionados. |
 | Audience/resource client do backend de dominio | `thimisu-backend` | `thimisu-backend` | Concluido no runtime. | Manter. |
 | Certificado `mTLS` do backend de dominio | `thimisu-backend.p12` | `thimisu-backend.p12` | Concluido no runtime. | Manter. |
@@ -97,9 +97,9 @@ imediato. Por isso a matriz abaixo classifica o estado de cada uma.
 
 - a documentacao do projeto ja registra `thimisu-backend-*` como convenio
   canônico para o host publico do backend de dominio;
-- o `hml` local passou a usar `issuer`/`jwk-set-uri` coerentes com
-  `https://oidc-hml.eickrono.store/realms/eickrono`;
-- o `docker-compose` local de `hml` passou a assumir `realm=eickrono` para o
+- a execução do profile `stg` via Docker passou a usar `issuer`/`jwk-set-uri` coerentes com
+  `https://oidc-stg.eickrono.store/realms/eickrono`;
+- o `docker compose` de `stg` passou a assumir `realm=eickrono` para o
   client interno de backchannel.
 - o backend do produto ja expõe:
   - `GET /api/interna/perfis-sistema/contexto`
@@ -147,7 +147,7 @@ O nome canônico ja vale tanto para runtime quanto para o modulo principal.
 
 Ja aparece de forma canonica em:
 
-- scripts de geracao de certificados `dev` e `hml`
+- scripts de geracao de certificados `dev` e `stg`
 - `.env` do backend de dominio
 - guias de `mTLS`
 - SAN e alias dos certificados locais

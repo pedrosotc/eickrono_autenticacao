@@ -33,7 +33,7 @@ O desenho aprovado e a opcao hibrida:
 
 ## Regra de ambiente
 
-HML e PRD devem usar a mesma arquitetura.
+STG e PRD devem usar a mesma arquitetura.
 
 A diferenca entre ambientes deve ser apenas configuracao:
 
@@ -45,8 +45,8 @@ A diferenca entre ambientes deve ser apenas configuracao:
 - destinos de alerta;
 - limites de cooldown.
 
-Nao deve existir uma estrategia para HML e outra estrategia diferente para PRD,
-porque HML precisa validar o comportamento que sera usado em producao.
+Nao deve existir uma estrategia para STG e outra estrategia diferente para PRD,
+porque STG precisa validar o comportamento que sera usado em producao.
 
 ## Problema tecnico
 
@@ -108,12 +108,12 @@ O mecanismo correto para a arquitetura atual e externo:
 
 Todo servico ECS que consome o segredo RDS deve estar listado na automacao.
 
-No HML atual, os nomes conhecidos sao:
+No STG atual, os nomes conhecidos sao:
 
-- `autenticacao-api-hml`;
-- `auth-hml`;
-- `identidade-hml`;
-- `thimisu-backend-hml`.
+- `autenticacao-api-stg`;
+- `auth-stg`;
+- `identidade-stg`;
+- `thimisu-backend-stg`.
 
 Em PRD, a lista deve usar os nomes equivalentes de producao.
 
@@ -178,10 +178,10 @@ Regra obrigatoria:
 
 Motivo:
 
-- em `hml`, um teste sintetico do fallback em `2026-06-02` confirmou que
+- em `stg`, um teste sintetico do fallback em `2026-06-02` confirmou que
   redeploy simultaneo de todos os servicos pode duplicar temporariamente o
   numero de tasks Java;
-- esse pico abriu conexoes demais no RDS pequeno de HML;
+- esse pico abriu conexoes demais no RDS pequeno de STG;
 - os servicos falharam com
   `remaining connection slots are reserved for non-replication superuser and rds_reserved connections`;
 - o problema nao era senha invalida, era excesso de conexoes causado pelo
@@ -468,17 +468,17 @@ Criterio de aceite:
 
 Objetivo:
 
-- manter HML e PRD com a mesma arquitetura.
+- manter STG e PRD com a mesma arquitetura.
 
 Regras:
 
 - a arquitetura deve ser a mesma;
 - nomes, ARNs, escala e destinos de alerta podem mudar por ambiente;
-- HML deve validar o comportamento que sera usado em PRD.
+- STG deve validar o comportamento que sera usado em PRD.
 
 Criterio de aceite:
 
-- HML e PRD usam o mesmo desenho operacional;
+- STG e PRD usam o mesmo desenho operacional;
 - diferem apenas em configuracao.
 
 ## Testes obrigatorios
@@ -505,7 +505,7 @@ Cenarios:
 - erro sem secret configurado deve falhar de forma explicita;
 - falha no `ecs update-service` deve gerar erro/alerta.
 
-### Teste integrado em HML
+### Teste integrado em STG
 
 O mesmo procedimento deve ser repetivel em PRD em janela controlada.
 
@@ -555,7 +555,7 @@ aws ecs describe-services \
 
 A implementacao esta correta quando:
 
-- HML e PRD usam o mesmo desenho;
+- STG e PRD usam o mesmo desenho;
 - rotacao bem-sucedida dispara redeploy automatico;
 - fallback por erro de senha existe;
 - fallback valida o secret atual antes de redeployar;
@@ -568,58 +568,58 @@ A implementacao esta correta quando:
 
 ## Estado atual conhecido
 
-Ja existe automacao principal documentada e implementada para HML:
+Ja existe automacao principal documentada e implementada para STG:
 
 - script operacional:
-  `infraestrutura/prod/ecs/configure_hml_rds_rotation_redeploy.sh`;
+  `infraestrutura/prod/ecs/configure_stg_rds_rotation_redeploy.sh`;
 - Lambda:
   `infraestrutura/prod/ecs/lambda/rds_rotation_ecs_redeploy/handler.py`;
 - regra EventBridge:
-  `eickrono-hml-rds-rotation-succeeded`;
+  `eickrono-stg-rds-rotation-succeeded`;
 - Lambda:
-  `eickrono-hml-rds-rotation-ecs-redeploy`.
+  `eickrono-stg-rds-rotation-ecs-redeploy`.
 
 O fallback por log ja possui implementacao local, testes locais e instalacao em
-HML. A validacao segura da task Fargate de `psql` tambem foi executada com
+STG. A validacao segura da task Fargate de `psql` tambem foi executada com
 sucesso.
 
-Em `2026-06-02`, `auth-hml` tambem foi validado e corrigido para operar com
+Em `2026-06-02`, `auth-stg` tambem foi validado e corrigido para operar com
 duas tasks permanentes. O teste sintetico completo do fallback ainda deve ser
 executado em janela segura, porque ele pode forcar redeploy sequencial dos
 quatro servicos, mas ele ja nao depende mais de um Keycloak com task unica.
 
-Estado operacional aplicado em HML em `2026-06-02`:
+Estado operacional aplicado em STG em `2026-06-02`:
 
-- `autenticacao-api-hml` foi incluido em `ECS_SERVICES`;
-- policy IAM da Lambda passou a permitir redeploy de `autenticacao-api-hml`;
-- `autenticacao-api-hml`, `identidade-hml` e `thimisu-backend-hml` foram
+- `autenticacao-api-stg` foi incluido em `ECS_SERVICES`;
+- policy IAM da Lambda passou a permitir redeploy de `autenticacao-api-stg`;
+- `autenticacao-api-stg`, `identidade-stg` e `thimisu-backend-stg` foram
   ajustados para `desiredCount=2`;
-- `thimisu-backend-hml` passou a usar `healthCheckGracePeriodSeconds=180`;
-- `auth-hml` foi ajustado para `desiredCount=2` permanente;
-- `auth-hml` passou a usar `deploymentConfiguration` com
+- `thimisu-backend-stg` passou a usar `healthCheckGracePeriodSeconds=180`;
+- `auth-stg` foi ajustado para `desiredCount=2` permanente;
+- `auth-stg` passou a usar `deploymentConfiguration` com
   `minimumHealthyPercent=100` e `maximumPercent=150`;
-- target group `eickrono-hml-auth` passou a usar stickiness por cookie do ALB
+- target group `eickrono-stg-auth` passou a usar stickiness por cookie do ALB
   com duracao de 86400 segundos;
 - o uso de stickiness foi escolhido porque a task definition atual do Keycloak
   nao mostrou configuracao explicita de cache/cluster;
-- `auth-hml` foi validado com 2 targets `healthy`;
+- `auth-stg` foi validado com 2 targets `healthy`;
 - endpoint publico do Keycloak foi validado em
-  `https://oidc-hml.eickrono.store/realms/eickrono/eickrono-runtime/estado`;
+  `https://oidc-stg.eickrono.store/realms/eickrono/eickrono-runtime/estado`;
 - issuer publico foi validado em
-  `https://oidc-hml.eickrono.store/realms/eickrono/.well-known/openid-configuration`;
+  `https://oidc-stg.eickrono.store/realms/eickrono/.well-known/openid-configuration`;
 - conexoes visiveis em `pg_stat_activity` apos a mudanca:
-  `keycloak_hml=4`, total observado `73/81`;
-- task orfa `identidade-hml:50` fora do service `identidade-hml` foi parada por
+  `keycloak_stg=4`, total observado `73/81`;
+- task orfa `identidade-stg:50` fora do service `identidade-stg` foi parada por
   manter senha RDS antiga em memoria.
-- Lambda de fallback `eickrono-hml-rds-password-auth-failure-fallback` foi
+- Lambda de fallback `eickrono-stg-rds-password-auth-failure-fallback` foi
   instalada;
 - subscription filter
-  `eickrono-hml-rds-password-auth-failure-fallback` foi instalado em:
-  `/ecs/hml/autenticacao`, `/ecs/hml/auth`, `/ecs/hml/identidade` e
-  `/ecs/hml/thimisu-backend`;
+  `eickrono-stg-rds-password-auth-failure-fallback` foi instalado em:
+  `/ecs/stg/autenticacao`, `/ecs/stg/auth`, `/ecs/stg/identidade` e
+  `/ecs/stg/thimisu-backend`;
 - task Fargate manual de validacao
   `86180380ca7840e6809493716429210d` executou `SELECT 1` em
-  `eickrono_identidade_hml` e terminou com `exitCode=0`.
+  `eickrono_identidade_stg` e terminou com `exitCode=0`.
 
 ## Arquivos e artefatos envolvidos
 
@@ -635,49 +635,49 @@ Estado operacional aplicado em HML em `2026-06-02`:
 
 | Arquivo | Papel |
 | --- | --- |
-| `infraestrutura/prod/ecs/configure_hml_rds_rotation_redeploy.sh` | Script oficial para criar/atualizar Lambda, role IAM, policy, regra EventBridge e target da automacao de rotacao em HML. |
+| `infraestrutura/prod/ecs/configure_stg_rds_rotation_redeploy.sh` | Script oficial para criar/atualizar Lambda, role IAM, policy, regra EventBridge e target da automacao de rotacao em STG. |
 | `infraestrutura/prod/ecs/lambda/rds_rotation_ecs_redeploy/handler.py` | Codigo da Lambda que recebe `RotationSucceeded`, valida o segredo monitorado e executa `ecs update-service --force-new-deployment`. |
 
 ### Fallback por erro de senha antiga
 
 | Arquivo | Papel |
 | --- | --- |
-| `infraestrutura/prod/ecs/configure_hml_rds_password_auth_failure_fallback.sh` | Script para criar/atualizar Lambda, role IAM, policy, permissao de CloudWatch Logs e subscription filter nos log groups monitorados. |
+| `infraestrutura/prod/ecs/configure_stg_rds_password_auth_failure_fallback.sh` | Script para criar/atualizar Lambda, role IAM, policy, permissao de CloudWatch Logs e subscription filter nos log groups monitorados. |
 | `infraestrutura/prod/ecs/lambda/rds_password_auth_failure_fallback/handler.py` | Codigo da Lambda que recebe evento de log, detecta `password authentication failed`, respeita cooldown, valida o segredo atual por task ECS/Fargate de `psql` e redeploya os servicos se a validacao passar. |
 
 ### Testes locais
 
 | Arquivo | Papel |
 | --- | --- |
-| `infraestrutura/prod/tests/configure_hml_rds_rotation_redeploy_test.sh` | Testa o plano gerado pelo script de configuracao em `--dry-run`. |
+| `infraestrutura/prod/tests/configure_stg_rds_rotation_redeploy_test.sh` | Testa o plano gerado pelo script de configuracao em `--dry-run`. |
 | `infraestrutura/prod/tests/rds_secret_rotation_ecs_redeploy_lambda_test.py` | Testa a Lambda de rotacao: eventos aceitos, eventos ignorados e redeploy dos servicos configurados. |
-| `infraestrutura/prod/tests/configure_hml_rds_password_auth_failure_fallback_test.sh` | Testa o plano gerado pelo script de configuracao do fallback em `--dry-run`. |
+| `infraestrutura/prod/tests/configure_stg_rds_password_auth_failure_fallback_test.sh` | Testa o plano gerado pelo script de configuracao do fallback em `--dry-run`. |
 | `infraestrutura/prod/tests/rds_password_auth_failure_fallback_lambda_test.py` | Testa a Lambda de fallback: evento irrelevante, secret validado, secret nao validado e cooldown. |
 
-### Artefatos AWS em HML
+### Artefatos AWS em STG
 
 | Artefato | Papel |
 | --- | --- |
-| EventBridge rule `eickrono-hml-rds-rotation-succeeded` | Observa evento `RotationSucceeded` do Secrets Manager. |
-| Lambda `eickrono-hml-rds-rotation-ecs-redeploy` | Executa redeploy dos servicos ECS configurados. |
-| IAM role `eickrono-hml-rds-rotation-ecs-redeploy-role` | Permite que a Lambda escreva logs e chame `ecs:UpdateService` nos servicos permitidos. |
+| EventBridge rule `eickrono-stg-rds-rotation-succeeded` | Observa evento `RotationSucceeded` do Secrets Manager. |
+| Lambda `eickrono-stg-rds-rotation-ecs-redeploy` | Executa redeploy dos servicos ECS configurados. |
+| IAM role `eickrono-stg-rds-rotation-ecs-redeploy-role` | Permite que a Lambda escreva logs e chame `ecs:UpdateService` nos servicos permitidos. |
 | Secrets Manager secret `rds!db-7df15f56-c831-40b7-be42-ebd935108b06` | Segredo RDS monitorado. |
-| ECS service `autenticacao-api-hml` | Consome `SPRING_DATASOURCE_PASSWORD` do segredo RDS. |
-| ECS service `auth-hml` | Consome `KC_DB_PASSWORD` do segredo RDS. |
-| ECS service `identidade-hml` | Consome `SPRING_DATASOURCE_PASSWORD` do segredo RDS. |
-| ECS service `thimisu-backend-hml` | Consome `SPRING_DATASOURCE_PASSWORD` do segredo RDS. |
+| ECS service `autenticacao-api-stg` | Consome `SPRING_DATASOURCE_PASSWORD` do segredo RDS. |
+| ECS service `auth-stg` | Consome `KC_DB_PASSWORD` do segredo RDS. |
+| ECS service `identidade-stg` | Consome `SPRING_DATASOURCE_PASSWORD` do segredo RDS. |
+| ECS service `thimisu-backend-stg` | Consome `SPRING_DATASOURCE_PASSWORD` do segredo RDS. |
 
-### Estado atual do fallback em HML
+### Estado atual do fallback em STG
 
 | Artefato | Estado |
 | --- | --- |
-| Lambda `eickrono-hml-rds-password-auth-failure-fallback` | Instalada e `Active`. |
-| IAM role `eickrono-hml-rds-password-auth-failure-fallback-role` | Instalada com permissao restrita para redeploy dos servicos monitorados, execucao da task de validacao e parametro de cooldown. |
+| Lambda `eickrono-stg-rds-password-auth-failure-fallback` | Instalada e `Active`. |
+| IAM role `eickrono-stg-rds-password-auth-failure-fallback-role` | Instalada com permissao restrita para redeploy dos servicos monitorados, execucao da task de validacao e parametro de cooldown. |
 | Subscription filters CloudWatch Logs | Instalados nos quatro log groups monitorados. |
-| Estado de cooldown | Parameter Store em `/eickrono/hml/rds-password-auth-failure-fallback/last-run`. |
-| Task Fargate de validacao `eickrono-hml-db-query-codex:1` | Validada manualmente com `exitCode=0`. |
+| Estado de cooldown | Parameter Store em `/eickrono/stg/rds-password-auth-failure-fallback/last-run`. |
+| Task Fargate de validacao `eickrono-stg-db-query-codex:1` | Validada manualmente com `exitCode=0`. |
 
-## Levantamento atual em HML - 2026-06-02
+## Levantamento atual em STG - 2026-06-02
 
 Comandos executados:
 
@@ -694,7 +694,7 @@ Comandos executados:
 
 | Item | Valor |
 | --- | --- |
-| Cluster ECS | `eickrono-hml` |
+| Cluster ECS | `eickrono-stg` |
 | Servicos ativos | 4 |
 | Tasks Fargate rodando | 7 |
 | Container Insights | `enabled` |
@@ -712,20 +712,20 @@ Comandos executados:
 
 | Item | Valor |
 | --- | --- |
-| Regra | `eickrono-hml-rds-rotation-succeeded` |
+| Regra | `eickrono-stg-rds-rotation-succeeded` |
 | Estado | `ENABLED` |
-| Target | `arn:aws:lambda:sa-east-1:531708494702:function:eickrono-hml-rds-rotation-ecs-redeploy` |
+| Target | `arn:aws:lambda:sa-east-1:531708494702:function:eickrono-stg-rds-rotation-ecs-redeploy` |
 
 ### Lambda atual
 
 | Item | Valor |
 | --- | --- |
-| Lambda | `eickrono-hml-rds-rotation-ecs-redeploy` |
+| Lambda | `eickrono-stg-rds-rotation-ecs-redeploy` |
 | Runtime | `python3.12` |
 | Estado | `Active` |
-| `ECS_CLUSTER` | `eickrono-hml` |
+| `ECS_CLUSTER` | `eickrono-stg` |
 | `TARGET_SECRET_ARN` | `arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-7df15f56-c831-40b7-be42-ebd935108b06-22Dwvf` |
-| `ECS_SERVICES` | `autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml` |
+| `ECS_SERVICES` | `autenticacao-api-stg,auth-stg,identidade-stg,thimisu-backend-stg` |
 
 Ultima atualizacao operacional conhecida:
 
@@ -735,30 +735,30 @@ Ultima atualizacao operacional conhecida:
 
 | Servico | Usa segredo RDS | Esta na Lambda atual | `desiredCount` | `runningCount` | Readiness | Deployment |
 | --- | --- | --- | --- | --- | --- | --- |
-| `autenticacao-api-hml` | Sim, `SPRING_DATASOURCE_PASSWORD` | Sim | 2 | 2 | Health check de container | `ROLLING`, `minimumHealthyPercent=100`, `maximumPercent=150` |
-| `auth-hml` | Sim, `KC_DB_PASSWORD` | Sim | 2 | 2 | Target group ALB | `ROLLING`, `minimumHealthyPercent=100`, `maximumPercent=150` |
-| `identidade-hml` | Sim, `SPRING_DATASOURCE_PASSWORD` | Sim | 2 | 2 | Target group ALB | `ROLLING`, `minimumHealthyPercent=100`, `maximumPercent=150` |
-| `thimisu-backend-hml` | Sim, `SPRING_DATASOURCE_PASSWORD` | Sim | 2 | 2 | Target group ALB | `ROLLING`, `minimumHealthyPercent=100`, `maximumPercent=150` |
+| `autenticacao-api-stg` | Sim, `SPRING_DATASOURCE_PASSWORD` | Sim | 2 | 2 | Health check de container | `ROLLING`, `minimumHealthyPercent=100`, `maximumPercent=150` |
+| `auth-stg` | Sim, `KC_DB_PASSWORD` | Sim | 2 | 2 | Target group ALB | `ROLLING`, `minimumHealthyPercent=100`, `maximumPercent=150` |
+| `identidade-stg` | Sim, `SPRING_DATASOURCE_PASSWORD` | Sim | 2 | 2 | Target group ALB | `ROLLING`, `minimumHealthyPercent=100`, `maximumPercent=150` |
+| `thimisu-backend-stg` | Sim, `SPRING_DATASOURCE_PASSWORD` | Sim | 2 | 2 | Target group ALB | `ROLLING`, `minimumHealthyPercent=100`, `maximumPercent=150` |
 
 Achados:
 
-- `autenticacao-api-hml`, `identidade-hml` e `thimisu-backend-hml` ja estao com
+- `autenticacao-api-stg`, `identidade-stg` e `thimisu-backend-stg` ja estao com
   redundancia minima de 2 tasks;
-- `auth-hml` agora tambem esta com redundancia minima de 2 tasks;
-- `auth-hml` usa stickiness no ALB porque a task definition atual nao mostrou
+- `auth-stg` agora tambem esta com redundancia minima de 2 tasks;
+- `auth-stg` usa stickiness no ALB porque a task definition atual nao mostrou
   configuracao explicita de cache/cluster do Keycloak;
 - antes de replicar em PRD, validar se a estrategia definitiva sera manter
   stickiness ou configurar cluster/cache explicito no Keycloak;
-- `autenticacao-api-hml` nao possui load balancer; sua validacao de readiness
+- `autenticacao-api-stg` nao possui load balancer; sua validacao de readiness
   foi resolvida por health check de container contra o actuator local;
 - foi encontrada task standalone `f250f20fed8941dab9e93f4af0b62090`,
-  `group=family:identidade-hml`, `taskDefinition=identidade-hml:50`, iniciada em
-  `2026-05-26`, fora do service `identidade-hml`;
+  `group=family:identidade-stg`, `taskDefinition=identidade-stg:50`, iniciada em
+  `2026-05-26`, fora do service `identidade-stg`;
 - essa task standalone gerava `password authentication failed for user
   "eickrono_admin"` e foi parada em `2026-06-02T08:02:18Z`;
 - apos a parada da task orfa, nao houve novo erro de senha no log de identidade
   no intervalo verificado.
-- fallback por erro de senha foi instalado em HML com subscription filters nos
+- fallback por erro de senha foi instalado em STG com subscription filters nos
   quatro log groups monitorados;
 - a task Fargate usada pelo fallback para validar o segredo atual foi testada
   manualmente em `2026-06-02` e terminou com `exitCode=0`.
@@ -770,20 +770,20 @@ Achados:
 
 | Servico | Tipo | Alvo | Intervalo | Healthy threshold / retries | Grace/start period |
 | --- | --- | --- | --- | --- | --- |
-| `autenticacao-api-hml` | Container health check | `wget -q -O - http://localhost:8081/actuator/health | grep '"status":"UP"'` | 30s | 3 retries | 120s |
-| `auth-hml` | Target group ALB | `/realms/eickrono/eickrono-runtime/estado` | 30s | 5 | 180s |
-| `identidade-hml` | Target group ALB | `/api/v1/estado` | 30s | 5 | 240s |
-| `thimisu-backend-hml` | Target group ALB | `/api/v1/estado` | 30s | 5 | 180s |
+| `autenticacao-api-stg` | Container health check | `wget -q -O - http://localhost:8081/actuator/health | grep '"status":"UP"'` | 30s | 3 retries | 120s |
+| `auth-stg` | Target group ALB | `/realms/eickrono/eickrono-runtime/estado` | 30s | 5 | 180s |
+| `identidade-stg` | Target group ALB | `/api/v1/estado` | 30s | 5 | 240s |
+| `thimisu-backend-stg` | Target group ALB | `/api/v1/estado` | 30s | 5 | 180s |
 
 Estado atual dos health checks:
 
-- `autenticacao-api-hml`: 2 tasks `HEALTHY` na revisao
-  `autenticacao-api-hml:12`;
-- `auth-hml`: 2 targets `healthy`;
-- `identidade-hml`: 2 targets `healthy`;
-- `thimisu-backend-hml`: 2 targets `healthy`.
+- `autenticacao-api-stg`: 2 tasks `HEALTHY` na revisao
+  `autenticacao-api-stg:12`;
+- `auth-stg`: 2 targets `healthy`;
+- `identidade-stg`: 2 targets `healthy`;
+- `thimisu-backend-stg`: 2 targets `healthy`.
 
-`autenticacao-api-hml` nao possui load balancer. Ele usa Cloud Map/service
+`autenticacao-api-stg` nao possui load balancer. Ele usa Cloud Map/service
 discovery interno. Para esse servico, a validacao de readiness deve ser feita
 pelo health check de container. Chamada interna por Cloud Map/log continua sendo
 diagnostico complementar, nao a fonte primaria de prontidao do ECS.
@@ -796,18 +796,18 @@ diagnostico complementar, nao a fonte primaria de prontidao do ECS.
 
 ## Proxima etapa recomendada
 
-1. Testar o fallback em HML usando evento sintetico somente em janela segura,
+1. Testar o fallback em STG usando evento sintetico somente em janela segura,
    porque ele pode forcar redeploy sequencial dos quatro servicos.
 2. Criar monitoramento para tasks standalone/orfas das familias de servicos.
 3. Replicar a mesma arquitetura em PRD com configuracoes proprias quando PRD
    existir.
 
-### Correcao de readiness do `autenticacao-api-hml`
+### Correcao de readiness do `autenticacao-api-stg`
 
 Executado em `2026-06-02`:
 
-1. Copiada a task definition ativa `autenticacao-api-hml:11`.
-2. Registrada a task definition `autenticacao-api-hml:12` mantendo imagem,
+1. Copiada a task definition ativa `autenticacao-api-stg:11`.
+2. Registrada a task definition `autenticacao-api-stg:12` mantendo imagem,
    secrets, roles, CPU/memoria e portas existentes.
 3. Adicionado health check de container ao container `autenticacao-api`:
    - comando:
@@ -816,7 +816,7 @@ Executado em `2026-06-02`:
    - `timeout=5`;
    - `retries=3`;
    - `startPeriod=120`.
-4. Atualizado o service `autenticacao-api-hml` para a revisao 12 com rollout:
+4. Atualizado o service `autenticacao-api-stg` para a revisao 12 com rollout:
    - `desiredCount=2`;
    - `minimumHealthyPercent=100`;
    - `maximumPercent=150`.
@@ -826,41 +826,41 @@ Executado em `2026-06-02`:
    - duas tasks `RUNNING` e `HEALTHY`;
    - actuator interno retornando
      `{"status":"UP","groups":["liveness","readiness"]}`;
-   - sem `ERROR` recente no log group `/ecs/hml/autenticacao` no intervalo
+   - sem `ERROR` recente no log group `/ecs/stg/autenticacao` no intervalo
      verificado.
 
-### Correcao de `auth-hml` para 2 tasks
+### Correcao de `auth-stg` para 2 tasks
 
 Executado em `2026-06-02`:
 
-1. Levantada a task definition `auth-hml:21`.
-2. Confirmado que `auth-hml` usa o banco `keycloak_hml` no RDS compartilhado.
+1. Levantada a task definition `auth-stg:21`.
+2. Confirmado que `auth-stg` usa o banco `keycloak_stg` no RDS compartilhado.
 3. Confirmado que a task definition nao possui configuracao explicita de
    cache/cluster do Keycloak.
-4. Habilitada stickiness no target group `eickrono-hml-auth`:
+4. Habilitada stickiness no target group `eickrono-stg-auth`:
    - `stickiness.enabled=true`;
    - `stickiness.type=lb_cookie`;
    - `stickiness.lb_cookie.duration_seconds=86400`.
-5. Atualizado o service `auth-hml`:
+5. Atualizado o service `auth-stg`:
    - `desiredCount=2`;
    - `minimumHealthyPercent=100`;
    - `maximumPercent=150`.
 6. Confirmado:
    - ECS `desired=2`, `running=2`, `pending=0`;
-   - dois targets `healthy` no target group `eickrono-hml-auth`;
+   - dois targets `healthy` no target group `eickrono-stg-auth`;
    - endpoint `/realms/eickrono/eickrono-runtime/estado` retornando `status=ok`;
    - issuer publico retornando
-     `https://oidc-hml.eickrono.store/realms/eickrono`;
+     `https://oidc-stg.eickrono.store/realms/eickrono`;
    - sem eventos recentes de `ERROR`, `password authentication failed` ou
-     `remaining connection slots` no log group `/ecs/hml/auth`.
+     `remaining connection slots` no log group `/ecs/stg/auth`.
 
 Consumo de conexoes apos a correcao:
 
 | Banco | Usuario | Estado | Conexoes |
 | --- | --- | --- | --- |
-| `eickrono_identidade_hml` | `eickrono_admin` | `idle` | 40 |
-| `eickrono_thimisu_hml` | `eickrono_admin` | `idle` | 20 |
-| `keycloak_hml` | `eickrono_admin` | `idle` | 4 |
+| `eickrono_identidade_stg` | `eickrono_admin` | `idle` | 40 |
+| `eickrono_thimisu_stg` | `eickrono_admin` | `idle` | 20 |
+| `keycloak_stg` | `eickrono_admin` | `idle` | 4 |
 | `postgres` | `eickrono_admin` | `active` | 1 |
 | `rdsadmin` | `rdsadmin` | `idle` | 2 |
 | reservado/sem banco | `rdsadmin` | n/a | 1 |

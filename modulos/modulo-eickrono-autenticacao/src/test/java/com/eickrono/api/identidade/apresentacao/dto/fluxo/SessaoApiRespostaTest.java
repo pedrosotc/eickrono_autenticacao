@@ -33,6 +33,7 @@ class SessaoApiRespostaTest {
                 List.of(),
                 "LIBERADO",
                 "pedrosotc@example.com",
+                "sub-pedrosotc",
                 "pedrosotc",
                 "https://cdn.eickrono.com/avatares/pedrosotc.png",
                 "THIMISU",
@@ -45,6 +46,7 @@ class SessaoApiRespostaTest {
 
         JsonNode json = objectMapper.valueToTree(resposta);
 
+        assertThat(json.path("sub").asText()).isEqualTo("sub-pedrosotc");
         assertThat(json.path("usuario").asText()).isEqualTo("pedrosotc");
         assertThat(json.path("avatarPreferidoUrl").asText())
                 .isEqualTo("https://cdn.eickrono.com/avatares/pedrosotc.png");
@@ -70,6 +72,7 @@ class SessaoApiRespostaTest {
                   "canaisConfirmacao": [],
                   "statusUsuario": "LIBERADO",
                   "emailPrincipal": "pedrosotc@example.com",
+                  "sub": "sub-pedrosotc",
                   "usuario": "pedrosotc",
                   "avatarPreferidoUrl": "https://cdn.eickrono.com/avatares/pedrosotc.png",
                   "avatarPreferidoOrigem": "THIMISU",
@@ -84,6 +87,7 @@ class SessaoApiRespostaTest {
         SessaoApiResposta resposta = objectMapper.readValue(json, SessaoApiResposta.class);
 
         assertThat(resposta.emailPrincipal()).isEqualTo("pedrosotc@example.com");
+        assertThat(resposta.sub()).isEqualTo("sub-pedrosotc");
         assertThat(resposta.usuario()).isEqualTo("pedrosotc");
         assertThat(resposta.avatarPreferidoUrl())
                 .isEqualTo("https://cdn.eickrono.com/avatares/pedrosotc.png");

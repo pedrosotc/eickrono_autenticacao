@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPT_UNDER_TEST="${ROOT_DIR}/ecs/configure_hml_rds_rotation_redeploy.sh"
+SCRIPT_UNDER_TEST="${ROOT_DIR}/ecs/configure_stg_rds_rotation_redeploy.sh"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -29,21 +29,21 @@ assert_equals() {
 test_dry_run_prints_expected_plan() {
   local output
   output="$("$SCRIPT_UNDER_TEST" \
-    --cluster eickrono-hml \
-    --services autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml \
+    --cluster eickrono-stg \
+    --services autenticacao-api-stg,auth-stg,identidade-stg,thimisu-backend-stg \
     --secret-arn arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc \
-    --function-name eickrono-hml-rds-rotation-ecs-redeploy \
-    --rule-name eickrono-hml-rds-rotation-succeeded \
-    --role-name eickrono-hml-rds-rotation-ecs-redeploy-role \
+    --function-name eickrono-stg-rds-rotation-ecs-redeploy \
+    --rule-name eickrono-stg-rds-rotation-succeeded \
+    --role-name eickrono-stg-rds-rotation-ecs-redeploy-role \
     --account-id 531708494702 \
     --dry-run)"
 
-  assert_contains "$output" "CLUSTER=eickrono-hml"
-  assert_contains "$output" "SERVICES=autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml"
+  assert_contains "$output" "CLUSTER=eickrono-stg"
+  assert_contains "$output" "SERVICES=autenticacao-api-stg,auth-stg,identidade-stg,thimisu-backend-stg"
   assert_contains "$output" "SECRET_ARN=arn:aws:secretsmanager:sa-east-1:531708494702:secret:rds!db-abc"
-  assert_contains "$output" "FUNCTION_NAME=eickrono-hml-rds-rotation-ecs-redeploy"
-  assert_contains "$output" "RULE_NAME=eickrono-hml-rds-rotation-succeeded"
-  assert_contains "$output" "ROLE_NAME=eickrono-hml-rds-rotation-ecs-redeploy-role"
+  assert_contains "$output" "FUNCTION_NAME=eickrono-stg-rds-rotation-ecs-redeploy"
+  assert_contains "$output" "RULE_NAME=eickrono-stg-rds-rotation-succeeded"
+  assert_contains "$output" "ROLE_NAME=eickrono-stg-rds-rotation-ecs-redeploy-role"
   assert_contains "$output" "TIMEOUT=900"
   assert_contains "$output" "WAITER_DELAY_SECONDS=15"
   assert_contains "$output" "WAITER_MAX_ATTEMPTS=40"

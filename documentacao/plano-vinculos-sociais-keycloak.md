@@ -369,5 +369,5 @@ No desenho operacional:
 1. implementar o backend real de vínculos sociais no `eickrono-autenticacao-servidor`;
 2. implementar o suporte social no `eickrono-autenticacao-cliente`;
 3. integrar o app Flutter à API e ao fluxo OIDC real;
-4. configurar e validar os cinco provedores nos realms `dev`, `hml` e `prod`;
+4. configurar e validar os cinco provedores nos realms `dev`, `stg` e `prod`;
 5. cobrir com testes unitários, integração e e2e.

@@ -21,14 +21,13 @@ import com.eickrono.api.identidade.aplicacao.modelo.ContextoPessoaPerfilSistema;
 import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.PessoaCanonicaConfirmada;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
+import com.eickrono.api.identidade.aplicacao.modelo.StatusCadastroPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.dominio.modelo.CanalValidacaoTelefoneCadastro;
 import com.eickrono.api.identidade.dominio.modelo.CadastroConta;
 import com.eickrono.api.identidade.dominio.modelo.StatusCadastroConta;
 import com.eickrono.api.identidade.dominio.modelo.TipoPessoaCadastro;
-import com.eickrono.api.identidade.dominio.modelo.TipoFormaAcesso;
 import com.eickrono.api.identidade.dominio.repositorio.CadastroContaRepositorio;
-import com.eickrono.api.identidade.dominio.repositorio.FormaAcessoRepositorio;
 import com.eickrono.api.identidade.infraestrutura.configuracao.DispositivoProperties;
 import java.lang.reflect.Field;
 import java.time.Clock;
@@ -37,6 +36,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,9 +55,6 @@ class CadastroContaInternaServicoTest {
 
     @Mock
     private CadastroContaRepositorio cadastroContaRepositorio;
-
-    @Mock
-    private FormaAcessoRepositorio formaAcessoRepositorio;
 
     @Mock
     private ClienteAdministracaoCadastroKeycloak clienteAdministracaoCadastroKeycloak;
@@ -122,12 +119,17 @@ class CadastroContaInternaServicoTest {
         Clock clock = Clock.fixed(Instant.parse("2026-03-19T10:00:00Z"), ZoneOffset.UTC);
         servico = new CadastroContaInternaServico(
                 cadastroContaRepositorio,
-                formaAcessoRepositorio,
+                clienteContextoPessoaPerfilSistema,
                 clienteAdministracaoCadastroKeycloak,
+                provisionadorPerfilSistemaServico,
+                confirmadorPessoaCadastroServico,
+                disponibilidadeUsuarioSistemaService,
                 provisionamentoIdentidadeService,
                 canalEnvioCodigoCadastroEmail,
+                canalNotificacaoTentativaCadastroEmail,
                 dispositivoProperties,
-                clock
+                clock,
+                null
         );
         servicoPublico = new CadastroContaInternaServico(
                 cadastroContaRepositorio,
@@ -150,11 +152,49 @@ class CadastroContaInternaServicoTest {
     }
 
     @Test
+    @DisplayName("deve consultar status público de cadastro pendente para continuar validação de e-mail")
+    void deveConsultarStatusPublicoDeCadastroPendente() {
+        UUID cadastroId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        CadastroConta cadastro = new CadastroConta(
+                cadastroId,
+                "sub-ana",
+                TipoPessoaCadastro.FISICA,
+                "Ana Souza",
+                null,
+                "ana.souza",
+                null,
+                "BR",
+                null,
+                "ana@eickrono.com",
+                "+5511999999999",
+                CanalValidacaoTelefoneCadastro.SMS,
+                "hash",
+                OffsetDateTime.parse("2026-03-19T10:00:00Z"),
+                OffsetDateTime.parse("2026-03-19T11:00:00Z"),
+                "eickrono-thimisu-app",
+                "127.0.0.1",
+                "JUnit",
+                OffsetDateTime.parse("2026-03-19T10:00:00Z"),
+                OffsetDateTime.parse("2026-03-19T10:00:00Z")
+        );
+        when(cadastroContaRepositorio.findByCadastroId(cadastroId)).thenReturn(Optional.of(cadastro));
+
+        StatusCadastroPublicoResolvido status = servicoPublico.consultarStatusCadastroPublico(cadastroId);
+
+        assertThat(status.cadastroId()).isEqualTo(cadastroId);
+        assertThat(status.emailPrincipal()).isEqualTo("ana@eickrono.com");
+        assertThat(status.telefonePrincipal()).isEqualTo("+5511999999999");
+        assertThat(status.emailConfirmado()).isFalse();
+        assertThat(status.telefoneConfirmado()).isFalse();
+        assertThat(status.telefoneObrigatorio()).isFalse();
+        assertThat(status.liberadoParaLogin()).isFalse();
+        assertThat(status.proximoPasso()).isEqualTo("VALIDAR_CONTATOS");
+    }
+
+    @Test
     @DisplayName("deve criar cadastro interno pendente e enviar o código de confirmação por e-mail")
     void deveCriarCadastroInternoPendente() {
         when(cadastroContaRepositorio.findByEmailPrincipal("ana@eickrono.com")).thenReturn(Optional.empty());
-        when(formaAcessoRepositorio.findByTipoAndProvedorAndIdentificador(
-                TipoFormaAcesso.EMAIL_SENHA, "EMAIL", "ana@eickrono.com")).thenReturn(Optional.empty());
         when(clienteAdministracaoCadastroKeycloak.criarUsuarioPendente(
                 "Ana Souza", "ana@eickrono.com", "SenhaForte@123"))
                 .thenReturn(new CadastroKeycloakProvisionado("sub-ana", "ana@eickrono.com", "Ana Souza"));
@@ -197,8 +237,6 @@ class CadastroContaInternaServicoTest {
     void deveConfirmarEmailDoCadastro() {
         AtomicReference<CadastroConta> salvo = new AtomicReference<>();
         when(cadastroContaRepositorio.findByEmailPrincipal("ana@eickrono.com")).thenReturn(Optional.empty());
-        when(formaAcessoRepositorio.findByTipoAndProvedorAndIdentificador(
-                TipoFormaAcesso.EMAIL_SENHA, "EMAIL", "ana@eickrono.com")).thenReturn(Optional.empty());
         when(clienteAdministracaoCadastroKeycloak.criarUsuarioPendente(
                 "Ana Souza", "ana@eickrono.com", "SenhaForte@123"))
                 .thenReturn(new CadastroKeycloakProvisionado("sub-ana", "ana@eickrono.com", "Ana Souza"));
@@ -247,8 +285,6 @@ class CadastroContaInternaServicoTest {
     void deveReenviarCodigoEmailDoCadastro() {
         AtomicReference<CadastroConta> salvo = new AtomicReference<>();
         when(cadastroContaRepositorio.findByEmailPrincipal("ana@eickrono.com")).thenReturn(Optional.empty());
-        when(formaAcessoRepositorio.findByTipoAndProvedorAndIdentificador(
-                TipoFormaAcesso.EMAIL_SENHA, "EMAIL", "ana@eickrono.com")).thenReturn(Optional.empty());
         when(clienteAdministracaoCadastroKeycloak.criarUsuarioPendente(
                 "Ana Souza", "ana@eickrono.com", "SenhaForte@123"))
                 .thenReturn(new CadastroKeycloakProvisionado("sub-ana", "ana@eickrono.com", "Ana Souza"));
@@ -686,6 +722,61 @@ class CadastroContaInternaServicoTest {
                 eq(99L),
                 any()
         );
+    }
+
+    @Test
+    @DisplayName("deve remover usuário pendente do Keycloak quando cadastro público falhar após criar o usuário remoto")
+    void deveCompensarUsuarioPendenteKeycloakQuandoCadastroPublicoFalharAposCriarUsuarioRemoto() {
+        when(disponibilidadeUsuarioSistemaService.identificadorPublicoSistemaDisponivel(
+                "ana.souza",
+                "eickrono-thimisu-app"
+        )).thenReturn(true);
+        when(cadastroContaRepositorio.findByEmailPrincipal("ana@eickrono.com")).thenReturn(Optional.empty());
+        when(clienteContextoPessoaPerfilSistema.buscarPorEmail("ana@eickrono.com")).thenReturn(Optional.empty());
+        when(clienteAdministracaoCadastroKeycloak.criarUsuarioPendente(
+                "Ana Souza", "ana@eickrono.com", "SenhaForte@123"))
+                .thenReturn(new CadastroKeycloakProvisionado("sub-ana", "ana@eickrono.com", "Ana Souza"));
+        when(cadastroContaRepositorio.save(any(CadastroConta.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<AvatarCadastroConfirmado> avatares = List.of(new AvatarCadastroConfirmado(
+                "THIMISU",
+                "https://cdn.eickrono.test/avatar/ana.png",
+                "usuarios/sub-ana/avatar/thimisu.png",
+                null,
+                "image/png",
+                12345L,
+                "hash-avatar",
+                "versao-avatar",
+                null,
+                true
+        ));
+        doThrow(new IllegalStateException("falha avatar"))
+                .when(cadastroAvatarConfirmadoJdbc)
+                .registrar(any(), eq(avatares));
+
+        assertThatThrownBy(() -> servicoPublico.cadastrarPublico(
+                TipoPessoaCadastro.FISICA,
+                "Ana Souza",
+                null,
+                "ana.souza",
+                null,
+                null,
+                null,
+                "ana@eickrono.com",
+                "+5511999999999",
+                CanalValidacaoTelefoneCadastro.SMS,
+                "SenhaForte@123",
+                "eickrono-thimisu-app",
+                "127.0.0.1",
+                "JUnit",
+                List.of(),
+                avatares
+        ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("falha avatar");
+
+        verify(clienteAdministracaoCadastroKeycloak).removerUsuarioPendente("sub-ana");
+        verify(canalEnvioCodigoCadastroEmail, never()).enviar(any(), any());
     }
 
     @Test

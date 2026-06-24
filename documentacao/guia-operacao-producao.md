@@ -54,7 +54,7 @@ pública/controlada entregue pelo `eickrono-identidade-servidor`.
 
 Buckets definidos:
 
-- HML: `eickrono-avatares-hml`
+- STG: `eickrono-avatares-stg`
 - Produção: `eickrono-avatares-prod`
 
 Configuração obrigatória dos buckets:
@@ -63,29 +63,29 @@ Configuração obrigatória dos buckets:
 - criptografia padrão `AES256`;
 - versionamento habilitado.
 
-Em HML, a leitura pública/controlada continua pela rota:
+Em STG, a leitura pública/controlada continua pela rota:
 
 ```text
-https://id-hml.eickrono.store/identidade/avatares/publicos/**
+https://id-stg.eickrono.store/identidade/avatares/publicos/**
 ```
 
-### Variáveis obrigatórias no `identidade-hml`
+### Variáveis obrigatórias no `identidade-stg`
 
 ```text
 IDENTIDADE_AVATAR_STORAGE_TIPO=s3
-IDENTIDADE_AVATAR_STORAGE_BUCKET=eickrono-avatares-hml
+IDENTIDADE_AVATAR_STORAGE_BUCKET=eickrono-avatares-stg
 IDENTIDADE_AVATAR_STORAGE_REGION=sa-east-1
-IDENTIDADE_AVATAR_STORAGE_PUBLIC_URL_BASE=https://id-hml.eickrono.store/identidade/avatares/publicos
+IDENTIDADE_AVATAR_STORAGE_PUBLIC_URL_BASE=https://id-stg.eickrono.store/identidade/avatares/publicos
 IDENTIDADE_AVATAR_STORAGE_MAX_BYTES=5242880
 ```
 
 ### Permissões IAM obrigatórias
 
-A role ECS do `identidade-hml` precisa desta policy mínima:
+A role ECS do `identidade-stg` precisa desta policy mínima:
 
-- `s3:ListBucket` em `arn:aws:s3:::eickrono-avatares-hml`;
+- `s3:ListBucket` em `arn:aws:s3:::eickrono-avatares-stg`;
 - `s3:GetObject` e `s3:PutObject` em
-  `arn:aws:s3:::eickrono-avatares-hml/*`.
+  `arn:aws:s3:::eickrono-avatares-stg/*`.
 
 Motivo do `ListBucket`:
 
@@ -99,15 +99,15 @@ Comando de validação da policy:
 
 ```bash
 aws iam get-role-policy \
-  --role-name eickrono-hml-ecs-task-role \
-  --policy-name eickrono-hml-identidade-avatares-s3 \
+  --role-name eickrono-stg-ecs-task-role \
+  --policy-name eickrono-stg-identidade-avatares-s3 \
   --profile Codex-cli_aws
 ```
 
 ### Validação pós-deploy
 
 ```bash
-curl https://id-hml.eickrono.store/actuator/health
+curl https://id-stg.eickrono.store/actuator/health
 ```
 
 Resposta esperada:
@@ -119,7 +119,7 @@ Resposta esperada:
 Validação de rota pública para arquivo inexistente:
 
 ```bash
-curl -i https://id-hml.eickrono.store/identidade/avatares/publicos/avatares/thimisu/arquivo-inexistente.png
+curl -i https://id-stg.eickrono.store/identidade/avatares/publicos/avatares/thimisu/arquivo-inexistente.png
 ```
 
 Resposta esperada:
@@ -130,9 +130,9 @@ Resposta esperada:
 Validação de leitura S3 pela rota pública:
 
 1. Enviar um PNG temporário para
-   `s3://eickrono-avatares-hml/avatares/thimisu/validacao-s3-hml.png`.
+   `s3://eickrono-avatares-stg/avatares/thimisu/validacao-s3-stg.png`.
 2. Ler pela URL
-   `https://id-hml.eickrono.store/identidade/avatares/publicos/avatares/thimisu/validacao-s3-hml.png`.
+   `https://id-stg.eickrono.store/identidade/avatares/publicos/avatares/thimisu/validacao-s3-stg.png`.
 3. Confirmar HTTP 200, `content-type: image/png` e
    `cache-control: public, max-age=86400`.
 4. Remover o objeto de teste do bucket.
@@ -145,12 +145,12 @@ Sempre que o segredo gerenciado do RDS for rotacionado com sucesso, os serviços
 ECS que consomem essa senha por variável de ambiente precisam receber
 `forceNewDeployment`.
 
-No ecossistema `hml`, isso é obrigatório para:
+No ecossistema `stg`, isso é obrigatório para:
 
-- `autenticacao-api-hml`
-- `auth-hml`
-- `identidade-hml`
-- `thimisu-backend-hml`
+- `autenticacao-api-stg`
+- `auth-stg`
+- `identidade-stg`
+- `thimisu-backend-stg`
 
 Motivo técnico:
 
@@ -164,7 +164,7 @@ Motivo técnico:
 
 Arquivo operacional:
 
-- [configure_hml_rds_rotation_redeploy.sh](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/prod/ecs/configure_hml_rds_rotation_redeploy.sh)
+- [configure_stg_rds_rotation_redeploy.sh](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/prod/ecs/configure_stg_rds_rotation_redeploy.sh)
 
 Artefato de runtime:
 
@@ -173,19 +173,19 @@ Artefato de runtime:
 O mecanismo padrão é:
 
 1. `EventBridge` observa `RotationSucceeded` do `Secrets Manager`.
-2. A regra aciona a Lambda `eickrono-hml-rds-rotation-ecs-redeploy`.
+2. A regra aciona a Lambda `eickrono-stg-rds-rotation-ecs-redeploy`.
 3. A Lambda confirma que o segredo do evento é o segredo RDS monitorado.
 4. A Lambda executa `ecs update-service --force-new-deployment` para os quatro serviços, um por vez.
 5. Depois de cada serviço, a Lambda aguarda `services_stable` antes de iniciar o próximo.
 
-Essa espera sequencial é obrigatória. Em HML, redeploy paralelo dos quatro
+Essa espera sequencial é obrigatória. Em STG, redeploy paralelo dos quatro
 serviços gerou pico de tasks e erro de limite de conexões no RDS.
 
 ### Fallback por erro de senha antiga
 
 Arquivo operacional:
 
-- [configure_hml_rds_password_auth_failure_fallback.sh](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/prod/ecs/configure_hml_rds_password_auth_failure_fallback.sh)
+- [configure_stg_rds_password_auth_failure_fallback.sh](/Users/thiago/Desenvolvedor/flutter/eickrono-autenticacao-servidor/infraestrutura/prod/ecs/configure_stg_rds_password_auth_failure_fallback.sh)
 
 Artefato de runtime:
 
@@ -201,10 +201,10 @@ O fallback observa os log groups dos serviços. Quando encontra
 5. aguarda `services_stable` de cada serviço antes de redeployar o próximo;
 6. se não conectar, não faz redeploy e registra erro operacional.
 
-Instalação/atualização em `hml`:
+Instalação/atualização em `stg`:
 
 ```bash
-bash ./infraestrutura/prod/ecs/configure_hml_rds_password_auth_failure_fallback.sh \
+bash ./infraestrutura/prod/ecs/configure_stg_rds_password_auth_failure_fallback.sh \
   --profile Codex-cli_aws
 ```
 
@@ -242,7 +242,7 @@ Isso elimina dependência do formato exato do payload do CloudTrail.
 #### 1. Instalar ou atualizar a automação
 
 ```bash
-bash ./infraestrutura/prod/ecs/configure_hml_rds_rotation_redeploy.sh \
+bash ./infraestrutura/prod/ecs/configure_stg_rds_rotation_redeploy.sh \
   --profile Codex-cli_aws
 ```
 
@@ -250,7 +250,7 @@ bash ./infraestrutura/prod/ecs/configure_hml_rds_rotation_redeploy.sh \
 
 ```bash
 aws events describe-rule \
-  --name eickrono-hml-rds-rotation-succeeded \
+  --name eickrono-stg-rds-rotation-succeeded \
   --profile Codex-cli_aws \
   --region sa-east-1
 ```
@@ -259,7 +259,7 @@ aws events describe-rule \
 
 ```bash
 aws events list-targets-by-rule \
-  --rule eickrono-hml-rds-rotation-succeeded \
+  --rule eickrono-stg-rds-rotation-succeeded \
   --profile Codex-cli_aws \
   --region sa-east-1
 ```
@@ -268,7 +268,7 @@ aws events list-targets-by-rule \
 
 ```bash
 aws lambda get-function-configuration \
-  --function-name eickrono-hml-rds-rotation-ecs-redeploy \
+  --function-name eickrono-stg-rds-rotation-ecs-redeploy \
   --profile Codex-cli_aws \
   --region sa-east-1
 ```
@@ -276,8 +276,8 @@ aws lambda get-function-configuration \
 Campos obrigatórios:
 
 - `TARGET_SECRET_ARN`
-- `ECS_CLUSTER=eickrono-hml`
-- `ECS_SERVICES=autenticacao-api-hml,auth-hml,identidade-hml,thimisu-backend-hml`
+- `ECS_CLUSTER=eickrono-stg`
+- `ECS_SERVICES=autenticacao-api-stg,auth-stg,identidade-stg,thimisu-backend-stg`
 - `SERVICE_STABLE_WAITER_DELAY_SECONDS=15`
 - `SERVICE_STABLE_WAITER_MAX_ATTEMPTS=40`
 
@@ -285,8 +285,8 @@ Campos obrigatórios:
 
 ```bash
 aws iam get-role-policy \
-  --role-name eickrono-hml-rds-rotation-ecs-redeploy-role \
-  --policy-name eickrono-hml-rds-rotation-ecs-redeploy-role-ecs-redeploy \
+  --role-name eickrono-stg-rds-rotation-ecs-redeploy-role \
+  --policy-name eickrono-stg-rds-rotation-ecs-redeploy-role-ecs-redeploy \
   --profile Codex-cli_aws
 ```
 
@@ -297,23 +297,23 @@ Após uma rotação real do segredo RDS, confirmar:
 - evento `RotationSucceeded` no CloudTrail/EventBridge;
 - invocação da Lambda;
 - novos deployments em:
-  - `autenticacao-api-hml`
-  - `auth-hml`
-  - `identidade-hml`
-  - `thimisu-backend-hml`
+  - `autenticacao-api-stg`
+  - `auth-stg`
+  - `identidade-stg`
+  - `thimisu-backend-stg`
 
 Comandos úteis:
 
 ```bash
 aws ecs describe-services \
-  --cluster eickrono-hml \
-  --services autenticacao-api-hml auth-hml identidade-hml thimisu-backend-hml \
+  --cluster eickrono-stg \
+  --services autenticacao-api-stg auth-stg identidade-stg thimisu-backend-stg \
   --profile Codex-cli_aws \
   --region sa-east-1
 ```
 
 ```bash
-aws logs tail /aws/lambda/eickrono-hml-rds-rotation-ecs-redeploy \
+aws logs tail /aws/lambda/eickrono-stg-rds-rotation-ecs-redeploy \
   --follow \
   --profile Codex-cli_aws \
   --region sa-east-1

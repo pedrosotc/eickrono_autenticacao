@@ -47,7 +47,7 @@ management:
 documentacao:
   swagger:
     usuario: swagger
-    senha: ${SWAGGER_HML_SENHA:trocar}
+    senha: ${SWAGGER_STG_SENHA:trocar}
     ips-permitidos:
       - 10.0.0.1
 
