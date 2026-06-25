@@ -827,6 +827,8 @@ public class CadastroContaInternaServico {
                 normalizarOpcional(cadastroConta.getSubjectRemoto()) != null
         );
         vincularIdentidadesSociaisConfirmadasDoCadastro(cadastroConta, agora);
+        cadastroConta.marcarEmailConfirmado(agora);
+        sincronizarCadastroSeConfigurado(cadastroConta);
         sincronizarAvataresConfirmadosDoCadastro(cadastroConta, agora);
         LOGGER.info(
                 "qa_cadastro_email_consumo_confirmados_fim cadastroId={} sistema={} statusPerfilSistema={}",
@@ -834,8 +836,6 @@ public class CadastroContaInternaServico {
                 cadastroConta.getSistemaSolicitante(),
                 statusPerfilSistema
         );
-        cadastroConta.marcarEmailConfirmado(agora);
-        sincronizarCadastroSeConfigurado(cadastroConta);
 
         return montarRespostaConfirmacao(cadastroConta, statusPerfilSistema);
     }

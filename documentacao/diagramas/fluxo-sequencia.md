@@ -125,7 +125,7 @@ sequenceDiagram
     %% Distribuição e rotação de certificados
     AC->>CF: 61. Disponibiliza certificados Origin Pull
     AC->>ALB: 62. Atualiza certificados mTLS/TLS
-    AC->>KC: 63. Certificados clientes confidenciais (dev/stg via scripts)
+    AC->>KC: 63. Certificados clientes confidenciais (dev/hml/stg via scripts)
     AC->>BFF: 64. Certificados clientes (produção via ACM/KMS)
 
     %% Observabilidade e alarmes finais

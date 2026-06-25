@@ -6,7 +6,7 @@ INCLUIR_API_CONTAS ?= false
 
 PIPELINE_DIR := $(ROOT_DIR)scripts/pipeline
 
-.PHONY: ajuda package test test-rapido verificar-servicos package-servicos test-servicos test-servicos-completo compose-config-dev compose-config-stg compose-config up-dev up-stg
+.PHONY: ajuda package test test-rapido verificar-servicos package-servicos test-servicos test-servicos-completo compose-config-dev compose-config-hml compose-config-stg compose-config up-dev up-hml up-stg
 
 ajuda:
 	@printf '%s\n' \
@@ -18,9 +18,11 @@ ajuda:
 		'  make test-servicos       # roda a bateria representativa estavel de autenticacao + identidade; use INCLUIR_API_CONTAS=true para incluir contas' \
 		'  make test-servicos-completo # roda a suite completa; exige Docker acessivel; use INCLUIR_API_CONTAS=true para incluir contas' \
 		'  make compose-config-dev  # valida docker compose de dev' \
+		'  make compose-config-hml  # valida docker compose de hml local' \
 		'  make compose-config-stg  # valida docker compose de stg' \
-		'  make compose-config      # valida dev e stg' \
+		'  make compose-config      # valida dev, hml e stg' \
 		'  make up-dev              # sobe dev auth-only por padrão; use INCLUIR_API_CONTAS=true para incluir contas' \
+		'  make up-hml              # sobe hml local com mocks de suporte; use INCLUIR_API_CONTAS=true para incluir contas' \
 		'  make up-stg              # sobe stg auth-only por padrão; use INCLUIR_API_CONTAS=true para incluir contas'
 
 package:
@@ -49,13 +51,19 @@ test-servicos-completo: verificar-servicos
 compose-config-dev: verificar-servicos
 	@"$(PIPELINE_DIR)/compose_config.sh" dev
 
+compose-config-hml: verificar-servicos
+	@"$(PIPELINE_DIR)/compose_config.sh" hml
+
 compose-config-stg: verificar-servicos
 	@"$(PIPELINE_DIR)/compose_config.sh" stg
 
-compose-config: compose-config-dev compose-config-stg
+compose-config: compose-config-dev compose-config-hml compose-config-stg
 
 up-dev: verificar-servicos
 	@"$(PIPELINE_DIR)/up_stack.sh" dev
+
+up-hml: verificar-servicos
+	@"$(PIPELINE_DIR)/up_stack.sh" hml
 
 up-stg: verificar-servicos
 	@"$(PIPELINE_DIR)/up_stack.sh" stg

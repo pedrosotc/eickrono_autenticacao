@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
-  echo "Uso: $0 <dev|stg>" >&2
+  echo "Uso: $0 <dev|hml|stg>" >&2
   exit 1
 fi
 

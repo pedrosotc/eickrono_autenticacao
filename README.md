@@ -315,17 +315,17 @@ Observação:
 ## Execução Local Com Docker
 
 Ambientes e forma de execução são conceitos separados. Os ambientes canônicos
-ativos são `dev`, `stg` e `prod`/`prd`. A decisão completa sobre a renomeação
+ativos são `dev`, `hml`, `stg` e `prod`/`prd`. A decisão completa sobre a renomeação
 do ambiente compartilhado na AWS está em
 `documentacao/decisao_ambientes_dev_stg_hml_prod.md`.
 
-Não crie nomes de ambiente com sufixo local. Quando a pasta `infraestrutura/stg`
-é executada via Docker no computador do desenvolvedor, o ambiente continua
-sendo `stg`; Docker é apenas a forma de execução.
+`stg` representa staging na AWS. `hml` representa homologação local/simulada no
+computador do desenvolvedor, usando Docker e bancos locais separados.
 
-Em `dev` e `stg`, o `docker compose` inclui `MailHog` para testes locais de e-mail:
+Em `dev`, `hml` e `stg`, o `docker compose` inclui `MailHog` para testes locais de e-mail:
 
 - `dev`: SMTP `localhost:1025`, UI `http://localhost:8025`
+- `hml`: SMTP `localhost:12025`, UI `http://localhost:19025`
 - `stg`: SMTP `localhost:11025`, UI `http://localhost:18025`
 
 No `dev`, se o `.env` ja estiver apontando para um SMTP real, ainda e possivel
@@ -337,9 +337,17 @@ forcar o uso do MailHog sem alterar essas credenciais:
 
 O `docker compose` local usa PostgreSQL já existente no ambiente local, com bancos separados por serviço:
 
-- `dev` Keycloak/autorização: `jdbc:postgresql://localhost:5432/eickrono_autorizacao`
+- `dev` Keycloak: `jdbc:postgresql://localhost:5432/eickrono_dev`
+- `dev` autenticacao: `jdbc:postgresql://localhost:5432/eickrono_autenticacao`, schema `autenticacao_dev`
 - `dev` identidade: `jdbc:postgresql://localhost:5432/eickrono_identidade`
 - `dev` contas: `jdbc:postgresql://localhost:5432/eickrono_contas`
+- `dev` avatares: storage local no volume Docker `identidade_avatar_dev`, leitura publica em `http://localhost:8084/identidade/avatares/publicos`
+- `hml` Keycloak: `jdbc:postgresql://localhost:5432/keycloak_hml`
+- `hml` autenticacao: `jdbc:postgresql://localhost:5432/eickrono_autenticacao_hml`, schema `autenticacao_hml`
+- `hml` identidade: `jdbc:postgresql://localhost:5432/eickrono_identidade_hml`
+- `hml` contas: `jdbc:postgresql://localhost:5432/eickrono_contas_hml`
+- `hml` Thimisu: `jdbc:postgresql://localhost:5432/eickrono_thimisu_hml`
+- `hml` avatares: storage local no volume Docker `identidade_avatar_hml`, leitura publica em `http://localhost:19084/identidade/avatares/publicos`
 - `stg` Keycloak: `jdbc:postgresql://localhost:5432/keycloak_stg`
 - `stg` identidade: `jdbc:postgresql://localhost:5432/eickrono_identidade_stg`
 - `stg` contas: `jdbc:postgresql://localhost:5432/eickrono_contas_stg`
@@ -348,17 +356,24 @@ O `docker compose` local usa PostgreSQL já existente no ambiente local, com ban
 
 - API autenticacao `dev`: `http://127.0.0.1:8081/swagger-ui/index.html`
 - API autenticacao `dev` OpenAPI: `http://127.0.0.1:8081/v3/api-docs`
+- API publica de avatares `dev`: `http://localhost:8084/identidade/avatares/publicos`
+- API autenticacao `hml`: `http://localhost:19081/swagger-ui/index.html`
+- API autenticacao `hml` OpenAPI: `http://localhost:19081/v3/api-docs`
 - API identidade `stg`: `http://localhost:18081/swagger-ui/index.html`
 - API identidade `stg` OpenAPI: `http://localhost:18081/v3/api-docs`
 - API contas `dev`: `http://localhost:8082/swagger-ui/index.html`
 - API contas `dev` OpenAPI: `http://localhost:8082/v3/api-docs`
+- API contas `hml`: `http://localhost:19082/swagger-ui/index.html`
+- API contas `hml` OpenAPI: `http://localhost:19082/v3/api-docs`
 - API contas `stg`: `http://localhost:18082/swagger-ui/index.html`
 - API contas `stg` OpenAPI: `http://localhost:18082/v3/api-docs`
 
 Proteção:
 
 - `dev`: uso local liberado;
+- `hml`: `Basic Auth`, com IP liberado localmente;
 - `stg`: `Basic Auth` + whitelist de IP;
+- credenciais padrão de `hml`: usuário `swagger`, senha `swagger-hml`;
 - credenciais padrão de `stg`: usuário `swagger`, senha `swagger-stg`.
 
 ## Leitura recomendada

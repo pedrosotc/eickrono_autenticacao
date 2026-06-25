@@ -269,7 +269,7 @@ curl -I 'https://oidc-dev.eickrono.online/realms/eickrono/protocol/openid-connec
 
 O comportamento esperado e um `302` ou `303` para `/broker/facebook/login`.
 
-Se o app Flutter estiver usando `https://oidc-dev.eickrono.online/realms/eickrono` como issuer padrao, esse `530` aparece no simulador ou no aparelho como falha de discovery OIDC antes mesmo de abrir o login social. Nesse cenario, o problema nao esta no app: ele esta no hostname publico/tunnel.
+Se o app Flutter for executado com `CONFIG_OIDC_ISSUER=https://oidc-dev.eickrono.online/realms/eickrono`, esse `530` aparece no simulador ou no aparelho como falha de discovery OIDC antes mesmo de abrir o login social. Nesse cenario, o problema nao esta no app: ele esta no hostname publico/tunnel.
 
 ## O que precisa mudar no Google OAuth
 
@@ -373,7 +373,7 @@ Para simulador ou execucao local pura:
 flutter run
 ```
 
-Com o `app_config.dev.json` atual, esse comando ja usa `https://oidc-dev.eickrono.online/realms/eickrono` como issuer OIDC padrao.
+No `app_config.dev.json` padrao, `dev` usa `http://127.0.0.1:8080/realms/eickrono`. Para validar este guia de tunnel, sobrescreva explicitamente o issuer com `--dart-define=CONFIG_OIDC_ISSUER=https://oidc-dev.eickrono.online/realms/eickrono`.
 Se voce quiser voltar temporariamente ao Keycloak local em `http://127.0.0.1:8080/realms/eickrono`, sobrescreva:
 
 ```bash

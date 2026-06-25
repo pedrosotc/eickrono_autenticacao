@@ -16,10 +16,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Proteção adicional do Swagger em staging com Basic Auth e lista de IPs.
+ * Proteção adicional do Swagger em staging e hml com Basic Auth e lista de IPs.
  */
 @Configuration
-@Profile("stg")
+@Profile({"stg", "hml"})
 @EnableConfigurationProperties(SwaggerSegurancaProperties.class)
 public class SwaggerStgSegurancaConfiguracao {
 

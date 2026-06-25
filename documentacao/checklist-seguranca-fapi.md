@@ -4,7 +4,7 @@ Utilize esta lista antes de cada release para garantir conformidade contínua co
 
 ## Preparação
 
-- [ ] Todos os certificados mTLS válidos (dev/stg autoassinados, prod via ACM/KMS).
+- [ ] Todos os certificados mTLS válidos (dev/hml/stg autoassinados, prod via ACM/KMS).
 - [ ] Chaves JWK rotacionadas conforme política interna e alinhadas com os clientes.
 - [ ] Relógios sincronizados (NTP) em todos os componentes críticos.
 
@@ -38,7 +38,7 @@ Utilize esta lista antes de cada release para garantir conformidade contínua co
 - [ ] Perfis `application-*.yml` atualizados com URLs corretas dos realms.
 - [ ] Auditoria ativa (tabelas `auditoria_eventos`, `auditoria_acessos`).
 - [ ] Logs sensíveis mascarados.
-- [ ] Swagger habilitado apenas em dev/stg (com Basic Auth + whitelist em stg).
+- [ ] Swagger habilitado apenas em dev/hml/stg (com Basic Auth em hml/stg + whitelist em stg).
 
 ## Observabilidade
 

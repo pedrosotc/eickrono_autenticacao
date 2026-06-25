@@ -8,9 +8,11 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 
 @Component
 public class CadastroAvatarConfirmadoJdbc {
@@ -52,7 +54,7 @@ public class CadastroAvatarConfirmadoJdbc {
             AvatarCadastroConfirmado materializado = uploadAvatarCadastroServico.materializar(avatar);
             String origem = normalizarOrigem(materializado.origem());
             String urlAvatar = normalizarObrigatorio(materializado.urlAvatar(), "urlAvatar");
-            jdbcTemplate.update("""
+            int avataresInseridos = jdbcTemplate.update("""
                     INSERT INTO autenticacao.cadastros_conta_avatares (
                         id,
                         cadastro_id,
@@ -96,6 +98,11 @@ public class CadastroAvatarConfirmadoJdbc {
                             .addValue("preferido", materializado.preferido())
                             .addValue("criadoEm", agora)
                             .addValue("atualizadoEm", agora));
+            if (avataresInseridos == 0) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Origem de avatar confirmada desconhecida ou inativa.");
+            }
         }
     }
 

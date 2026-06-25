@@ -12,7 +12,7 @@ Checklist técnico do `servidor de autenticação` para correlação de atestaç
 
 - [x] Criar serviço de avaliação de sinais locais do app.
 - [x] Auditar `aplicacaoId`, plataforma, score e sinais recebidos.
-- [x] Permitir modo observação em `dev/stg/test`.
+- [x] Permitir modo observação em `dev/hml/stg/test`.
 - [x] Endurecer regras em `prod`.
 - [x] Integrar a avaliação de risco ao cadastro público.
 - [x] Integrar a avaliação de risco ao login público.

@@ -1,42 +1,47 @@
 spring:
   config:
     activate:
-      on-profile: dev
+      on-profile: hml
   datasource:
-    url: jdbc:postgresql://localhost:5432/eickrono_autenticacao
-    username: eickrono
-    password: senhaSuperSeguraDev
+    url: jdbc:postgresql://localhost:5432/eickrono_autenticacao_hml
+    username: eickrono_hml
+    password: senhaSuperSeguraHml
   jpa:
-    hibernate:
-      ddl-auto: update
     properties:
       hibernate:
-        default_schema: autenticacao_dev
+        default_schema: autenticacao_hml
   flyway:
-    schemas: autenticacao_dev
+    schemas: autenticacao_hml
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://127.0.0.1:8080/realms/eickrono
-          jwk-set-uri: http://127.0.0.1:8080/realms/eickrono/protocol/openid-connect/certs
+          issuer-uri: http://127.0.0.1:19080/realms/eickrono
+          jwk-set-uri: http://127.0.0.1:19080/realms/eickrono/protocol/openid-connect/certs
 
 seguranca:
+  mtls:
+    habilitado: true
+    keystore-arquivo: classpath:certificados/hml-servidor.p12
+    keystore-senha: senhaCertificadoHml
+    truststore-arquivo: classpath:certificados/hml-truststore.p12
+    truststore-senha: senhaTruststoreHml
   cors:
     origens-permitidas:
       - http://localhost:3000
-      - http://127.0.0.1:3000
+
+documentacao:
+  swagger:
+    usuario: swagger
+    senha: swagger-hml
+    ips-permitidos:
+      - "*"
 
 springdoc:
   api-docs:
     enabled: true
   swagger-ui:
     enabled: true
-
-documentacao:
-  swagger:
-    usuario: swagger
-    senha: swagger-dev
 
 logging:
   level:
@@ -56,18 +61,17 @@ identidade:
   cadastro:
     interna:
       keycloak:
-        url-base: ${IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_URL_BASE:http://localhost:8080}
+        url-base: ${IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_URL_BASE:http://localhost:19080}
         realm: ${IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_REALM:eickrono}
-        client-id: ${IDENTIDADE_CADASTRO_INTERNO_KEYCLOAK_CLIENT_ID:admin-cli}
   sessao:
     interna:
       keycloak:
-        url-base: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_URL_BASE:http://localhost:8080}
+        url-base: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_URL_BASE:http://localhost:19080}
         realm: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_REALM:eickrono}
-        client-id: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_ID:app-flutter-local}
+        client-id: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_ID:app-flutter-hml}
         token-exchange-client-id: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_CLIENT_ID:eickrono-autenticacao-interno}
         token-exchange-client-secret: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_CLIENT_SECRET:${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET:}}
-        token-exchange-audience: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_AUDIENCE:app-flutter-local}
+        token-exchange-audience: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_AUDIENCE:app-flutter-hml}
         token-exchange-scope: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_SCOPE:openid identidade:ler vinculos:ler vinculos:escrever offline_access}
   social:
     credenciais:
@@ -75,6 +79,6 @@ identidade:
         audiences: ${IDENTIDADE_SOCIAL_CREDENCIAIS_APPLE_AUDIENCES:com.eickrono.thimisu}
   dispositivo:
     token:
-      segredo-hmac: ${IDENTIDADE_DEVICE_TOKEN_SECRET:dev-device-token-secret}
+      segredo-hmac: ${IDENTIDADE_DEVICE_TOKEN_SECRET}
     codigo:
-      segredo-hmac: ${IDENTIDADE_CODIGO_TOKEN_SECRET:dev-codigo-secret}
+      segredo-hmac: ${IDENTIDADE_CODIGO_TOKEN_SECRET}

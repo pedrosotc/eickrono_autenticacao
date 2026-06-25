@@ -8,44 +8,75 @@ foi renomeado para `stg`.
 Essa renomeacao corrige a ambiguidade anterior: o ambiente existente nao era a
 homologacao final. Ele representa staging.
 
-Nao existia um ambiente local de homologacao. O que existia era `hml` na AWS; a
-execucao via Docker no computador do desenvolvedor e apenas uma forma de rodar
-componentes para teste.
+Decisao complementar: a partir desta revisao, `hml` volta a existir, mas com
+outro significado. `hml` agora e o ambiente de homologacao local/simulado,
+executado no computador do desenvolvedor e isolado do `stg` da AWS.
+
+O `hml` novo nao e a AWS antiga. Ele copia o que for util do desenho de `stg`,
+mas troca dependencias externas por recursos locais ou simulados.
 
 ## Nomes canonicos
 
 | Nome | Uso |
 | --- | --- |
 | `dev` | desenvolvimento |
-| `stg` | staging |
-| `hml` | homologacao futura na AWS, ainda nao criada |
+| `hml` | homologacao local/simulada |
+| `stg` | staging na AWS |
 | `prod`/`prd` | producao |
 
 ## Regra operacional
 
-Nao existe ambiente chamado `hml-local`, `stg-local`, "homologacao local" ou
-"staging local".
+Nao crie nomes como `hml-local` ou `stg-local`.
+
+O nome canonico do ambiente local de homologacao e `hml`.
 
 Docker, Kubernetes local, LocalStack, emuladores ou qualquer ferramenta parecida
-sao apenas formas de executar componentes no computador do desenvolvedor. Eles
-nao criam um ambiente novo.
+sao formas de execucao local. No caso de homologacao local, a forma de execucao
+local pertence ao ambiente `hml`.
 
 Quando o compose usa a pasta `infraestrutura/stg`, a leitura correta e:
 
 - ambiente: `stg`;
-- forma de execucao: Docker no computador do desenvolvedor;
+- alvo: staging na AWS ou runtime equivalente de staging;
 - bancos: bancos separados com sufixo `_stg`;
-- objetivo: permitir testes do runtime de `stg` sem depender da AWS.
+- objetivo: validar o runtime de staging.
+
+Quando o compose usa a pasta `infraestrutura/hml`, a leitura correta e:
+
+- ambiente: `hml`;
+- forma de execucao: Docker no computador do desenvolvedor;
+- bancos: bancos separados com sufixo `_hml`;
+- objetivo: homologacao local com mocks/simulacoes para o que nao existir fora
+  da AWS.
+
+Mocks e simulacoes atuais do `hml`:
+
+- e-mail via MailHog;
+- PostgreSQL local compartilhado, mas em bancos `_hml` separados por servico:
+  `keycloak_hml`, `eickrono_autenticacao_hml`,
+  `eickrono_identidade_hml`, `eickrono_contas_hml` e
+  `eickrono_thimisu_hml`;
+- Keycloak local com `hml-realm.json`;
+- avatar/storage em modo local, com volume Docker `identidade_avatar_hml` e
+  endpoint publico local `http://localhost:19084/identidade/avatares/publicos`;
+- validacao oficial de atestacao desligada, com validacao local permitida;
+- provedores sociais com credenciais placeholder quando nao houver credencial
+  real local.
 
 ## Regra para pastas e arquivos
 
 - caminho de staging: `infraestrutura/stg`;
+- caminho de homologacao local: `infraestrutura/hml`;
 - profile Spring de staging: `stg`;
+- profile Spring de homologacao local: `hml`;
 - arquivo de configuracao do app: `app_config.stg.json`;
+- arquivo de configuracao do app HML local: `app_config.hml.json`;
 - realm de staging: `staging-realm.json`;
+- realm HML local: `hml-realm.json`;
 - scripts e task definitions de staging devem usar `stg`;
-- `hml` fica reservado para a homologacao futura e nao deve ser reaproveitado
-  para o staging atual.
+- scripts locais de homologacao devem usar `hml`;
+- artefatos AWS continuam usando `stg` para staging e `prod`/`prd` para
+  producao.
 
 Arquivos de assinatura Android guardados no computador do desenvolvedor devem
 ser lidos apenas como material de assinatura da variante correspondente. Eles

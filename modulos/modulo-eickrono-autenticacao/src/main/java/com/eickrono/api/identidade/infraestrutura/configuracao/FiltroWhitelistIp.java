@@ -28,6 +28,10 @@ public class FiltroWhitelistIp extends OncePerRequestFilter {
             @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         String ip = request.getRemoteAddr();
+        if (ipsPermitidos.contains("*")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         if (!ipsPermitidos.contains(ip)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "IP não autorizado");
             return;
