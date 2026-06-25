@@ -58,9 +58,7 @@ public class DeviceTokenFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (jwtAuthenticationToken.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .noneMatch("ROLE_cliente"::equals)) {
+        if (!exigeTokenDispositivo(jwtAuthenticationToken)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -80,6 +78,17 @@ public class DeviceTokenFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean exigeTokenDispositivo(JwtAuthenticationToken authentication) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority ->
+                        "ROLE_cliente".equals(authority)
+                                || "SCOPE_identidade:ler".equals(authority)
+                                || "SCOPE_vinculos:ler".equals(authority)
+                                || "SCOPE_vinculos:escrever".equals(authority)
+                                || "SCOPE_contas:ler".equals(authority));
     }
 
     private boolean shouldSkip(HttpServletRequest request) {

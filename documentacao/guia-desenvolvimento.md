@@ -378,6 +378,22 @@ Para a abertura de sessão interna por `backchannel`, mantenha o `client_id` do 
 - `stg`: `app-flutter-stg`
 - `prod`: `app-flutter-prod`
 
+O login público por senha chama o token endpoint do Keycloak pelo backend.
+Esse fluxo também precisa solicitar os escopos que o app usará nas rotas
+autenticadas de conta. Configure:
+
+- `IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_SCOPE`
+
+Default local atual:
+
+```text
+openid identidade:ler vinculos:ler vinculos:escrever offline_access
+```
+
+Sem `vinculos:ler` e `vinculos:escrever`, o login pode concluir, mas chamadas
+como `GET /api/conta/redes-sociais` e
+`PUT /api/conta/avatar-preferido/upload` retornam `403`.
+
 Para o provisionamento interno do cadastro nativo, mantenha tambem configurados na API de identidade:
 - `identidade.cadastro.interna.keycloak.client-id`
 - `identidade.cadastro.interna.keycloak.client-secret`
@@ -597,6 +613,13 @@ O fluxo final ficou assim:
 4. O Keycloak aplica o executor `eickrono-device-token-refresh`.
 5. O executor consulta a API pública de autenticação em `/api/conta/dispositivos/token/validacao/interna`.
 6. Se a API responder que o token está revogado, expirado, inválido ou ausente, o refresh falha com `invalid_grant`.
+7. Quando o token de dispositivo está ativo, a autenticação renova sua
+   expiração para `agora + identidade.dispositivo.token.validade-horas` e
+   devolve a nova data ao cliente.
+
+O cliente Flutter deve persistir a nova `tokenDispositivoExpiraEm` retornada no
+refresh. Se ele preservar a data antiga, a sessão local pode parecer expirada
+mesmo após o servidor ter prorrogado o token de dispositivo.
 
 Variáveis de ambiente relevantes para reproduzir esse fluxo:
 

@@ -187,6 +187,36 @@ class TokenDispositivoServiceTest {
     }
 
     @Test
+    void deveRenovarExpiracaoDoTokenAtivoSemTrocarToken() {
+        inicializarServico();
+        TokenDispositivoService.TokenEmitido tokenEmitido =
+                tokenDispositivoService.emitirToken(registroDispositivo, dispositivoIdentidade, "usuario-123");
+        TokenDispositivo tokenComExpiracaoAntiga = new TokenDispositivo(
+                tokenEmitido.entidade().getId(),
+                registroDispositivo,
+                dispositivoIdentidade,
+                "usuario-123",
+                tokenEmitido.entidade().getFingerprint(),
+                tokenEmitido.entidade().getPlataforma(),
+                tokenEmitido.entidade().getVersaoAplicativo().orElse(null),
+                tokenEmitido.entidade().getTokenHash(),
+                StatusTokenDispositivo.ATIVO,
+                OffsetDateTime.now(CLOCK_FIXO).minusHours(2),
+                OffsetDateTime.now(CLOCK_FIXO).plusHours(1)
+        );
+        tokensPersistidos.removeIf(token -> token.getId().equals(tokenEmitido.entidade().getId()));
+        tokensPersistidos.add(tokenComExpiracaoAntiga);
+
+        Optional<TokenDispositivoService.TokenDispositivoValidado> resultado =
+                tokenDispositivoService.renovarExpiracaoTokenAtivoSemUsuario(tokenEmitido.tokenClaro());
+
+        assertThat(resultado).isPresent();
+        assertThat(resultado.orElseThrow().usuarioSub()).isEqualTo("usuario-123");
+        assertThat(resultado.orElseThrow().expiraEm()).isEqualTo(OffsetDateTime.now(CLOCK_FIXO).plusHours(48));
+        assertThat(tokenComExpiracaoAntiga.getExpiraEm()).isEqualTo(OffsetDateTime.now(CLOCK_FIXO).plusHours(48));
+    }
+
+    @Test
     void deveClassificarTokenRevogado() {
         inicializarServico();
         TokenDispositivoService.TokenEmitido tokenEmitido =

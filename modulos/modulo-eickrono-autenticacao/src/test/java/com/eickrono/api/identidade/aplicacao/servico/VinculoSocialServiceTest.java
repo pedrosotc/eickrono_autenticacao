@@ -9,11 +9,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.eickrono.api.identidade.aplicacao.excecao.ApiAutenticadaException;
+import com.eickrono.api.identidade.aplicacao.modelo.AvatarCadastroConfirmado;
 import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.SessaoInternaAutenticada;
 import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.apresentacao.dto.AtualizarAvatarPreferidoApiRequest;
+import com.eickrono.api.identidade.apresentacao.dto.UploadAvatarPreferidoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.VinculoSocialDto;
 import com.eickrono.api.identidade.apresentacao.dto.VinculosSociaisDto;
 import com.eickrono.api.identidade.dominio.modelo.AuditoriaEventoIdentidade;
@@ -55,6 +57,8 @@ class VinculoSocialServiceTest {
     private ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico;
     @Mock
     private AvatarSocialProjetoJdbc avatarSocialProjetoJdbc;
+    @Mock
+    private UploadAvatarCadastroServico uploadAvatarCadastroServico;
 
     private final List<FormaAcesso> formasAcessoPersistidas = new ArrayList<>();
     private final List<AuditoriaEventoIdentidade> auditorias = new ArrayList<>();
@@ -273,6 +277,62 @@ class VinculoSocialServiceTest {
     }
 
     @Test
+    @DisplayName("upload avatar preferido: deve materializar arquivo e definir URL do projeto")
+    void deveMaterializarUploadEDefinirAvatarPreferidoUrlDoProjeto() {
+        inicializarServico();
+        Pessoa pessoa = criarPessoa();
+        Jwt jwt = jwt("sub-123");
+        when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
+        when(uploadAvatarCadastroServico.materializar(any()))
+                .thenReturn(new AvatarCadastroConfirmado(
+                        "THIMISU",
+                        "https://cdn.eickrono.test/avatar-upload.jpg",
+                        "avatares/thimisu/avatar-upload.jpg",
+                        "avatar.jpg",
+                        "image/jpeg",
+                        3L,
+                        "hash",
+                        "avatar-v1",
+                        null,
+                        true));
+        when(avatarSocialProjetoJdbc.buscarPreferencia("sub-123", 1L))
+                .thenReturn(new AvatarSocialProjetoJdbc.PreferenciaAvatarProjeto(
+                        "URL_EXTERNA",
+                        "https://cdn.eickrono.test/avatar-upload.jpg",
+                        null,
+                        "avatar-v1",
+                        OffsetDateTime.parse("2024-05-03T10:00:00Z")));
+
+        VinculosSociaisDto resposta = vinculoSocialService.uploadAvatarPreferido(
+                jwt,
+                new UploadAvatarPreferidoApiRequest(
+                        "eickrono-thimisu-app",
+                        "avatar.jpg",
+                        "image/jpeg",
+                        3L,
+                        "YWJj"));
+
+        verify(uploadAvatarCadastroServico).materializar(new AvatarCadastroConfirmado(
+                "THIMISU",
+                null,
+                null,
+                "avatar.jpg",
+                "image/jpeg",
+                3L,
+                null,
+                null,
+                "YWJj",
+                true));
+        verify(avatarSocialProjetoJdbc).definirAvatarUrl(
+                eq("sub-123"),
+                eq(1L),
+                eq("https://cdn.eickrono.test/avatar-upload.jpg"),
+                any());
+        assertThat(resposta.avatarPreferidoOrigem()).isEqualTo("URL_EXTERNA");
+        assertThat(resposta.avatarPreferidoUrl()).isEqualTo("https://cdn.eickrono.test/avatar-upload.jpg");
+    }
+
+    @Test
     @DisplayName("vincular rede social confirmada: deve manter o vínculo mesmo quando o provedor não informar foto")
     void deveVincularRedeSocialConfirmadaSemFotoDisponivel() throws Exception {
         inicializarServico();
@@ -407,7 +467,8 @@ class VinculoSocialServiceTest {
                 Objects.requireNonNull(clienteAdministracaoCadastroKeycloak),
                 Objects.requireNonNull(autenticacaoSessaoInternaServico),
                 Objects.requireNonNull(resolvedorProjetoFluxoPublico),
-                Objects.requireNonNull(avatarSocialProjetoJdbc));
+                Objects.requireNonNull(avatarSocialProjetoJdbc),
+                Objects.requireNonNull(uploadAvatarCadastroServico));
     }
 
     private FormaAcessoRepositorio formaAcessoRepositorio() {

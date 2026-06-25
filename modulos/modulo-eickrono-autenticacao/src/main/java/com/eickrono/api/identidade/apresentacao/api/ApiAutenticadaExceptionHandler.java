@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice(assignableTypes = {
+        AvatarPreferidoController.class,
         RegistroDispositivoController.class,
         VinculosSociaisController.class
 })

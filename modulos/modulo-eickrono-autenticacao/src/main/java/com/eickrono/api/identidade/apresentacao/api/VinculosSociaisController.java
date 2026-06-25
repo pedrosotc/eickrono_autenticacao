@@ -5,6 +5,7 @@ import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadas
 import com.eickrono.api.identidade.apresentacao.dto.AtualizarAvatarPreferidoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.VincularRedeSocialApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.ConfirmacaoSenhaApiRequest;
+import com.eickrono.api.identidade.apresentacao.dto.UploadAvatarPreferidoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.VinculosSociaisDto;
 import jakarta.validation.Valid;
 import java.util.Objects;
@@ -81,6 +82,15 @@ public class VinculosSociaisController {
             @Valid @RequestBody final AtualizarAvatarPreferidoApiRequest requisicao,
             @AuthenticationPrincipal final Jwt jwt) {
         return ResponseEntity.ok(vinculoSocialService.atualizarAvatarPreferido(
+                Objects.requireNonNull(jwt, "jwt é obrigatório"),
+                Objects.requireNonNull(requisicao, "requisicao é obrigatória")));
+    }
+
+    @PutMapping("/avatar-preferido/upload")
+    public ResponseEntity<VinculosSociaisDto> uploadAvatarPreferido(
+            @Valid @RequestBody final UploadAvatarPreferidoApiRequest requisicao,
+            @AuthenticationPrincipal final Jwt jwt) {
+        return ResponseEntity.ok(vinculoSocialService.uploadAvatarPreferido(
                 Objects.requireNonNull(jwt, "jwt é obrigatório"),
                 Objects.requireNonNull(requisicao, "requisicao é obrigatória")));
     }

@@ -85,6 +85,7 @@ identidade:
         realm: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_REALM:eickrono}
         client-id: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_ID:app-flutter-prod}
         client-secret: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_CLIENT_SECRET:}
+        scope: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_SCOPE:openid identidade:ler vinculos:ler vinculos:escrever offline_access}
         token-exchange-client-id: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_CLIENT_ID:eickrono-autenticacao-interno}
         token-exchange-client-secret: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_CLIENT_SECRET:${INTEGRACAO_PERFIL_JWT_INTERNO_CLIENT_SECRET:}}
         token-exchange-audience: ${IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_TOKEN_EXCHANGE_AUDIENCE:app-flutter-prod}

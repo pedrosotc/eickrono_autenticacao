@@ -1,10 +1,12 @@
 package com.eickrono.api.identidade.aplicacao.servico;
 
 import com.eickrono.api.identidade.aplicacao.excecao.ApiAutenticadaException;
+import com.eickrono.api.identidade.aplicacao.modelo.AvatarCadastroConfirmado;
 import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.ProjetoFluxoPublicoResolvido;
 import com.eickrono.api.identidade.aplicacao.modelo.VinculoSocialConfirmadoCadastro;
 import com.eickrono.api.identidade.apresentacao.dto.AtualizarAvatarPreferidoApiRequest;
+import com.eickrono.api.identidade.apresentacao.dto.UploadAvatarPreferidoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.VinculosSociaisDto;
 import com.eickrono.api.identidade.dominio.modelo.FormaAcesso;
 import com.eickrono.api.identidade.dominio.modelo.Pessoa;
@@ -43,6 +45,7 @@ public class VinculoSocialService {
     private final AutenticacaoSessaoInternaServico autenticacaoSessaoInternaServico;
     private final ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico;
     private final AvatarSocialProjetoJdbc avatarSocialProjetoJdbc;
+    private final UploadAvatarCadastroServico uploadAvatarCadastroServico;
 
     public VinculoSocialService(FormaAcessoRepositorio formaAcessoRepositorio,
                                 AuditoriaService auditoriaService,
@@ -51,7 +54,8 @@ public class VinculoSocialService {
                                 ClienteAdministracaoCadastroKeycloak clienteAdministracaoCadastroKeycloak,
                                 AutenticacaoSessaoInternaServico autenticacaoSessaoInternaServico,
                                 ResolvedorProjetoFluxoPublico resolvedorProjetoFluxoPublico,
-                                AvatarSocialProjetoJdbc avatarSocialProjetoJdbc) {
+                                AvatarSocialProjetoJdbc avatarSocialProjetoJdbc,
+                                UploadAvatarCadastroServico uploadAvatarCadastroServico) {
         this.formaAcessoRepositorio = formaAcessoRepositorio;
         this.auditoriaService = auditoriaService;
         this.provisionamentoIdentidadeService = provisionamentoIdentidadeService;
@@ -60,6 +64,7 @@ public class VinculoSocialService {
         this.autenticacaoSessaoInternaServico = autenticacaoSessaoInternaServico;
         this.resolvedorProjetoFluxoPublico = resolvedorProjetoFluxoPublico;
         this.avatarSocialProjetoJdbc = avatarSocialProjetoJdbc;
+        this.uploadAvatarCadastroServico = uploadAvatarCadastroServico;
     }
 
     @Transactional
@@ -190,6 +195,46 @@ public class VinculoSocialService {
                     "Origem de avatar preferido inválida."
             );
         }
+        Pessoa pessoa = provisionamentoIdentidadeService.provisionarOuAtualizar(jwt);
+        return montarResposta(
+                formaAcessoRepositorio.findByPessoa(pessoa),
+                Optional.of(projeto),
+                jwt.getSubject());
+    }
+
+    @Transactional
+    public VinculosSociaisDto uploadAvatarPreferido(final Jwt jwt,
+                                                    final UploadAvatarPreferidoApiRequest requisicao) {
+        Objects.requireNonNull(jwt, "jwt é obrigatório");
+        Objects.requireNonNull(requisicao, "requisicao é obrigatória");
+        ProjetoFluxoPublicoResolvido projeto = resolvedorProjetoFluxoPublico.resolverAtivo(requisicao.aplicacaoId());
+        AvatarCadastroConfirmado avatarMaterializado = uploadAvatarCadastroServico.materializar(
+                new AvatarCadastroConfirmado(
+                        "THIMISU",
+                        null,
+                        null,
+                        requisicao.nomeArquivo(),
+                        requisicao.contentType(),
+                        requisicao.tamanhoBytes(),
+                        null,
+                        null,
+                        requisicao.conteudoBase64(),
+                        true
+                )
+        );
+        if (avatarMaterializado == null || normalizarTexto(avatarMaterializado.urlAvatar()) == null) {
+            throw new ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_GATEWAY,
+                    "Nao foi possivel materializar o avatar do usuario."
+            );
+        }
+        OffsetDateTime agora = OffsetDateTime.now();
+        avatarSocialProjetoJdbc.definirAvatarUrl(
+                jwt.getSubject(),
+                projeto.clienteEcossistemaId(),
+                avatarMaterializado.urlAvatar(),
+                agora
+        );
         Pessoa pessoa = provisionamentoIdentidadeService.provisionarOuAtualizar(jwt);
         return montarResposta(
                 formaAcessoRepositorio.findByPessoa(pessoa),

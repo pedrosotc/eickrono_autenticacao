@@ -175,6 +175,25 @@ public class TokenDispositivoService {
                 .map(token -> new TokenDispositivoValidado(token.getUsuarioSub(), token.getExpiraEm()));
     }
 
+    @Transactional
+    public Optional<TokenDispositivoValidado> renovarExpiracaoTokenAtivoSemUsuario(final String tokenClaro) {
+        if (!StringUtils.hasText(tokenClaro)) {
+            return Optional.empty();
+        }
+        String hash = gerarHashToken(tokenClaro);
+        OffsetDateTime agora = OffsetDateTime.now(clock);
+        return tokenRepositorio.findByTokenHash(hash)
+                .filter(token -> token.getStatus() == StatusTokenDispositivo.ATIVO)
+                .filter(token -> token.estaAtivo(agora))
+                .map(token -> {
+                    OffsetDateTime novaExpiracao = agora.plusHours(dispositivoProperties.getToken().getValidadeHoras());
+                    token.renovarExpiracao(novaExpiracao);
+                    tokenRepositorio.save(token);
+                    sincronizarTokenSeConfigurado(token);
+                    return new TokenDispositivoValidado(token.getUsuarioSub(), token.getExpiraEm());
+                });
+    }
+
     private String gerarTokenClaro() {
         byte[] buffer = new byte[dispositivoProperties.getToken().getTamanhoBytes()];
         secureRandom.nextBytes(buffer);

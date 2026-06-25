@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.eickrono.api.identidade.aplicacao.servico.VinculoSocialService;
 import com.eickrono.api.identidade.apresentacao.dto.AtualizarAvatarPreferidoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.ConfirmacaoSenhaApiRequest;
+import com.eickrono.api.identidade.apresentacao.dto.UploadAvatarPreferidoApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.VincularRedeSocialApiRequest;
 import com.eickrono.api.identidade.apresentacao.dto.VinculoSocialDto;
 import com.eickrono.api.identidade.apresentacao.dto.VinculosSociaisDto;
@@ -141,6 +142,26 @@ class VinculosSociaisControllerTest {
         assertThat(resposta.getStatusCode().value()).isEqualTo(200);
         assertThat(resposta.getBody()).isEqualTo(respostaEsperada);
         verify(vinculoSocialService).atualizarAvatarPreferido(jwt, request);
+    }
+
+    @Test
+    void deveDelegarUploadDoAvatarPreferido() {
+        Jwt jwt = jwt();
+        UploadAvatarPreferidoApiRequest request = new UploadAvatarPreferidoApiRequest(
+                "eickrono-thimisu-app",
+                "avatar.jpg",
+                "image/jpeg",
+                3L,
+                "YWJj"
+        );
+        VinculosSociaisDto respostaEsperada = resposta();
+        when(vinculoSocialService.uploadAvatarPreferido(jwt, request)).thenReturn(respostaEsperada);
+
+        ResponseEntity<VinculosSociaisDto> resposta = controller.uploadAvatarPreferido(request, jwt);
+
+        assertThat(resposta.getStatusCode().value()).isEqualTo(200);
+        assertThat(resposta.getBody()).isEqualTo(respostaEsperada);
+        verify(vinculoSocialService).uploadAvatarPreferido(jwt, request);
     }
 
     private Jwt jwt() {

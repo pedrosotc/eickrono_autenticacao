@@ -2,6 +2,7 @@ package com.eickrono.api.identidade.apresentacao.api;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -354,7 +355,7 @@ class FluxoPublicoControllerTest {
                 "PENDENTE_LIBERACAO_PRODUTO"
         );
         when(autenticacaoSessaoInternaServico.renovar("refresh-token", "device-token-atual")).thenReturn(sessao);
-        when(tokenDispositivoService.validarTokenAtivoSemUsuario("device-token-atual"))
+        when(tokenDispositivoService.renovarExpiracaoTokenAtivoSemUsuario("device-token-atual"))
                 .thenReturn(Optional.of(new TokenDispositivoService.TokenDispositivoValidado(
                         "usuario-xyz",
                         OffsetDateTime.parse("2026-05-05T18:00:00Z")
@@ -688,6 +689,111 @@ class FluxoPublicoControllerTest {
         assertThat(resposta.canaisConfirmacao()).containsExactly(CanalVerificacao.EMAIL);
         assertThat(resposta.podeOferecerBiometria()).isFalse();
         assertThat(resposta.podeOferecerVinculacaoSocial()).isFalse();
+    }
+
+    @Test
+    void deveResolverIdentificadorPublicoParaEmailAntesDoLoginPorSenha() {
+        CriarSessaoApiRequest request = new CriarSessaoApiRequest(
+                "eickrono-thimisu-app",
+                "pedroso_tc",
+                "Senha#123",
+                new DispositivoSessaoApiRequest(
+                        "IOS",
+                        "eickrono-thimisu-app",
+                        "instalacao-login",
+                        "iphone17,1",
+                        "apple",
+                        "ios",
+                        "18.0",
+                        "1.0.0"
+                ),
+                new AtestacaoOperacaoApiRequest(
+                        PlataformaAtestacaoApp.IOS,
+                        ProvedorAtestacaoApp.APPLE_APP_ATTEST,
+                        TipoComprovanteAtestacaoApp.OBJETO_ATESTACAO,
+                        "desafio",
+                        "ZGVzYWZpbw==",
+                        "dG9rZW0=",
+                        OffsetDateTime.parse("2026-05-05T18:00:00Z"),
+                        null
+                ),
+                new SegurancaAplicativoApiRequest(
+                        "IOS",
+                        "APPLE_APP_ATTEST",
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        true,
+                        true,
+                        java.util.List.of(),
+                        0,
+                        "store.eickrono.thimisu",
+                        null,
+                        null,
+                        null
+                )
+        );
+        ProjetoFluxoPublicoResolvido projeto = new ProjetoFluxoPublicoResolvido(
+                1L,
+                "eickrono-thimisu-app",
+                "Thimisu",
+                "APP",
+                "Thimisu",
+                "MOBILE",
+                false
+        );
+        SessaoInternaAutenticada sessao = new SessaoInternaAutenticada(
+                true,
+                "Bearer",
+                "access-login",
+                "refresh-login",
+                1800L
+        );
+        ContextoPessoaPerfilSistema contexto = new ContextoPessoaPerfilSistema(
+                123L,
+                "usuario-xyz",
+                "pedroso_tc@hotmail.com",
+                "Pedro",
+                "pedroso_tc",
+                "perfil-001",
+                "LIBERADO"
+        );
+        when(servletRequest.getHeader("X-Forwarded-For")).thenReturn(null);
+        when(servletRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(resolvedorProjetoFluxoPublico.resolverAtivo("eickrono-thimisu-app")).thenReturn(projeto);
+        when(localizadorPerfilSistemaProjetoPorEmail.localizarPorIdentificadorPublico(1L, "pedroso_tc"))
+                .thenReturn(Optional.of(new PerfilSistemaProjetoPorEmailResolvido(
+                        UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                        "pedroso_tc@hotmail.com",
+                        "pedroso_tc"
+                )));
+        when(autenticacaoSessaoInternaServico.autenticar("pedroso_tc@hotmail.com", "Senha#123"))
+                .thenReturn(sessao);
+        when(resolvedorContextoAutenticacaoService.buscarPorEmailPublico("pedroso_tc@hotmail.com"))
+                .thenReturn(Optional.of(contexto));
+        when(registroDispositivoLoginSilenciosoService.registrar(contexto, request.dispositivo()))
+                .thenThrow(new FluxoPublicoException(
+                        org.springframework.http.HttpStatus.LOCKED,
+                        "dispositivo_nao_liberado",
+                        "Este dispositivo não está liberado para uso com a conta."
+                ));
+        when(registroDispositivoService.solicitarRegistroParaSessao(contexto, request.dispositivo()))
+                .thenReturn(new RegistroDispositivoResponse(
+                        UUID.fromString("33333333-3333-3333-3333-333333333333"),
+                        OffsetDateTime.parse("2026-05-05T18:20:00Z"),
+                        StatusRegistroDispositivo.PENDENTE,
+                        java.util.List.of(CanalVerificacao.EMAIL)
+                ));
+
+        SessaoApiResposta resposta = controller.criarSessao(request, servletRequest);
+
+        assertThat(resposta.autenticado()).isTrue();
+        assertThat(resposta.emailPrincipal()).isEqualTo("pedroso_tc@hotmail.com");
+        assertThat(resposta.usuario()).isEqualTo("pedroso_tc");
+        verify(autenticacaoSessaoInternaServico).autenticar("pedroso_tc@hotmail.com", "Senha#123");
+        verify(resolvedorContextoAutenticacaoService).buscarPorEmailPublico("pedroso_tc@hotmail.com");
     }
 
     @Test

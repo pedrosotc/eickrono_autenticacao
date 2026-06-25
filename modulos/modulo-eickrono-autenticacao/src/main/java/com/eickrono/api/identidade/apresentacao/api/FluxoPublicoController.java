@@ -352,13 +352,24 @@ public class FluxoPublicoController {
             throw exception;
         }
         SessaoInternaAutenticada sessao;
+        String loginAutenticacaoNormalizado = resolverLoginAutenticacao(
+                loginNormalizado,
+                requisicao.aplicacaoId()
+        );
+        if (!Objects.equals(loginNormalizado, loginAutenticacaoNormalizado)) {
+            LOGGER.info(
+                    "login_publico_identificador_resolvido login={} loginAutenticacao={}",
+                    loginMascarado,
+                    mascararIdentificador(loginAutenticacaoNormalizado)
+            );
+        }
         try {
             sessao = autenticacaoSessaoInternaServico.autenticar(
-                    loginNormalizado,
+                    loginAutenticacaoNormalizado,
                     requisicao.senha()
             );
         } catch (ResponseStatusException exception) {
-            FluxoPublicoException erroMapeado = mapearErroLoginPublico(loginNormalizado, exception);
+            FluxoPublicoException erroMapeado = mapearErroLoginPublico(loginAutenticacaoNormalizado, exception);
             LOGGER.warn(
                     "login_publico_autenticacao_rejeitada login={} codigo={} status={} motivo={}",
                     loginMascarado,
@@ -375,7 +386,7 @@ public class FluxoPublicoController {
                 sessao.expiresIn()
         );
         ContextoPessoaPerfilSistema contexto = resolvedorContextoAutenticacaoService
-                .buscarPorEmailPublico(loginNormalizado)
+                .buscarPorEmailPublico(loginAutenticacaoNormalizado)
                 .orElseThrow(() -> {
                     LOGGER.warn(
                             "login_publico_contexto_ausente login={} motivo=conta_nao_liberada",
@@ -413,6 +424,18 @@ public class FluxoPublicoController {
     private boolean statusPerfilSistemaPermiteLoginCentral(final String statusPerfilSistema) {
         return STATUS_LIBERADO.equalsIgnoreCase(statusPerfilSistema)
                 || STATUS_PENDENTE_LIBERACAO_PRODUTO.equalsIgnoreCase(statusPerfilSistema);
+    }
+
+    private String resolverLoginAutenticacao(final String loginNormalizado, final String aplicacaoId) {
+        if (loginNormalizado.indexOf('@') > 0) {
+            return loginNormalizado;
+        }
+        ProjetoFluxoPublicoResolvido projeto = resolvedorProjetoFluxoPublico.resolverAtivo(aplicacaoId);
+        return localizadorPerfilSistemaProjetoPorEmail
+                .localizarPorIdentificadorPublico(projeto.clienteEcossistemaId(), loginNormalizado)
+                .map(PerfilSistemaProjetoPorEmailResolvido::emailNormalizado)
+                .filter(StringUtils::hasText)
+                .orElse(loginNormalizado);
     }
 
     @PostMapping("/sessoes/sociais")
@@ -612,7 +635,7 @@ public class FluxoPublicoController {
                                                           final String tokenDispositivo,
                                                           final String aplicacaoId) {
         Optional<TokenDispositivoService.TokenDispositivoValidado> tokenAtivo = tokenDispositivoService
-                .validarTokenAtivoSemUsuario(tokenDispositivo);
+                .renovarExpiracaoTokenAtivoSemUsuario(tokenDispositivo);
         if (tokenAtivo.isPresent()) {
             TokenDispositivoService.TokenDispositivoValidado tokenValidado = tokenAtivo.orElseThrow();
             ContextoPessoaPerfilSistema contexto = buscarContextoParaSessao(tokenValidado.usuarioSub()).orElseThrow(() ->

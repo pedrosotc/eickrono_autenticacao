@@ -277,6 +277,16 @@ No desenho canônico atual:
 - o backend decide se o aparelho pode ser aceito silenciosamente;
 - quando o contexto estiver válido, a própria autenticação emite o `X-Device-Token` na resposta de `POST /api/publica/sessoes`;
 - o app apenas persiste esse token e o envia depois nas chamadas protegidas;
+- rotas autenticadas de conta/identidade exigem `X-Device-Token` quando o JWT
+  possui `ROLE_cliente` ou escopos protegidos como `identidade:ler`,
+  `vinculos:ler`, `vinculos:escrever` ou `contas:ler`;
+- o login público por senha usa o cliente OIDC do app e deve solicitar os
+  escopos configurados em `IDENTIDADE_SESSAO_INTERNA_KEYCLOAK_SCOPE`; em
+  runtime local o default inclui `openid identidade:ler vinculos:ler
+  vinculos:escrever offline_access`;
+- quando o app recompõe sessão via refresh e o token de dispositivo está ativo,
+  a API renova a expiração do `X-Device-Token` usando a validade configurada do
+  servidor;
 - o app não calcula localmente um estado de "onboarding de dispositivo";
 - uma tela separada de registro de dispositivo não faz mais parte do fluxo principal.
 

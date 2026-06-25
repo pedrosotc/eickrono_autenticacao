@@ -133,7 +133,7 @@ public class ExclusaoCadastroProdutoDryRunService {
         adicionarAcoesAutenticacao(usuariosIds, vinculosIds, usuarioCentralExclusivoDoProduto, acoes, preservados);
         adicionarPlanoKeycloak(usuariosIds, usuarioCentralExclusivoDoProduto, acoes, preservados, bloqueios);
         adicionarPlanoStorageAvatar(vinculosIds, acoes, preservados);
-        adicionarPlanoProduto(produto.codigo(), requisicao, acoes, preservados, bloqueios);
+        adicionarPlanoProduto(produto.codigo(), requisicao, !vinculosIds.isEmpty(), acoes, preservados, bloqueios);
         adicionarPreservados(usuariosIds, preservados);
 
         if (usuariosIds.isEmpty()) {
@@ -469,6 +469,13 @@ public class ExclusaoCadastroProdutoDryRunService {
         if (pessoasIds.isEmpty()) {
             return 0L;
         }
+        if (!tabelaExiste(tabela)) {
+            LOGGER.warn(
+                    "exclusao_cadastro_produto_identidade_preservada_indisponivel tabela={} motivo=tabela_ausente",
+                    tabela
+            );
+            return 0L;
+        }
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("ids", pessoasIds);
         Long quantidade = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM " + tabela + " WHERE " + coluna + " IN (:ids)",
@@ -476,6 +483,16 @@ public class ExclusaoCadastroProdutoDryRunService {
                 Long.class
         );
         return quantidade == null ? 0L : quantidade;
+    }
+
+    private boolean tabelaExiste(final String tabela) {
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("tabela", tabela);
+        String relacao = jdbcTemplate.queryForObject(
+                "SELECT to_regclass(:tabela)",
+                params,
+                String.class
+        );
+        return relacao != null;
     }
 
     private void adicionarPlanoKeycloak(final List<String> usuariosIds,
@@ -587,6 +604,7 @@ public class ExclusaoCadastroProdutoDryRunService {
 
     private void adicionarPlanoProduto(final String produto,
                                        final ExclusaoCadastroProdutoApiRequest requisicao,
+                                       final boolean alvoAutenticacaoResolvido,
                                        final List<ItemPlanoExclusaoCadastroProdutoApiResposta> acoes,
                                        final List<ItemPlanoExclusaoCadastroProdutoApiResposta> preservados,
                                        final List<BloqueioExclusaoCadastroProdutoApiResposta> bloqueios) {
@@ -620,7 +638,31 @@ public class ExclusaoCadastroProdutoDryRunService {
         );
         acoes.addAll(resultado.acoes());
         preservados.addAll(resultado.preservados());
+        if (alvoAutenticacaoResolvido && bloqueiosProdutoIndicamAlvoAusente(resultado)) {
+            LOGGER.warn(
+                    "exclusao_cadastro_produto_produto_sem_alvo_ignorado produto={} usuarioPublicoProduto={} perfilProdutoIdPresente={} motivo=limpeza_vinculo_autenticacao_orfao",
+                    produto,
+                    requisicao.usuarioPublicoProduto(),
+                    requisicao.perfilProdutoId() != null && !requisicao.perfilProdutoId().isBlank()
+            );
+            preservados.add(new ItemPlanoExclusaoCadastroProdutoApiResposta(
+                    SISTEMA_PRODUTO,
+                    "NAO_TOCAR",
+                    "produto sem perfil correspondente",
+                    0L
+            ));
+            return;
+        }
         bloqueios.addAll(resultado.bloqueios());
+    }
+
+    private boolean bloqueiosProdutoIndicamAlvoAusente(
+            final ResolvedorExclusaoCadastroProdutoService.Resultado resultado) {
+        return resultado.acoes().isEmpty()
+                && resultado.preservados().isEmpty()
+                && !resultado.bloqueios().isEmpty()
+                && resultado.bloqueios().stream()
+                .allMatch(bloqueio -> "alvo_nao_resolvido".equals(bloqueio.codigo()));
     }
 
     private ExclusaoCadastroProdutoApiResposta resposta(final ExclusaoCadastroProdutoApiRequest requisicao,

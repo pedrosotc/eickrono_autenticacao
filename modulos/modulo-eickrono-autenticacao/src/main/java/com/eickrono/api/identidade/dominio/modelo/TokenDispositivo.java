@@ -145,6 +145,10 @@ public class TokenDispositivo {
         return status == StatusTokenDispositivo.ATIVO && expiraEm.isAfter(agora);
     }
 
+    public void renovarExpiracao(OffsetDateTime novaExpiracao) {
+        this.expiraEm = Objects.requireNonNull(novaExpiracao, "novaExpiracao é obrigatória");
+    }
+
     public void revogar(MotivoRevogacaoToken motivo, OffsetDateTime momento) {
         this.status = StatusTokenDispositivo.REVOGADO;
         this.motivoRevogacao = motivo;

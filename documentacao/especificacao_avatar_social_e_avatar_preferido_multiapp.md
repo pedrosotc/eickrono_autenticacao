@@ -301,6 +301,7 @@ Exemplo:
 Endpoint implementado:
 
 - `PUT /api/conta/avatar-preferido`
+- `PUT /api/conta/avatar-preferido/upload`
 
 Corpo para escolher avatar de rede social:
 
@@ -328,11 +329,35 @@ Corpo para limpar escolha explícita:
 }
 ```
 
+Corpo para enviar foto local do dispositivo e materializar uma URL pública:
+
+```json
+{
+  "aplicacaoId": "eickrono-thimisu-app",
+  "nomeArquivo": "avatar.jpg",
+  "contentType": "image/jpeg",
+  "tamanhoBytes": 184523,
+  "conteudoBase64": "<base64>"
+}
+```
+
 Semântica:
 
 - `SOCIAL` resolve a `forma_acesso` do provedor dentro do usuário autenticado;
+- `URL_EXTERNA` persiste uma URL já resolvida pelo cliente/fluxo anterior;
+- `NENHUM` remove a escolha explícita do avatar preferido do projeto;
+- `upload` usa `UploadAvatarCadastroServico` para validar/materializar a foto
+  local e grava a URL resultante como avatar preferido do projeto;
 - o servidor grava a preferência no vínculo do usuário com o projeto atual;
 - a resposta pode devolver o `avatarUrlEfetivo` já resolvido.
+
+Segurança:
+
+- todos os endpoints acima exigem `Authorization: Bearer <accessToken>`;
+- chamadas feitas pelo app móvel também devem enviar
+  `X-Device-Token: <tokenDispositivo>`;
+- `GET` de vínculos requer `vinculos:ler` ou `ROLE_cliente`;
+- alteração de avatar requer `vinculos:escrever` ou `ROLE_cliente`.
 
 ### 3. Resposta do contexto autenticado
 

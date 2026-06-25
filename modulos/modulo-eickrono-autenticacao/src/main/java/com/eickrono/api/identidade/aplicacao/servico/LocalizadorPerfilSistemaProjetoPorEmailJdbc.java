@@ -53,6 +53,38 @@ public class LocalizadorPerfilSistemaProjetoPorEmailJdbc {
                 """, params, this::mapear).stream().findFirst();
     }
 
+    public Optional<PerfilSistemaProjetoPorEmailResolvido> localizarPorIdentificadorPublico(
+            final Long clienteEcossistemaId,
+            final String identificadorPublico) {
+        if (clienteEcossistemaId == null || !StringUtils.hasText(identificadorPublico)) {
+            return Optional.empty();
+        }
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("clienteEcossistemaId", clienteEcossistemaId)
+                .addValue("identificadorPublico", identificadorPublico.trim().toLowerCase(Locale.ROOT));
+        return jdbcTemplate.query("""
+                SELECT u.id AS usuario_id,
+                       lower(ufa.identificador_externo) AS email_normalizado,
+                       lower(uce.identificador_publico_cliente) AS login_sugerido
+                FROM autenticacao.usuarios_clientes_ecossistema uce
+                JOIN autenticacao.usuarios u
+                  ON u.id = uce.usuario_id
+                JOIN autenticacao.usuarios_formas_acesso ufa
+                  ON ufa.usuario_id = u.id
+                WHERE uce.cliente_ecossistema_id = :clienteEcossistemaId
+                  AND uce.revogado_em IS NULL
+                  AND COALESCE(uce.status_vinculo, '') <> 'REVOGADO'
+                  AND uce.identificador_publico_cliente IS NOT NULL
+                  AND lower(uce.identificador_publico_cliente) = :identificadorPublico
+                  AND ufa.desvinculado_em IS NULL
+                  AND ufa.tipo = 'EMAIL_SENHA'
+                  AND ufa.provedor = 'EMAIL'
+                ORDER BY ufa.principal DESC,
+                         uce.atualizado_em DESC
+                LIMIT 1
+                """, params, this::mapear).stream().findFirst();
+    }
+
     private PerfilSistemaProjetoPorEmailResolvido mapear(final ResultSet rs, final int rowNum) throws SQLException {
         return new PerfilSistemaProjetoPorEmailResolvido(
                 rs.getObject("usuario_id", UUID.class),

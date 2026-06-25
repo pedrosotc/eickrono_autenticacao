@@ -48,10 +48,15 @@ curl -X POST http://localhost:8080/realms/eickrono/protocol/openid-connect/token
 - `openid` — escopo padrão do OpenID Connect que habilita emissão de tokens compatíveis com as bibliotecas OIDC. Sem ele, alguns clientes rejeitam o token.
 - `vinculos:ler` — libera leituras autenticadas como `GET /api/conta/vinculos-organizacionais`.
 - `vinculos:ler` — permite listar vínculos sociais (`GET /api/conta/redes-sociais`).
-- `vinculos:escrever` — requerido para criar vínculos (`POST /api/conta/redes-sociais`).
+- `vinculos:escrever` — requerido para criar vínculos e alterar avatar
+  preferido (`POST /api/conta/redes-sociais`,
+  `PUT /api/conta/avatar-preferido` e
+  `PUT /api/conta/avatar-preferido/upload`).
 - `contas:ler` — autoriza a leitura de contas (`GET /contas`, `GET /contas/{id}`).
 - `transacoes:ler` — autoriza `GET /transacoes?contaId=...`.
-- `cliente` — realm role que mapeia para `ROLE_cliente`, usada pelas APIs para impor o cabeçalho `X-Device-Token` e garantir que se trata de um cliente humano.
+- `cliente` — realm role que mapeia para `ROLE_cliente`, aceita pelas APIs como
+  alternativa aos escopos específicos; `X-Device-Token` também é exigido quando
+  o JWT possui escopos protegidos.
 
 Todos esses nomes são customizados pelas nossas APIs e não vêm prontos no Keycloak; por isso é necessário criá-los e associá-los manualmente ou via script antes de testar. Nos ambientes oficiais (stg/prod), esses escopos e roles já devem ser provisionados pelas pipelines de infraestrutura ou pela importação automática do realm; o passo manual é exclusivo do ambiente local/dev quando o realm é iniciado do zero.
 
@@ -207,13 +212,15 @@ PY
 > As chamadas abaixo exigem **dois cabeçalhos**:
 > - `Authorization: Bearer <token_password>`
 > - `X-Device-Token: <tokenDispositivo>`
-> (o `DeviceTokenFilter` libera apenas usuários com `ROLE_cliente` e token ativo).
+> (o `DeviceTokenFilter` exige token ativo para usuários com `ROLE_cliente` ou
+> escopos protegidos como `identidade:ler`, `vinculos:ler`,
+> `vinculos:escrever` e `contas:ler`).
 
 1. **GET** `http://127.0.0.1:8081/api/conta/vinculos-organizacionais`
    - Esperado: `200 OK` com `PerfilDto` (nome, email, perfis, papeis).
 
 2. **GET** `http://127.0.0.1:8081/api/conta/redes-sociais`
-   - Escopos: `identidade:ler` ou role `cliente`.
+   - Escopos: `vinculos:ler` ou role `cliente`.
    - Esperado: lista de vínculos; vazia na primeira execução.
 
 3. **POST** `http://127.0.0.1:8081/api/conta/redes-sociais/google`
@@ -227,7 +234,21 @@ PY
      ```
    - Esperado: `200 OK` com `VinculoSocialDto` recém-criado.
 
-4. **POST** `http://127.0.0.1:8081/api/conta/dispositivos/revogar`
+4. **PUT** `http://127.0.0.1:8081/api/conta/avatar-preferido/upload`
+   - Requer escopo `vinculos:escrever`.
+   - Payload:
+     ```json
+     {
+       "aplicacaoId": "eickrono-thimisu-app",
+       "nomeArquivo": "avatar.jpg",
+       "contentType": "image/jpeg",
+       "tamanhoBytes": 12,
+       "conteudoBase64": "AQIDBAUGBwgJCgsM"
+     }
+     ```
+   - Esperado: `200 OK` com vínculos sociais atualizados e `avatarPreferidoUrl` preenchido.
+
+5. **POST** `http://127.0.0.1:8081/api/conta/dispositivos/revogar`
    - Cabeçalhos extras: `X-Device-Token: <tokenDispositivo>` (o mesmo a ser revogado).
    - Payload opcional:
      ```json

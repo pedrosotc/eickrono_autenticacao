@@ -3113,6 +3113,7 @@ Remocao:
 Avatar preferido:
 
 - `PUT /api/conta/avatar-preferido`
+- `PUT /api/conta/avatar-preferido/upload`
 
 Headers:
 
@@ -3137,10 +3138,24 @@ Exemplo de `PUT /api/conta/avatar-preferido`:
 }
 ```
 
+Exemplo de `PUT /api/conta/avatar-preferido/upload`:
+
+```json
+{
+  "aplicacaoId": "eickrono-thimisu-app",
+  "nomeArquivo": "avatar.jpg",
+  "contentType": "image/jpeg",
+  "tamanhoBytes": 184523,
+  "conteudoBase64": "<base64>"
+}
+```
+
 Observacoes:
 
 - desvinculacao exige senha atual;
 - biometria nao substitui essa reautenticacao;
+- upload de foto local exige `vinculos:escrever` e `X-Device-Token`, como as
+  demais escritas autenticadas de conta;
 - a listagem e as respostas de sincronizacao devolvem o estado social por provedor, inclusive
   disponibilidade de avatar social no projeto atual.
 
@@ -3663,7 +3678,9 @@ permitir:
 - vincular nova rede;
 - desvincular rede antiga;
 - sincronizar dados sociais;
-- escolher avatar preferido a partir dessas redes.
+- escolher avatar preferido a partir dessas redes;
+- trocar a foto de perfil por imagem local do dispositivo, materializando a URL
+  no backend de autenticação/identidade antes de atualizar o cache local.
 
 #### 7.4.2 Diferenca entre dados sociais temporarios e vinculo persistido
 
@@ -3715,6 +3732,7 @@ Runtime atual observado:
 - `POST /api/conta/redes-sociais/:provedor/sincronizacao`
 - `DELETE /api/conta/redes-sociais/:provedor`
 - `PUT /api/conta/avatar-preferido`
+- `PUT /api/conta/avatar-preferido/upload`
 
 Estado alvo adotado:
 

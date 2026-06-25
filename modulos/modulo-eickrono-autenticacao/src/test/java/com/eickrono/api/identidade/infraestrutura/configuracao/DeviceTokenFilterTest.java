@@ -15,6 +15,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
@@ -120,6 +121,25 @@ class DeviceTokenFilterTest {
         assertThat(response.getStatus()).isEqualTo(200);
     }
 
+    @Test
+    void deveExigirTokenQuandoJwtTemEscopoProtegidoSemRoleCliente() throws ServletException, IOException {
+        inicializarFiltro();
+        MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/api/conta/avatar-preferido/upload");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        JwtAuthenticationToken authentication = autenticarComAutoridades(
+                "usuario-xyz",
+                List.of("SCOPE_vinculos:escrever"));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(428);
+        assertThat(response.getContentAsString()).contains("DEVICE_TOKEN_MISSING");
+        assertThat(tokenDispositivoService.ultimoUsuario()).isEmpty();
+    }
+
     /**
      * Garante que a reconciliacao offline tambem e bloqueada no proprio filtro quando o token
      * do dispositivo foi revogado. Isso impede que o app envie eventos offline com uma sessao
@@ -160,11 +180,17 @@ class DeviceTokenFilterTest {
     }
 
     private JwtAuthenticationToken autenticarCliente(String sub) {
+        return autenticarComAutoridades(sub, List.of("ROLE_cliente"));
+    }
+
+    private JwtAuthenticationToken autenticarComAutoridades(String sub, List<String> authorities) {
         Jwt jwt = Jwt.withTokenValue("teste")
                 .header("alg", "none")
                 .subject(sub)
                 .build();
-        return new JwtAuthenticationToken(jwt, List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_cliente")));
+        return new JwtAuthenticationToken(
+                jwt,
+                authorities.stream().map(SimpleGrantedAuthority::new).toList());
     }
 
     private TokenDispositivo criarToken() {
