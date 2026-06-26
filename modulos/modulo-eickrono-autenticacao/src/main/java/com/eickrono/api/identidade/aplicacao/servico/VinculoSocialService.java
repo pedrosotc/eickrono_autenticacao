@@ -76,10 +76,20 @@ public class VinculoSocialService {
     public VinculosSociaisDto listar(final Jwt jwt, final String aplicacaoId) {
         Jwt jwtLocal = Objects.requireNonNull(jwt, "jwt é obrigatório");
         Pessoa pessoa = provisionamentoIdentidadeService.provisionarOuAtualizar(jwtLocal);
-        return montarResposta(
-                formaAcessoRepositorio.findByPessoa(pessoa),
-                resolverProjetoOpcional(aplicacaoId),
-                jwtLocal.getSubject());
+        return sincronizarEListar(jwtLocal, pessoa, aplicacaoId);
+    }
+
+    @Transactional
+    public VinculosSociaisDto sincronizar(final Jwt jwt, final String aliasProvedor, final String aplicacaoId) {
+        ProvedorVinculoSocial provedor = validarProvedor(aliasProvedor);
+        Jwt jwtLocal = Objects.requireNonNull(jwt, "jwt é obrigatório");
+        Pessoa pessoa = provisionamentoIdentidadeService.provisionarOuAtualizar(jwtLocal);
+        VinculosSociaisDto resposta = sincronizarEListar(jwtLocal, pessoa, aplicacaoId);
+        auditoriaService.registrarEvento(
+                "VINCULO_SOCIAL_SINCRONIZADO",
+                jwtLocal.getSubject(),
+                "Provedor=" + provedor.getAliasApi());
+        return resposta;
     }
 
     @Transactional
@@ -477,6 +487,20 @@ public class VinculoSocialService {
             return Optional.empty();
         }
         return Optional.of(resolvedorProjetoFluxoPublico.resolverAtivo(aplicacaoId));
+    }
+
+    private VinculosSociaisDto sincronizarEListar(final Jwt jwt,
+                                                  final Pessoa pessoa,
+                                                  final String aplicacaoId) {
+        OffsetDateTime instanteSincronizacao = OffsetDateTime.now();
+        List<IdentidadeFederadaKeycloak> identidadesFederadas =
+                clienteAdministracaoVinculosSociaisKeycloak.listarIdentidadesFederadas(jwt.getSubject());
+        reconciliarFormasAcessoSociais(pessoa, identidadesFederadas, instanteSincronizacao);
+        sincronizarAvataresMultiapp(jwt, pessoa, instanteSincronizacao, identidadesFederadas, aplicacaoId);
+        return montarResposta(
+                formaAcessoRepositorio.findByPessoa(pessoa),
+                resolverProjetoOpcional(aplicacaoId),
+                jwt.getSubject());
     }
 
     private void sincronizarAvataresMultiapp(final Jwt jwt,

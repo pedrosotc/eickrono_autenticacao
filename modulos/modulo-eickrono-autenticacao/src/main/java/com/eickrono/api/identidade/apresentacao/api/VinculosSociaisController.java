@@ -64,6 +64,17 @@ public class VinculosSociaisController {
                 requisicaoLocal.aplicacaoId()));
     }
 
+    @PostMapping("/{provedor}/sincronizacao")
+    public ResponseEntity<VinculosSociaisDto> sincronizar(@PathVariable("provedor") final String provedor,
+                                                          @RequestParam(value = "aplicacaoId", required = false)
+                                                          final String aplicacaoId,
+                                                          @AuthenticationPrincipal final Jwt jwt) {
+        return ResponseEntity.ok(vinculoSocialService.sincronizar(
+                Objects.requireNonNull(jwt, "jwt é obrigatório"),
+                provedor,
+                aplicacaoId));
+    }
+
     @DeleteMapping("/{provedor}")
     public ResponseEntity<VinculosSociaisDto> remover(@PathVariable("provedor") final String provedor,
                                                       @RequestParam(value = "aplicacaoId", required = false)

@@ -14,7 +14,11 @@ import com.eickrono.api.identidade.AplicacaoApiIdentidade;
 import com.eickrono.api.identidade.aplicacao.modelo.IdentidadeFederadaKeycloak;
 import com.eickrono.api.identidade.aplicacao.modelo.SessaoInternaAutenticada;
 import com.eickrono.api.identidade.aplicacao.servico.AutenticacaoSessaoInternaServico;
+import com.eickrono.api.identidade.aplicacao.servico.ResultadoValidacaoTokenDispositivo;
+import com.eickrono.api.identidade.aplicacao.servico.StatusValidacaoTokenDispositivo;
+import com.eickrono.api.identidade.aplicacao.servico.TokenDispositivoService;
 import com.eickrono.api.identidade.dominio.modelo.FormaAcesso;
+import com.eickrono.api.identidade.dominio.modelo.Pessoa;
 import com.eickrono.api.identidade.dominio.modelo.ProvedorVinculoSocial;
 import com.eickrono.api.identidade.dominio.modelo.TipoFormaAcesso;
 import com.eickrono.api.identidade.dominio.repositorio.FormaAcessoRepositorio;
@@ -45,6 +49,7 @@ class VinculosSociaisControllerIT {
 
     private static final String ENDPOINT = "/identidade/vinculos-sociais";
     private static final String ENDPOINT_CONTA = "/api/conta/redes-sociais";
+    private static final String DEVICE_TOKEN = "device-token-vinculos-sociais";
 
     @Autowired
     private MockMvc mockMvc;
@@ -58,12 +63,19 @@ class VinculosSociaisControllerIT {
     @MockBean
     private AutenticacaoSessaoInternaServico autenticacaoSessaoInternaServico;
 
+    @MockBean
+    private TokenDispositivoService tokenDispositivoService;
+
     @BeforeEach
     void limparEstado() {
         keycloakStub.limparIdentidadesFederadas();
         formaAcessoRepositorio.deleteAll();
         when(autenticacaoSessaoInternaServico.autenticar("teste@eickrono.com", "SenhaAtual123"))
                 .thenReturn(new SessaoInternaAutenticada(true, "Bearer", "access", "refresh", 300L));
+        when(tokenDispositivoService.validarToken("sub-123", DEVICE_TOKEN))
+                .thenReturn(new ResultadoValidacaoTokenDispositivo(
+                        StatusValidacaoTokenDispositivo.VALIDO,
+                        OffsetDateTime.parse("2026-06-30T12:00:00Z")));
     }
 
     @Test
@@ -76,11 +88,12 @@ class VinculosSociaisControllerIT {
                         "teste@gmail.com")));
 
         mockMvc.perform(post(ENDPOINT + "/google/sincronizacao")
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provedores[0].provedor").value("google"))
                 .andExpect(jsonPath("$.provedores[0].vinculado").value(true))
-                .andExpect(jsonPath("$.provedores[0].identificadorMascarado").value("t***@gmail.com"));
+                .andExpect(jsonPath("$.provedores[0].identificadorMascarado").value("g***1"));
 
         assertThat(formaAcessoRepositorio.findAll().stream()
                 .filter(forma -> forma.getTipo() == TipoFormaAcesso.SOCIAL)
@@ -91,16 +104,10 @@ class VinculosSociaisControllerIT {
                 .filter(forma -> forma.getTipo() == TipoFormaAcesso.SOCIAL)
                 .findFirst()
                 .orElseThrow();
-        formaAcessoRepositorio.save(new FormaAcesso(
-                formaSocial.getPessoa(),
-                TipoFormaAcesso.EMAIL_SENHA,
-                "EMAIL",
-                "teste@eickrono.com",
-                true,
-                OffsetDateTime.parse("2024-05-02T15:00:00Z"),
-                OffsetDateTime.parse("2024-05-02T15:00:00Z")));
+        garantirFormaAcessoEmailSenha(formaSocial.getPessoa());
 
         mockMvc.perform(get(ENDPOINT)
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:ler")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provedores[0].provedor").value("google"))
@@ -111,6 +118,7 @@ class VinculosSociaisControllerIT {
                         .content("""
                                 {"senhaConfirmacao":"SenhaAtual123"}
                                 """)
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provedores[0].provedor").value("google"))
@@ -128,6 +136,7 @@ class VinculosSociaisControllerIT {
         mockMvc.perform(delete(ENDPOINT + "/google")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}")
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("senha_confirmacao_obrigatoria"))
@@ -149,6 +158,7 @@ class VinculosSociaisControllerIT {
                         .content("""
                                 {"senhaConfirmacao":"SenhaErrada"}
                                 """)
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo").value("senha_confirmacao_invalida"))
@@ -164,7 +174,7 @@ class VinculosSociaisControllerIT {
     }
 
     @Test
-    void deveAceitarListagemPelaRotaCanonicaDeConta() throws Exception {
+    void deveSincronizarBancoAoListarPelaRotaCanonicaDeConta() throws Exception {
         keycloakStub.definirIdentidadesFederadas(
                 "sub-123",
                 List.of(new IdentidadeFederadaKeycloak(
@@ -172,15 +182,18 @@ class VinculosSociaisControllerIT {
                         "google-sub-1",
                         "teste@gmail.com")));
 
-        mockMvc.perform(post(ENDPOINT + "/google/sincronizacao")
-                        .with(jwtEscopo("vinculos:escrever")))
-                .andExpect(status().isOk());
-
         mockMvc.perform(get(ENDPOINT_CONTA)
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:ler")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provedores[0].provedor").value("google"))
                 .andExpect(jsonPath("$.provedores[0].vinculado").value(true));
+
+        assertThat(formaAcessoRepositorio.findAll().stream()
+                .filter(forma -> forma.getTipo() == TipoFormaAcesso.SOCIAL)
+                .toList())
+                .extracting(FormaAcesso::getProvedor, FormaAcesso::getIdentificador)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("GOOGLE", "google-sub-1"));
     }
 
     @Test
@@ -196,6 +209,7 @@ class VinculosSociaisControllerIT {
 
         mockMvc.perform(post(ENDPOINT + "/google/sincronizacao")
                         .param("aplicacaoId", "eickrono-thimisu-app")
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provedores[0].urlAvatarExterno")
@@ -210,6 +224,7 @@ class VinculosSociaisControllerIT {
                                   "provedor": "google"
                                 }
                                 """)
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.avatarPreferidoOrigem").value("SOCIAL"))
@@ -233,6 +248,7 @@ class VinculosSociaisControllerIT {
 
         mockMvc.perform(post(ENDPOINT + "/google/sincronizacao")
                         .param("aplicacaoId", "eickrono-thimisu-app")
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provedores[0].provedor").value("google"))
@@ -261,6 +277,7 @@ class VinculosSociaisControllerIT {
 
         mockMvc.perform(post(ENDPOINT + "/apple/sincronizacao")
                         .param("aplicacaoId", "eickrono-thimisu-app")
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provedores[1].provedor").value("apple"))
@@ -284,6 +301,7 @@ class VinculosSociaisControllerIT {
 
         mockMvc.perform(post(ENDPOINT + "/google/sincronizacao")
                         .param("aplicacaoId", "eickrono-thimisu-app")
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isOk());
 
@@ -296,6 +314,7 @@ class VinculosSociaisControllerIT {
                                   "provedor": "google"
                                 }
                                 """)
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("avatar_social_indisponivel"))
@@ -310,6 +329,13 @@ class VinculosSociaisControllerIT {
                 .authorities(new SimpleGrantedAuthority("SCOPE_" + Objects.requireNonNull(escopo)));
     }
 
+    private org.springframework.test.web.servlet.request.RequestPostProcessor tokenDispositivo() {
+        return request -> {
+            request.addHeader("X-Device-Token", DEVICE_TOKEN);
+            return request;
+        };
+    }
+
     private void prepararVinculoGoogleComSenhaLocal() throws Exception {
         keycloakStub.definirIdentidadesFederadas(
                 "sub-123",
@@ -318,14 +344,26 @@ class VinculosSociaisControllerIT {
                         "google-sub-1",
                         "teste@gmail.com")));
         mockMvc.perform(post(ENDPOINT + "/google/sincronizacao")
+                        .with(tokenDispositivo())
                         .with(jwtEscopo("vinculos:escrever")))
                 .andExpect(status().isOk());
         FormaAcesso formaSocial = formaAcessoRepositorio.findAll().stream()
                 .filter(forma -> forma.getTipo() == TipoFormaAcesso.SOCIAL)
                 .findFirst()
                 .orElseThrow();
+        garantirFormaAcessoEmailSenha(formaSocial.getPessoa());
+    }
+
+    private void garantirFormaAcessoEmailSenha(final Pessoa pessoa) {
+        boolean jaExiste = formaAcessoRepositorio.findAll().stream()
+                .anyMatch(forma -> forma.getTipo() == TipoFormaAcesso.EMAIL_SENHA
+                        && Objects.equals(forma.getProvedor(), "EMAIL")
+                        && Objects.equals(forma.getIdentificador(), "teste@eickrono.com"));
+        if (jaExiste) {
+            return;
+        }
         formaAcessoRepositorio.save(new FormaAcesso(
-                formaSocial.getPessoa(),
+                pessoa,
                 TipoFormaAcesso.EMAIL_SENHA,
                 "EMAIL",
                 "teste@eickrono.com",

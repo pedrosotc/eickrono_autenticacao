@@ -76,6 +76,12 @@ class VinculoSocialServiceTest {
         Jwt jwt = jwt("sub-123");
         when(provisionamentoIdentidadeService.provisionarOuAtualizar(jwt)).thenReturn(pessoa);
 
+        clienteAdministracaoVinculosSociaisKeycloak.definir(
+                "sub-123",
+                List.of(new IdentidadeFederadaKeycloak(
+                        ProvedorVinculoSocial.GOOGLE,
+                        "teste@gmail.com",
+                        "teste@gmail.com")));
         formasAcessoPersistidas.add(criarFormaAcesso(pessoa, 1L, "GOOGLE", "teste@gmail.com"));
 
         VinculosSociaisDto resposta = vinculoSocialService.listar(jwt);
