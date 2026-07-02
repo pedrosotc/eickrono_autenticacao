@@ -78,5 +78,6 @@ identidade:
   dispositivo:
     token:
       segredo-hmac: ${IDENTIDADE_DEVICE_TOKEN_SECRET}
+      validade-horas: ${IDENTIDADE_DEVICE_TOKEN_VALIDADE_HORAS:720}
     codigo:
       segredo-hmac: ${IDENTIDADE_CODIGO_TOKEN_SECRET}

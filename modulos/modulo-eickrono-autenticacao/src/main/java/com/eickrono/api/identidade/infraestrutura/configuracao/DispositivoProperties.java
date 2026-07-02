@@ -142,7 +142,7 @@ public class DispositivoProperties {
 
     public static class Offline {
         private boolean permitido = true;
-        private long tempoMaximoMinutos = 1440;
+        private long tempoMaximoMinutos = 43200;
         private boolean exigeReconciliacao = true;
         private boolean bloquearQuandoTokenRevogado = true;
         private boolean bloquearQuandoTokenExpirado = true;

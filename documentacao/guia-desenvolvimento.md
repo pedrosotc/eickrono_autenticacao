@@ -626,6 +626,12 @@ Variáveis de ambiente relevantes para reproduzir esse fluxo:
 - `EICKRONO_AUTENTICACAO_API_BASE_URL`
 - `EICKRONO_INTERNAL_SECRET`
 - `EICKRONO_AUTENTICACAO_TIMEOUT_MS`
+- `IDENTIDADE_DEVICE_TOKEN_VALIDADE_HORAS`, com valor padrão `720` para manter
+  a sessão do dispositivo por 30 dias e renovar essa janela a cada refresh
+  aceito pelo servidor.
+- `IDENTIDADE_OFFLINE_TEMPO_MAXIMO_MINUTOS`, com valor padrão `43200`, para
+  permitir reentrada offline subordinada por até 30 dias quando a última sessão
+  salva ainda for elegível e a falha atual for apenas de rede.
 
 Essas variáveis precisam existir no container do Keycloak e na API pública de autenticação. O `docker compose` de `dev` e `stg` já foi alinhado com isso. Os nomes `EICKRONO_IDENTIDADE_*` continuam aceitos apenas como fallback transitório.
 

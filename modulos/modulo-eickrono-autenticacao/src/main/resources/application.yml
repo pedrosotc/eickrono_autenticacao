@@ -129,7 +129,7 @@ identidade:
       sms-fornecedor: log
     offline:
       permitido: true
-      tempo-maximo-minutos: 1440
+      tempo-maximo-minutos: ${IDENTIDADE_OFFLINE_TEMPO_MAXIMO_MINUTOS:43200}
       exige-reconciliacao: true
       bloquear-quando-token-revogado: true
       bloquear-quando-token-expirado: true

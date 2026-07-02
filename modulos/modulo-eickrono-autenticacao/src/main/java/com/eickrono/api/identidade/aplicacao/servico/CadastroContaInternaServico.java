@@ -539,20 +539,26 @@ public class CadastroContaInternaServico {
 
     public Optional<ContextoPessoaPerfilSistema> buscarContextoCentralPorEmailPublico(final String emailPrincipal) {
         String emailNormalizado = obrigatorio(emailPrincipal, "emailPrincipal").toLowerCase(Locale.ROOT);
-        return cadastroContaRepositorio.findByEmailPrincipal(emailNormalizado)
+        Optional<ContextoPessoaPerfilSistema> contextoLocal = cadastroContaRepositorio.findByEmailPrincipal(emailNormalizado)
                 .filter(CadastroConta::emailJaConfirmado)
                 .filter(cadastro -> cadastro.getPessoaIdPerfil() != null)
                 .filter(this::cadastroPossuiUsuarioMaterializado)
                 .map(this::mapearContextoCentralFallback);
+        return contextoLocal.isPresent()
+                ? contextoLocal
+                : buscarContextoProdutoPorEmailTolerante(emailNormalizado);
     }
 
     public Optional<ContextoPessoaPerfilSistema> buscarContextoCentralPorSubPublico(final String subPessoa) {
         String subNormalizado = obrigatorio(subPessoa, "subPessoa");
-        return cadastroContaRepositorio.findBySubjectRemoto(subNormalizado)
+        Optional<ContextoPessoaPerfilSistema> contextoLocal = cadastroContaRepositorio.findBySubjectRemoto(subNormalizado)
                 .filter(CadastroConta::emailJaConfirmado)
                 .filter(cadastro -> cadastro.getPessoaIdPerfil() != null)
                 .filter(this::cadastroPossuiUsuarioMaterializado)
                 .map(this::mapearContextoCentralFallback);
+        return contextoLocal.isPresent()
+                ? contextoLocal
+                : buscarContextoProdutoPorSubTolerante(subNormalizado);
     }
 
     public StatusCadastroPublicoResolvido consultarStatusCadastroPublico(final UUID cadastroId) {

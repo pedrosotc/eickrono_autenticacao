@@ -1061,8 +1061,8 @@ class CadastroContaInternaServicoTest {
     }
 
     @Test
-    @DisplayName("nao deve resolver contexto central por sub quando cadastro nao tem usuario")
-    void naoDeveResolverContextoCentralPorSubSemUsuarioMaterializado() throws Exception {
+    @DisplayName("deve resolver contexto central por sub no produto quando cadastro local nao tem usuario")
+    void deveResolverContextoCentralPorSubNoProdutoQuandoCadastroLocalNaoTemUsuario() throws Exception {
         CadastroConta cadastro = new CadastroConta(
                 java.util.UUID.randomUUID(),
                 "sub-sem-usuario",
@@ -1089,17 +1089,28 @@ class CadastroContaInternaServicoTest {
         cadastro.marcarEmailConfirmado(OffsetDateTime.parse("2026-03-16T10:00:00Z"));
         cadastro.definirPessoaIdPerfil(10L, OffsetDateTime.parse("2026-03-16T10:01:00Z"));
         when(cadastroContaRepositorio.findBySubjectRemoto("sub-sem-usuario")).thenReturn(Optional.of(cadastro));
+        when(clienteContextoPessoaPerfilSistema.buscarPorSub("sub-sem-usuario"))
+                .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
+                        20L,
+                        "sub-sem-usuario",
+                        "ana@eickrono.com",
+                        "Ana Souza",
+                        "ana.souza",
+                        "perfil-produto-001",
+                        "LIBERADO"
+                )));
 
         Optional<ContextoPessoaPerfilSistema> resultado =
                 servicoPublico.buscarContextoCentralPorSubPublico("sub-sem-usuario");
 
-        assertThat(resultado).isEmpty();
-        verify(clienteContextoPessoaPerfilSistema, never()).buscarPorSub(any());
+        assertThat(resultado).isPresent();
+        assertThat(resultado.orElseThrow().perfilSistemaId()).isEqualTo("perfil-produto-001");
+        verify(clienteContextoPessoaPerfilSistema).buscarPorSub("sub-sem-usuario");
     }
 
     @Test
-    @DisplayName("nao deve resolver contexto central por email quando cadastro nao tem usuario")
-    void naoDeveResolverContextoCentralPorEmailSemUsuarioMaterializado() throws Exception {
+    @DisplayName("deve resolver contexto central por email no produto quando cadastro local nao tem usuario")
+    void deveResolverContextoCentralPorEmailNoProdutoQuandoCadastroLocalNaoTemUsuario() throws Exception {
         CadastroConta cadastro = new CadastroConta(
                 java.util.UUID.randomUUID(),
                 "sub-sem-usuario",
@@ -1126,11 +1137,46 @@ class CadastroContaInternaServicoTest {
         cadastro.marcarEmailConfirmado(OffsetDateTime.parse("2026-03-16T10:00:00Z"));
         cadastro.definirPessoaIdPerfil(10L, OffsetDateTime.parse("2026-03-16T10:01:00Z"));
         when(cadastroContaRepositorio.findByEmailPrincipal("ana@eickrono.com")).thenReturn(Optional.of(cadastro));
+        when(clienteContextoPessoaPerfilSistema.buscarPorEmail("ana@eickrono.com"))
+                .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
+                        20L,
+                        "sub-sem-usuario",
+                        "ana@eickrono.com",
+                        "Ana Souza",
+                        "ana.souza",
+                        "perfil-produto-001",
+                        "LIBERADO"
+                )));
 
         Optional<ContextoPessoaPerfilSistema> resultado =
                 servicoPublico.buscarContextoCentralPorEmailPublico("ANA@EICKRONO.COM");
 
-        assertThat(resultado).isEmpty();
+        assertThat(resultado).isPresent();
+        assertThat(resultado.orElseThrow().perfilSistemaId()).isEqualTo("perfil-produto-001");
+        verify(clienteContextoPessoaPerfilSistema).buscarPorEmail("ana@eickrono.com");
+    }
+
+    @Test
+    @DisplayName("deve resolver contexto central por email no produto quando cadastro local nao existe")
+    void deveResolverContextoCentralPorEmailNoProdutoQuandoCadastroLocalNaoExiste() {
+        when(cadastroContaRepositorio.findByEmailPrincipal("ana@eickrono.com")).thenReturn(Optional.empty());
+        when(clienteContextoPessoaPerfilSistema.buscarPorEmail("ana@eickrono.com"))
+                .thenReturn(Optional.of(new ContextoPessoaPerfilSistema(
+                        20L,
+                        "sub-ana",
+                        "ana@eickrono.com",
+                        "Ana Souza",
+                        "ana.souza",
+                        "perfil-produto-001",
+                        "LIBERADO"
+                )));
+
+        Optional<ContextoPessoaPerfilSistema> resultado =
+                servicoPublico.buscarContextoCentralPorEmailPublico("ANA@EICKRONO.COM");
+
+        assertThat(resultado).isPresent();
+        assertThat(resultado.orElseThrow().usuario()).isEqualTo("ana.souza");
+        verify(clienteContextoPessoaPerfilSistema).buscarPorEmail("ana@eickrono.com");
     }
 
     private static void simularUsuarioLegadoNulo(final CadastroConta cadastro) throws Exception {
