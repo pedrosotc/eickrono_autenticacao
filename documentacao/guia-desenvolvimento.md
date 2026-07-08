@@ -2,6 +2,14 @@
 
 Este guia orienta a preparação do ambiente local e o fluxo de trabalho diário para contribuir com a stack **Eickrono Autenticação**.
 
+Se voce esta entrando no ecossistema agora e precisa subir app + Docker +
+iPhone fisico, comece por:
+
+- `../../eickrono-thimisu/eickrono-thimisu-app/docs/start_programador_junior.md`
+
+Depois volte para este documento quando a duvida for especifica da autenticacao,
+MailHog, SMTP, Keycloak ou Postgres da stack de autenticacao.
+
 ## Requisitos locais
 
 - **Sistema operacional:** macOS, Linux ou Windows 11 com WSL2.

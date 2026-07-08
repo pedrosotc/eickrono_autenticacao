@@ -135,6 +135,21 @@ Regra prática:
 A documentação principal permanece em `documentacao/`, e este `README.md`
 resume a estrutura física e a direção vigente do repositório.
 
+### Start para novos programadores
+
+O guia operacional de primeiro dia fica no app, porque ele junta Docker,
+Postgres, Keycloak, MailHog, APIs e instalação no iPhone físico:
+
+- `../eickrono-thimisu/eickrono-thimisu-app/docs/start_programador_junior.md`
+
+Use esse guia antes de abrir documentos especializados. Depois consulte:
+
+- `documentacao/guia-desenvolvimento.md`: Docker, MailHog, SMTP fake/real e rotina local
+- `documentacao/guia_swagger_api_identidade_dev_hml_stg.md`: Swagger da autenticação
+- `documentacao/guia-testes-swagger.md`: exemplos de chamadas manuais
+- `documentacao/servicos-docker-dev.md`: explicação dos containers de dev
+- `../eickrono-thimisu/eickrono-thimisu-app/docs/recriacao_servidores_docker_dev_iphone.md`: histórico de limpeza/recriação dos servidores Docker dev
+
 ### Diretriz vigente para o app móvel
 
 - cadastro, confirmação de e-mail, login e recuperação de senha devem
